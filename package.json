@@ -1,0 +1,21 @@
+{
+  "name": "weld",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "lint": "tslint -c tslint.json src/**/*.ts",
+    "build": "tsc"
+  },
+  "author": {
+    "name": "Giacomo Gregoletto",
+    "email": "gregolettogiacomo@gmail.com"
+  },
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "tslint": "^5.9.1",
+    "typescript": "^2.8.1"
+  }
+}
