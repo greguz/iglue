@@ -71,6 +71,12 @@ export class View {
   private directives: Directive[];
 
   /**
+   * Attribute name regular expression
+   */
+
+  private prefix: RegExp;
+
+  /**
    * @constructor
    */
 
@@ -83,6 +89,7 @@ export class View {
     this.model = new Model(data);
     Object.assign(this.binders, View.binders, this.options.binders);
     Object.assign(this.components, View.components, this.options.components);
+    this.prefix = new RegExp("^" + (this.options.prefix || 'wd') + "-(.+)$");
 
     this.traverse(el);
   }
@@ -92,29 +99,27 @@ export class View {
    */
 
   public bind() {
-
     const { model, directives } = this;
 
     for (const directive of directives) {
-
+      // observed model path
       const path = directive.path;
 
+      // initialize the directive passing the publish function
       directive.bind((value) => {
-
+        // update the model on directive publishing
         model.set(path, value);
-
       });
 
+      // initialize the directive value
       directive.write(model.get(path));
 
+      // start model observing
       model.observe(path, () => {
-
+        // notify the directive that the model has changed
         directive.write(model.get(path));
-
       });
-
     }
-
   }
 
   /**
@@ -122,17 +127,13 @@ export class View {
    */
 
   public unbind() {
-
     const { model, directives } = this;
 
     for (const directive of directives) {
-
       directive.unbind();
-
     }
 
     model.unobserve();
-
   }
 
   /**
@@ -140,15 +141,11 @@ export class View {
    */
 
   public refresh() {
-
     const { model, directives } = this;
 
     for (const directive of directives) {
-
       directive.write(model.get(directive.path));
-
     }
-
   }
 
   /**
@@ -156,9 +153,7 @@ export class View {
    */
 
   public clone(el: HTMLElement): View {
-
     return new View(el, this.data);
-
   }
 
   /**
@@ -166,13 +161,11 @@ export class View {
    */
 
   private traverse(node: HTMLElement) {
-
     if (node.nodeType === 3) {
 
       // TODO apply text binding
 
     } else if (node.nodeType === 1) {
-
       const tag: string = node.nodeName.toLowerCase()
 
       // TODO rv-for
@@ -180,52 +173,44 @@ export class View {
       // TODO rv-if
 
       if (tag === "component" || this.components[tag]) {
-
         this.loadComponent(node);
-
       } else {
-
         this.loadBinders(node);
 
         for (const child of node.childNodes) {
-
           this.traverse(child as HTMLElement);
-
         }
-
       }
-
     }
-
   }
 
   /**
-   * TODO docs
+   * Load a component
    */
 
   private loadComponent(node: HTMLElement): void {
-
     // create the component context
     const context: any = {};
 
     // schedule the data reload for the context attributes
     for (let i = 0; i < node.attributes.length; i++) {
-
       const attr: Attr = node.attributes[i];
 
+      // component context update function
       function write(value: any): void {
         context[attr.name] = value;
       }
 
+      // initialize the component context
       write(this.model.get(attr.value));
 
+      // save the directive for this path
       this.directives.push({
         path: attr.value,
         bind: () => undefined,
         write,
         unbind: () => undefined
       });
-
     }
 
     // create the component directive
@@ -243,35 +228,29 @@ export class View {
         }
       )
     );
-
   }
 
   /**
-   * TODO docs
+   * Load the custom binders for the current node
    */
 
   private loadBinders(node: HTMLElement): void {
-
     for (let i = 0; i < node.attributes.length; i++) {
-
       const attr: Attr = node.attributes[i];
 
-      const matches = attr.name.match(/^rv-(.+)$/); // TODO configure regexp
-
-      if (!matches[1]) {
+      const matches = attr.name.match(this.prefix);
+      if (!matches) {
         continue;
       }
 
-      const name: string = matches[1];
-
-      const binder: Binder<any> = this.binders[name];
-
       this.directives.push(
-        new BinderDirective(node, attr.name, binder)
+        new BinderDirective(
+          node,
+          attr.name,
+          this.binders[matches[1]]
+        )
       );
-
     }
-
   }
 
 }
