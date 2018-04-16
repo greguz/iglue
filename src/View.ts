@@ -230,13 +230,18 @@ export class View {
 
     // create the component directive
     this.directives.push(
-      new ComponentDirective(node, context, (name: string): Component => {
-        const component = this.components[name];
-        if (!component) {
-          throw new Error(`Unable to load component "${name}"`);
+      new ComponentDirective(
+        node,
+        context,
+        this.options,
+        function resolveComponentName(name: string): Component {
+          const component = this.components[name];
+          if (!component) {
+            throw new Error(`Unable to load component "${name}"`);
+          }
+          return component;
         }
-        return component;
-      })
+      )
     );
 
   }

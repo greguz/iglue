@@ -1,5 +1,5 @@
 import { Directive } from "../Directive";
-import { View } from "../View";
+import { View, ViewOptions } from "../View";
 
 /**
  * Component context
@@ -112,6 +112,12 @@ export class ComponentDirective implements Directive {
   private context: any;
 
   /**
+   * Parent view configuration
+   */
+
+  private options: ViewOptions;
+
+  /**
    * Component name resolution function
    */
 
@@ -121,12 +127,13 @@ export class ComponentDirective implements Directive {
    * @constructor
    */
 
-  constructor(node: HTMLElement, context: any, resolve: ResolveComponentName) {
+  constructor(node: HTMLElement, context: any, options: ViewOptions, resolve: ResolveComponentName) {
     this.parentNode = node.parentElement;
     this.originalNode = node;
     this.currentNode = node;
     this.context = context;
     this.resolve = resolve;
+    this.options = options;
 
     const name = node.tagName.toLowerCase();
     if (name === "component") {
@@ -161,7 +168,7 @@ export class ComponentDirective implements Directive {
       }
 
       // bind the component view
-      this.view = new View(this.currentNode, this.context);
+      this.view = new View(this.currentNode, this.context, this.options);
       this.view.bind();
 
       // data-binding and DOM both initialized
