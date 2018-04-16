@@ -1,4 +1,4 @@
-export interface IDirective {
+export interface Directive {
 
   /**
    * Target model value path to watch

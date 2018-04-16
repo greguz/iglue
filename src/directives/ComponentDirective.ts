@@ -1,44 +1,76 @@
-import { IDirective } from "../IDirective";
+import { Directive } from "../Directive";
 import { View } from "../View";
 
 /**
- * TODO docs
+ * Component context
  */
 
-function prepareTemplateNode(template: string): HTMLElement { // TODO remove container
-  const div = document.createElement("div");
-  div.innerHTML = template;
-  return div;
-}
+export interface ComponentContext { [key: string]: any; }
 
 /**
  * Component interface
  */
 
-export interface IComponent {
+export interface Component {
+
+  /**
+   * The component HTML template
+   */
+
   template: string;
-  create?(): void;
-  attach?(el: HTMLElement): void;
-  bind?(view: View): void;
-  unbind?(view: View): void;
-  detach?(el: HTMLElement): void;
-  destroy?(): void;
+
+  /**
+   * Component loaded, data-binding and DOM not initialized
+   */
+
+  create?(this: ComponentContext): void;
+
+  /**
+   * DOM initialized, data-binding is not running
+   */
+
+  attach?(this: ComponentContext, el: HTMLElement): void;
+
+  /**
+   * Both DOM and data-binding are initialized
+   */
+
+  bind?(this: ComponentContext, view: View): void;
+
+  /**
+   * The data-binding and the DOM are still running
+   */
+
+  unbind?(this: ComponentContext, view: View): void;
+
+  /**
+   * The data-binding is stopped, the DOM is still untached
+   */
+
+  detach?(this: ComponentContext, el: HTMLElement): void;
+
+  /**
+   * Both data-biding and DOM are dead
+   */
+
+  destroy?(this: ComponentContext): void;
+
 }
 
 /**
- * TODO docs
+ * Function that resolve a component name into a component object
  */
 
-export type ResolveComponentName = (name: string) => IComponent;
+export type ResolveComponentName = (name: string) => Component;
 
 /**
- * Manage the component lifecycle
+ * Directive that manages the component lifecycle
  */
 
-export class ComponentDirective implements IDirective {
+export class ComponentDirective implements Directive {
 
   /**
-   * TODO docs
+   * Observed path, the component name
    */
 
   public readonly path: string;
@@ -65,10 +97,10 @@ export class ComponentDirective implements IDirective {
    * The loaded component object
    */
 
-  private component: IComponent;
+  private component: Component;
 
   /**
-   * Current bound view
+   * Currently bound view
    */
 
   private view: View;
@@ -80,7 +112,7 @@ export class ComponentDirective implements IDirective {
   private context: any;
 
   /**
-   * TODO docs
+   * Component name resolution function
    */
 
   private resolve: ResolveComponentName;
@@ -96,11 +128,12 @@ export class ComponentDirective implements IDirective {
     this.context = context;
     this.resolve = resolve;
 
-    if (node.hasAttribute("rv-is")) {
-      this.path = node.getAttribute("rv-is");
+    const name = node.tagName.toLowerCase();
+    if (name === "component") {
+      this.path = node.getAttribute("is");
     } else {
       this.path = "__";
-      this.component = this.resolve(node.tagName.toLowerCase());
+      this.component = this.resolve(name);
     }
   }
 
@@ -109,35 +142,37 @@ export class ComponentDirective implements IDirective {
    */
 
   public bind(): void {
-
     if (this.component) {
-
+      // DOM and data-binding both not initialized
       if (this.component.create) {
         this.component.create();
       }
 
-      this.currentNode = prepareTemplateNode(this.component.template);
+      // create the container node for this component
+      this.currentNode = document.createElement("component");
+      this.currentNode.outerHTML = this.component.template;
 
+      // inject the node into the correct place
       this.parentNode.replaceChild(this.currentNode, this.originalNode);
 
+      // now the DOM is initialized
       if (this.component.attach) {
         this.component.attach(this.currentNode);
       }
 
+      // bind the component view
       this.view = new View(this.currentNode, this.context);
-
       this.view.bind();
 
+      // data-binding and DOM both initialized
       if (this.component.bind) {
         this.component.bind(this.view);
       }
-
     }
-
   }
 
   /**
-   * TODO docs
+   * Chaneg the current component
    */
 
   public write(value: string): void {
@@ -149,27 +184,30 @@ export class ComponentDirective implements IDirective {
   }
 
   /**
-   * TODO docs
+   * Disable data-binding and restore the DOM
    */
 
   public unbind(): void {
-
+    // DOM and data-binding still ok
     if (this.component.unbind) {
       this.component.unbind(this.view);
     }
 
+    // unbind the view
     this.view.unbind();
 
+    // data-binding is dead
     if (this.component.detach) {
       this.component.detach(this.currentNode);
     }
 
+    // restore the original node
     this.parentNode.replaceChild(this.originalNode, this.currentNode);
 
+    // DOM restored and data-binding not running
     if (this.component.destroy) {
       this.component.destroy();
     }
-
   }
 
 }

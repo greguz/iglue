@@ -1,22 +1,22 @@
-import { IDirective } from "../IDirective";
+import { Directive } from "../Directive";
 
 /**
  * Generic context per binding
  */
 
-export interface IOneWayBinderContext { [key: string]: any; }
+export interface OneWayBinderContext { [key: string]: any; }
 
 /**
  * Simple one-way data binder, just update the DOM when the model changes
  */
 
-export type OneWayBinder<T> = (this: IOneWayBinderContext, el: HTMLElement, value: T) => void;
+export type OneWayBinder<T> = (this: OneWayBinderContext, el: HTMLElement, value: T) => void;
 
 /**
  * Two way data binding context
  */
 
-export interface ITwoWayBinderContext<T> extends IOneWayBinderContext {
+export interface TwoWayBinderContext<T> extends OneWayBinderContext {
 
   /**
    * Function to update the model
@@ -30,25 +30,25 @@ export interface ITwoWayBinderContext<T> extends IOneWayBinderContext {
  * Two way data binder
  */
 
-export interface ITwoWayBinder<T> {
+export interface TwoWayBinder<T> {
 
   /**
    * Called when the binding is initialized
    */
 
-  bind?: (this: ITwoWayBinderContext<T>, el: HTMLElement) => void;
+  bind?: (this: TwoWayBinderContext<T>, el: HTMLElement) => void;
 
   /**
    * Called when there"s a model update
    */
 
-  routine?: (this: ITwoWayBinderContext<T>, el: HTMLElement, value: T) => void;
+  routine?: (this: TwoWayBinderContext<T>, el: HTMLElement, value: T) => void;
 
   /**
    * Called on binding death
    */
 
-  unbind?: (this: ITwoWayBinderContext<T>, el: HTMLElement) => void;
+  unbind?: (this: TwoWayBinderContext<T>, el: HTMLElement) => void;
 
 }
 
@@ -56,7 +56,7 @@ export interface ITwoWayBinder<T> {
  * All binder types
  */
 
-export type Binder<T> = OneWayBinder<T> | ITwoWayBinder<T>;
+export type Binder<T> = OneWayBinder<T> | TwoWayBinder<T>;
 
 /**
  * Build the default binder
@@ -73,10 +73,10 @@ function buildDefaultBinder(attrName: string): Binder<any> {
 }
 
 /**
- * TODO docs
+ * Handle the binder lifecycle
  */
 
-export class BinderDirective implements IDirective {
+export class BinderDirective implements Directive {
 
   /**
    * Bound node to this binding
@@ -106,13 +106,13 @@ export class BinderDirective implements IDirective {
    * Normalized binder
    */
 
-  private binder: ITwoWayBinder<any>;
+  private binder: TwoWayBinder<any>;
 
   /**
    * Current binding context
    */
 
-  private context: ITwoWayBinderContext<any>;
+  private context: TwoWayBinderContext<any>;
 
   /**
    * @constructor

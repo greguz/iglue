@@ -1,19 +1,17 @@
 import { Model } from "./Model";
-import { IDirective } from "./IDirective";
+import { Directive } from "./Directive";
 
 import { BinderDirective, Binder } from "./directives/BinderDirective";
-import { ComponentDirective, IComponent } from "./directives/ComponentDirective";
+import { ComponentDirective, Component } from "./directives/ComponentDirective";
 
-export interface ICollection<T> {
+export interface Collection<T> {
   [key: string]: T;
 }
 
-export type ComponentFactory = () => IComponent;
-
-export interface IViewOptions {
-  prefix?: string; // wd
-  binders?: ICollection<Binder<any>>;
-  components?: ICollection<ComponentFactory>;
+export interface ViewOptions {
+  prefix?: string;
+  binders?: Collection<Binder<any>>;
+  components?: Collection<Component>;
 }
 
 export class View {
@@ -22,13 +20,13 @@ export class View {
    * Binders collection
    */
 
-  public static binders: ICollection<Binder<any>> = {};
+  public static binders: Collection<Binder<any>> = {};
 
   /**
    * Binders collection
    */
 
-  public static components: ICollection<ComponentFactory> = {};
+  public static components: Collection<Component> = {};
 
   /**
    * Bound DOM element
@@ -43,16 +41,22 @@ export class View {
   public readonly data: any;
 
   /**
-   * Binders collection
+   * View options
    */
 
-  public readonly binders: ICollection<Binder<any>>;
+  public readonly options: ViewOptions;
 
   /**
    * Binders collection
    */
 
-  public readonly components: ICollection<ComponentFactory>;
+  private binders: Collection<Binder<any>>;
+
+  /**
+   * Binders collection
+   */
+
+  private components: Collection<Component>;
 
   /**
    * View model instance
@@ -64,21 +68,23 @@ export class View {
    * Parsed DOM-data links
    */
 
-  private directives: IDirective[];
+  private directives: Directive[];
 
   /**
    * @constructor
    */
 
-  constructor(el: HTMLElement, data: any, options?: IViewOptions) {
+  constructor(el: HTMLElement, data: any, options?: ViewOptions) {
     this.el = el;
     this.data = data;
-    this.model = new Model(data);
+    this.options = options || {};
+
     this.directives = [];
+    this.model = new Model(data);
+    Object.assign(this.binders, View.binders, this.options.binders);
+    Object.assign(this.components, View.components, this.options.components);
+
     this.traverse(el);
-    options = options || {};
-    Object.assign(this.binders, View.binders, options.binders);
-    Object.assign(this.components, View.components, options.components);
   }
 
   /**
@@ -173,7 +179,7 @@ export class View {
 
       // TODO rv-if
 
-      if (tag === "component" || View.components[tag]) {
+      if (tag === "component" || this.components[tag]) {
 
         this.loadComponent(node);
 
@@ -224,12 +230,12 @@ export class View {
 
     // create the component directive
     this.directives.push(
-      new ComponentDirective(node, context, (name: string): IComponent => {
-        const Factory = this.components[name];
-        if (!Factory) {
+      new ComponentDirective(node, context, (name: string): Component => {
+        const component = this.components[name];
+        if (!component) {
           throw new Error(`Unable to load component "${name}"`);
         }
-        return Factory();
+        return component;
       })
     );
 
