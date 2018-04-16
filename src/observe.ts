@@ -1,14 +1,16 @@
 /**
+ * Array methods that changes internally the array structure
+ */
+
+const ARR_METHODS: string[] = ["push", "pop", "shift", "unshift", "sort", "reverse", "splice"];
+
+/**
  * Utility to listen array changes
  */
 
 function subscribe(arr: any[], notify: () => void): () => void {
-
-  // all methods that changes the original array
-  const methods = ["push", "pop", "shift", "unshift", "sort", "reverse", "splice"];
-
   // inject a middleware into all target methods
-  for (const method of methods) {
+  for (const method of ARR_METHODS) {
     Object.defineProperty(arr, method, {
       enumerable: false,
       configurable: true,
@@ -23,7 +25,7 @@ function subscribe(arr: any[], notify: () => void): () => void {
   // return subscription function
   return function unsubscribe() {
     // restore the original methods (get from the array constructor)
-    for (const method of methods) {
+    for (const method of ARR_METHODS) {
       Object.defineProperty(arr, method, {
         enumerable: false,
         configurable: true,
@@ -31,7 +33,6 @@ function subscribe(arr: any[], notify: () => void): () => void {
       });
     }
   };
-
 }
 
 /**
@@ -60,7 +61,7 @@ const DEFAULT_DESCRIPTOR: PropertyDescriptor = {
   enumerable: true,
   writable: true,
   value: undefined
-}
+};
 
 /**
  * Inject observing middleware into the object
@@ -84,46 +85,40 @@ function applyMiddleware(obj: any, property: string) {
   let set: (value: any) => void;
 
   if (descriptor.get || descriptor.set) {
-
     get = descriptor.get;
 
     if (descriptor.set) {
-
-      set = function set(value: any): void {
+      set = function getter(value: any): void {
         descriptor.set.call(this, value);
         notify();
-      }
-
+      };
     }
-
   } else {
-
     let subscription: () => void;
 
-    function handleArrays(value: any): any {
+    function handleArrays(arr: any): any {
       if (subscription) {
         subscription();
         subscription = null;
       }
-      if (value instanceof Array) {
-        subscription = subscribe(value, notify);
+      if (arr instanceof Array) {
+        subscription = subscribe(arr, notify);
       }
-      return value;
+      return arr;
     }
 
-    let value = handleArrays(descriptor.value)
+    let value = handleArrays(descriptor.value);
 
-    get = function get(): any {
+    get = function getter(): any {
       return value;
-    }
+    };
 
-    set = function set(update: any): void {
+    set = function setter(update: any): void {
       if (update !== value) {
         value = handleArrays(update);
         notify();
       }
-    }
-
+    };
   }
 
   Object.defineProperty(obj, property, {

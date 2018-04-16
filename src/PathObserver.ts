@@ -1,4 +1,4 @@
-import { observe, unobserve } from './observe';
+import { observe, unobserve } from "./observe";
 
 export class PathObserver {
 
@@ -39,7 +39,7 @@ export class PathObserver {
   constructor(data: any, path: string) {
     this.data = data;
     this.path = path;
-    this.tokens = path.split('.');
+    this.tokens = path.split(".");
     this.update = this.update.bind(this);
   }
 
@@ -49,7 +49,7 @@ export class PathObserver {
 
   public observe(callback: (value: any) => void): void {
     if (this.callback) {
-      throw new Error('Currently observing');
+      throw new Error("Currently observing");
     }
 
     this.callback = callback;
@@ -61,7 +61,7 @@ export class PathObserver {
       const token: string = tokens[i];
       const obj: any = values[i];
 
-      if (typeof obj === 'object') {
+      if (typeof obj === "object") {
         observe(
           obj,
           token,
@@ -81,7 +81,7 @@ export class PathObserver {
     let obj: any = this.data;
 
     for (const token of this.tokens) {
-      if (typeof obj === 'object') {
+      if (typeof obj === "object") {
         obj = obj[token];
       } else {
         return undefined;
@@ -102,8 +102,8 @@ export class PathObserver {
 
     for (i = 0; i < tokens.length - 1; i++) {
       const token: string = tokens[i];
-      if (typeof obj[token] !== 'object') {
-        throw new Error('NOPE');
+      if (typeof obj[token] !== "object") {
+        throw new Error("NOPE");
       }
       obj = obj[token];
     }
@@ -117,7 +117,7 @@ export class PathObserver {
 
   public unobserve(): void {
     if (!this.values) {
-      throw new Error('Not observing');
+      throw new Error("Not observing");
     }
 
     const tokens: string[] = this.tokens;
@@ -127,7 +127,7 @@ export class PathObserver {
       const token: string = tokens[i];
       const obj: any = values[i];
 
-      if (typeof obj === 'object') {
+      if (typeof obj === "object") {
         unobserve(
           obj,
           token,
@@ -154,10 +154,10 @@ export class PathObserver {
       const current: any = currentValues[i];
 
       if (current !== previous) {
-        if (typeof previous === 'object') {
+        if (typeof previous === "object") {
           unobserve(previous, token, this.update);
         }
-        if (typeof current === 'object') {
+        if (typeof current === "object") {
           observe(current, token, this.update);
         }
         if (i === tokens.length) {
@@ -179,7 +179,7 @@ export class PathObserver {
 
     for (const token of this.tokens) {
       values.push(obj);
-      if (typeof obj === 'object') {
+      if (typeof obj === "object") {
         obj = obj[token];
       } else {
         obj = undefined;

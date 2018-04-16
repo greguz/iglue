@@ -1,9 +1,10 @@
-import { Model } from "./Model";
 import { Directive } from "./Directive";
 
-import { BinderDirective, Binder } from "./directives/BinderDirective";
-import { ComponentDirective, Component } from "./directives/ComponentDirective";
-import { TextDirective } from './directives/TextDirective';
+import { Model } from "./Model";
+
+import { Binder, BinderDirective } from "./directives/BinderDirective";
+import { Component, ComponentDirective } from "./directives/ComponentDirective";
+import { TextDirective } from "./directives/TextDirective";
 
 export interface Collection<T> {
   [key: string]: T;
@@ -104,7 +105,7 @@ export class View {
     this.model = new Model(data);
     this.binders = Object.assign({}, View.binders, this.options.binders);
     this.components = Object.assign({}, View.components, this.options.components);
-    this.prefix = new RegExp("^" + (this.options.prefix || 'wd') + "-(.+)$");
+    this.prefix = new RegExp("^" + (this.options.prefix || "wd") + "-(.+)$");
 
     this.traverse(el);
   }
@@ -205,7 +206,7 @@ export class View {
     // create the component context
     const context: any = {};
 
-    // schedule the data reload for the context attributes
+    // tslint:disable-next-line: prefer-for-of
     for (let i = 0; i < node.attributes.length; i++) {
       const attr: Attr = node.attributes[i];
 
@@ -248,6 +249,7 @@ export class View {
    */
 
   private loadBinders(node: HTMLElement): void {
+    // tslint:disable-next-line: prefer-for-of
     for (let i = 0; i < node.attributes.length; i++) {
       const attr: Attr = node.attributes[i];
 
@@ -275,24 +277,25 @@ export class View {
   private injectTextNodes(node: Text): void {
     const parent: HTMLElement = node.parentElement;
     const text: string = node.data;
-    let chunk: string = '';
+    let chunk: string = "";
 
+    // tslint:disable-next-line: prefer-for-of
     for (let i = 0; i < text.length; i++) {
       const char: string = text[i];
 
-      if (char === '{') {
+      if (char === "{") {
         if (chunk) {
           parent.insertBefore(
             document.createTextNode(chunk),
             node
           );
-          chunk = '';
+          chunk = "";
         }
-      } else if (char === '}') {
+      } else if (char === "}") {
         const path: string = chunk.trim();
 
         if (!path) {
-          throw new Error('Invalid text binding');
+          throw new Error("Invalid text binding");
         }
 
         this.directives.push(
@@ -305,7 +308,7 @@ export class View {
           )
         );
 
-        chunk = '';
+        chunk = "";
       } else {
         chunk += char;
       }

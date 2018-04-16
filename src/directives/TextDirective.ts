@@ -1,4 +1,4 @@
-import { Directive } from '../Directive';
+import { Directive } from "../Directive";
 
 export class TextDirective implements Directive {
 
@@ -16,7 +16,7 @@ export class TextDirective implements Directive {
   }
 
   public write(value: string): void {
-    this.node.data = value == null ? '' : value.toString();
+    this.node.data = value == null ? "" : value.toString();
   }
 
   public unbind(): void {
