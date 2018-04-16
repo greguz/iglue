@@ -1,44 +1,43 @@
-import { observe, unobserve } from "./observe";
-
-export type Callback = () => void;
-
-interface Observer {
-  property: string;
-  listener: Callback;
-}
+import { PathObserver } from "./PathObserver";
 
 export class Model {
 
   private data: any;
 
-  private observers: Observer[];
+  private observers: PathObserver[];
 
   constructor(data: any) {
     this.data = data;
     this.observers = [];
   }
 
-  public observe(property: string, listener: Callback): void {
-    this.observers.push({
-      property,
-      listener
-    });
-    observe(this.data, property, listener);
+  public observe(path: string, listener: (value: any) => void): void {
+    const observer = new PathObserver(this.data, path);
+    observer.observe(listener);
+    this.observers.push(observer);
   }
 
   public unobserve(): void {
     for (const observer of this.observers) {
-      unobserve(this.data, observer.property, observer.listener);
+      observer.unobserve();
     }
     this.observers = [];
   }
 
-  public get(property: string): any {
-    return this.data[property];
+  public get(path: string): any {
+    for (const observer of this.observers) {
+      if (observer.path === path) {
+        return observer.get();
+      }
+    }
   }
 
-  public set(property: string, value: any): void {
-    this.data[property] = value;
+  public set(path: string, value: any): void {
+    for (const observer of this.observers) {
+      if (observer.path === path) {
+        return observer.set(value);
+      }
+    }
   }
 
 }

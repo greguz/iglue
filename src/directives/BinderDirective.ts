@@ -59,20 +59,6 @@ export interface TwoWayBinder<T> {
 export type Binder<T> = OneWayBinder<T> | TwoWayBinder<T>;
 
 /**
- * Build the default binder
- */
-
-function buildDefaultBinder(attrName: string): Binder<any> {
-  return function bindAttributeValue(el: HTMLElement, value: any): void {
-    if (value == null) {
-      el.removeAttribute(attrName);
-    } else {
-      el.setAttribute(attrName, value.toString());
-    }
-  };
-}
-
-/**
  * Handle the binder lifecycle
  */
 
@@ -118,15 +104,11 @@ export class BinderDirective implements Directive {
    * @constructor
    */
 
-  constructor(node: HTMLElement, attrName: string, binder?: Binder<any>) {
+  constructor(node: HTMLElement, attrName: string, binder: Binder<any>) {
     this.node = node;
     this.attributeName = attrName;
     this.attributeValue = node.getAttribute(attrName);
     this.path = this.attributeValue;
-
-    if (binder == null) {
-      binder = buildDefaultBinder(attrName);
-    }
 
     if (typeof binder === "function") {
       this.binder = { routine: binder };

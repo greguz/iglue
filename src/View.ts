@@ -15,6 +15,20 @@ export interface ViewOptions {
   components?: Collection<Component>;
 }
 
+/**
+ * Build the default binder
+ */
+
+function buildDefaultBinder(attrName: string): Binder<any> {
+  return function bindAttributeValue(el: HTMLElement, value: any): void {
+    if (value == null) {
+      el.removeAttribute(attrName);
+    } else {
+      el.setAttribute(attrName, value.toString());
+    }
+  };
+}
+
 export class View {
 
   /**
@@ -88,8 +102,8 @@ export class View {
 
     this.directives = [];
     this.model = new Model(data);
-    Object.assign(this.binders, View.binders, this.options.binders);
-    Object.assign(this.components, View.components, this.options.components);
+    this.binders = Object.assign({}, View.binders, this.options.binders);
+    this.components = Object.assign({}, View.components, this.options.components);
     this.prefix = new RegExp("^" + (this.options.prefix || 'wd') + "-(.+)$");
 
     this.traverse(el);
@@ -112,14 +126,14 @@ export class View {
         model.set(path, value);
       });
 
+      // start model observing
+      model.observe(path, (value) => {
+        // notify the directive that the model has changed
+        directive.write(value);
+      });
+
       // initialize the directive value
       directive.write(model.get(path));
-
-      // start model observing
-      model.observe(path, () => {
-        // notify the directive that the model has changed
-        directive.write(model.get(path));
-      });
     }
   }
 
@@ -242,11 +256,13 @@ export class View {
         continue;
       }
 
+      const binderName: string = matches[1];
+
       this.directives.push(
         new BinderDirective(
           node,
           attr.name,
-          this.binders[matches[1]]
+          this.binders[binderName] || buildDefaultBinder(binderName)
         )
       );
     }
@@ -257,6 +273,7 @@ export class View {
    */
 
   private injectTextNodes(node: Text): void {
+    const parent: HTMLElement = node.parentElement;
     const text: string = node.data;
     let chunk: string = '';
 
@@ -265,7 +282,7 @@ export class View {
 
       if (char === '{') {
         if (chunk) {
-          document.insertBefore(
+          parent.insertBefore(
             document.createTextNode(chunk),
             node
           );
@@ -280,7 +297,7 @@ export class View {
 
         this.directives.push(
           new TextDirective(
-            document.insertBefore(
+            parent.insertBefore(
               document.createTextNode(`{ ${path} }`),
               node
             ),
@@ -295,7 +312,7 @@ export class View {
     }
 
     if (chunk) {
-      document.insertBefore(
+      parent.insertBefore(
         document.createTextNode(chunk),
         node
       );
