@@ -148,7 +148,7 @@ export class PathObserver {
     const previousValues: any[] = this.values;
     const currentValues: any[] = this.realize();
 
-    for (let i = 0; i < tokens.length; i++) {
+    for (let i = 0; i <= tokens.length; i++) {
       const token: string = tokens[i];
       const previous: any = previousValues[i];
       const current: any = currentValues[i];
@@ -160,7 +160,7 @@ export class PathObserver {
         if (typeof current === 'object') {
           observe(current, token, this.update);
         }
-        if (i === tokens.length - 1) {
+        if (i === tokens.length) {
           this.callback(current);
         }
       }
@@ -170,20 +170,22 @@ export class PathObserver {
   }
 
   /**
-   * Get all path values
+   * Return the full path valuse, including the root data object and the final value
    */
 
   private realize(): any[] {
     const values: any[] = [];
-    const tokens: string[] = this.tokens;
     let obj: any = this.data;
-    let i: number;
 
-    for (i = 0; i < tokens.length && typeof obj === 'object'; i++) {
-      const token = tokens[i];
+    for (const token of this.tokens) {
       values.push(obj);
-      obj = obj[token];
+      if (typeof obj === 'object') {
+        obj = obj[token];
+      } else {
+        obj = undefined;
+      }
     }
+    values.push(obj);
 
     return values;
   }
