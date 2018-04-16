@@ -1,6 +1,6 @@
 import { Directive } from "./Directive";
 
-import { Model } from "./Model";
+import { Model } from "./model/Model";
 
 import { Binder, BinderDirective } from "./directives/BinderDirective";
 import { Component, ComponentDirective } from "./directives/ComponentDirective";
