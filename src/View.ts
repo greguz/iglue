@@ -6,6 +6,8 @@ import { Binder, BinderDirective } from "./directives/BinderDirective";
 import { Component, ComponentDirective } from "./directives/ComponentDirective";
 import { TextDirective } from "./directives/TextDirective";
 
+import binders from './binders';
+
 export interface Collection<T> {
   [key: string]: T;
 }
@@ -36,7 +38,7 @@ export class View {
    * Binders collection
    */
 
-  public static binders: Collection<Binder<any>> = {};
+  public static binders: Collection<Binder<any>> = binders;
 
   /**
    * Binders collection
