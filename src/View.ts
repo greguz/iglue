@@ -3,6 +3,7 @@ import { Directive } from "./Directive";
 
 import { BinderDirective, Binder } from "./directives/BinderDirective";
 import { ComponentDirective, Component } from "./directives/ComponentDirective";
+import { TextDirective } from './directives/TextDirective';
 
 export interface Collection<T> {
   [key: string]: T;
@@ -160,22 +161,20 @@ export class View {
    * Traverse DOM nodes and save bindings
    */
 
-  private traverse(node: HTMLElement) {
+  private traverse(node: Node) {
     if (node.nodeType === 3) {
-
-      // TODO apply text binding
-
+      this.injectTextNodes(node as Text);
     } else if (node.nodeType === 1) {
-      const tag: string = node.nodeName.toLowerCase()
+      const tag: string = node.nodeName.toLowerCase();
 
       // TODO rv-for
 
       // TODO rv-if
 
       if (tag === "component" || this.components[tag]) {
-        this.loadComponent(node);
+        this.loadComponent(node as HTMLElement);
       } else {
-        this.loadBinders(node);
+        this.loadBinders(node as HTMLElement);
 
         for (const child of node.childNodes) {
           this.traverse(child as HTMLElement);
@@ -251,6 +250,58 @@ export class View {
         )
       );
     }
+  }
+
+  /**
+   * Parse a text node and create its directives
+   */
+
+  private injectTextNodes(node: Text): void {
+    const text: string = node.data;
+    let chunk: string = '';
+
+    for (let i = 0; i < text.length; i++) {
+      const char: string = text[i];
+
+      if (char === '{') {
+        if (chunk) {
+          document.insertBefore(
+            document.createTextNode(chunk),
+            node
+          );
+          chunk = '';
+        }
+      } else if (char === '}') {
+        const path: string = chunk.trim();
+
+        if (!path) {
+          throw new Error('Invalid text binding');
+        }
+
+        this.directives.push(
+          new TextDirective(
+            document.insertBefore(
+              document.createTextNode(`{ ${path} }`),
+              node
+            ),
+            path
+          )
+        );
+
+        chunk = '';
+      } else {
+        chunk += char;
+      }
+    }
+
+    if (chunk) {
+      document.insertBefore(
+        document.createTextNode(chunk),
+        node
+      );
+    }
+
+    node.parentElement.removeChild(node);
   }
 
 }

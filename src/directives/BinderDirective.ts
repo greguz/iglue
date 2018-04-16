@@ -139,7 +139,7 @@ export class BinderDirective implements Directive {
    * Create a new context and start the binding with the DOM
    */
 
-  public bind(publish: (value: any) => void) {
+  public bind(publish: (value: any) => void): void {
     if (this.context) {
       throw new Error("Binding is active");
     }
@@ -171,7 +171,7 @@ export class BinderDirective implements Directive {
    * Stop DOM listening and reset the context
    */
 
-  public unbind() {
+  public unbind(): void {
     if (!this.context) {
       throw new Error("Binding is not active");
     }
