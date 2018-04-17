@@ -1,115 +1,34 @@
-import { Directive } from "../Directive";
+import { IBinder } from "../interfaces/IBinder";
+import { IBinding } from "../interfaces/IBinding";
+import { IDirective } from "../interfaces/IDirective";
 
-/**
- * Generic context per binding
- */
-
-export interface OneWayBinderContext { [key: string]: any; }
-
-/**
- * Simple one-way data binder, just update the DOM when the model changes
- */
-
-export type OneWayBinder<T> = (this: OneWayBinderContext, el: HTMLElement, value: T) => void;
-
-/**
- * Two way data binding context
- */
-
-export interface TwoWayBinderContext<T> extends OneWayBinderContext {
+export class BinderDirective implements IDirective {
 
   /**
-   * Function to update the model
+   * Attribute binding
    */
 
-  readonly publish: (value: T) => void;
-
-}
-
-/**
- * Two way data binder
- */
-
-export interface TwoWayBinder<T> {
+  private binding: IBinding;
 
   /**
-   * Called when the binding is initialized
+   * Binder context
    */
 
-  bind?: (this: TwoWayBinderContext<T>, el: HTMLElement) => void;
+  private context: any;
 
   /**
-   * Called when there"s a model update
+   * Target binder
    */
 
-  routine?: (this: TwoWayBinderContext<T>, el: HTMLElement, value: T) => void;
-
-  /**
-   * Called on binding death
-   */
-
-  unbind?: (this: TwoWayBinderContext<T>, el: HTMLElement) => void;
-
-}
-
-/**
- * All binder types
- */
-
-export type Binder<T> = OneWayBinder<T> | TwoWayBinder<T>;
-
-/**
- * Handle the binder lifecycle
- */
-
-export class BinderDirective implements Directive {
-
-  /**
-   * Bound node to this binding
-   */
-
-  public readonly node: HTMLElement;
-
-  /**
-   * Bound attribute name
-   */
-
-  public readonly attributeName: string;
-
-  /**
-   * Bound attribute value
-   */
-
-  public readonly attributeValue: string;
-
-  /**
-   * Bound model value path
-   */
-
-  public path: string;
-
-  /**
-   * Normalized binder
-   */
-
-  private binder: TwoWayBinder<any>;
-
-  /**
-   * Current binding context
-   */
-
-  private context: TwoWayBinderContext<any>;
+  private binder: IBinder;
 
   /**
    * @constructor
    */
 
-  constructor(node: HTMLElement, attrName: string, binder: Binder<any>) {
-    this.node = node;
-    this.attributeName = attrName;
-    this.attributeValue = node.getAttribute(attrName);
-    this.path = this.attributeValue;
-
+  constructor(binding: IBinding, binder: any) { // TODO types
+    this.binding = binding;
+    this.context = undefined;
     if (typeof binder === "function") {
       this.binder = { routine: binder };
     } else {
@@ -121,17 +40,14 @@ export class BinderDirective implements Directive {
    * Create a new context and start the binding with the DOM
    */
 
-  public bind(publish: (value: any) => void): void {
+  public bind(): void {
     if (this.context) {
       throw new Error("Binding is active");
     }
-
-    this.context = { publish };
-
-    this.node.removeAttribute(this.attributeName);
-
+    this.binding.el.removeAttribute(this.binding.attributeName);
+    this.context = {};
     if (this.binder.bind) {
-      this.binder.bind.call(this.context, this.node);
+      this.binder.bind.call(this.context, this.binding);
     }
   }
 
@@ -139,13 +55,12 @@ export class BinderDirective implements Directive {
    * Write a value to the DOM
    */
 
-  public write(value: any): void {
+  public routine(): void {
     if (!this.context) {
       throw new Error("Binding is not active");
     }
-
     if (this.binder.routine) {
-      this.binder.routine.call(this.context, this.node, value);
+      this.binder.routine.call(this.context, this.binding);
     }
   }
 
@@ -157,14 +72,11 @@ export class BinderDirective implements Directive {
     if (!this.context) {
       throw new Error("Binding is not active");
     }
-
     if (this.binder.unbind) {
-      this.binder.unbind.call(this.context, this.node);
+      this.binder.unbind.call(this.context, this.binding);
     }
-
+    this.binding.el.setAttribute(this.binding.attributeName, this.binding.attributeValue);
     this.context = undefined;
-
-    this.node.setAttribute(this.attributeName, this.attributeValue);
   }
 
 }

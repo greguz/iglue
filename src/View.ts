@@ -1,12 +1,13 @@
-import { Directive } from "./Directive";
+import { IBinding } from "./interfaces/IBinding";
+import { IDirective } from "./interfaces/IDirective";
+import { IModel, IModelCallback } from "./interfaces/IModel";
+import { IObserver } from "./interfaces/IObserver";
 
-import { Model } from "./model/Model";
+import { buildModel } from "./model";
 
 import { Binder, BinderDirective } from "./directives/BinderDirective";
 import { Component, ComponentDirective } from "./directives/ComponentDirective";
 import { TextDirective } from "./directives/TextDirective";
-
-import binders from './binders';
 
 export interface Collection<T> {
   [key: string]: T;
@@ -17,6 +18,77 @@ export interface ViewOptions {
   binders?: Collection<Binder<any>>;
   components?: Collection<Component>;
 }
+
+
+
+
+
+
+
+
+
+
+
+function extractBindingArgument(attrName: string): string {
+  const regex = /.+:(.+)$/;
+  if (regex.test(attrName)) {
+    return attrName.match(regex)[1];
+  } else {
+    return null;
+  }
+}
+
+function extractBindingName(attrName: string, prefix: string): string {
+  const regex = new RegExp(prefix + "-([^:]+)");
+  if (regex.test(attrName)) {
+    return attrName.match(regex)[1];
+  } else {
+    throw new Error('Invalid attribute');
+  }
+}
+
+function buildBinding(el: HTMLElement, attributeName: string, prefix: string, model: IModel, callback: IModelCallback): IBinding {
+  const attributeValue: string = el.getAttribute(attributeName);
+  const name: string = extractBindingName(attributeName, prefix);
+  const path: string = attributeValue;
+  const arg: string = extractBindingArgument(attributeName);
+  const observer: IObserver = model.observe(path, callback);
+
+  function get(): any {
+    return observer.get();
+  }
+
+  function set(value: any): void {
+    observer.set(value);
+  }
+
+  return {
+    el,
+    attributeName,
+    attributeValue,
+    name,
+    path,
+    arg,
+    observer,
+    get,
+    set
+  };
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * Build the default binder
@@ -80,13 +152,13 @@ export class View {
    * View model instance
    */
 
-  private model: Model;
+  private model: IModel;
 
   /**
    * Parsed DOM-data links
    */
 
-  private directives: Directive[];
+  private directives: IDirective[];
 
   /**
    * Attribute name regular expression
@@ -94,17 +166,35 @@ export class View {
 
   private prefix: RegExp;
 
+
+
+
+
+
+
+
+
+
+
+
+
+  /**
+   * Bound observers
+   */
+
+  private observers: IObserver[];
+
   /**
    * @constructor
    */
 
-  constructor(el: HTMLElement, data: any, options?: ViewOptions) {
+  constructor(el: HTMLElement, data: object, options?: ViewOptions) {
     this.el = el;
     this.data = data;
     this.options = options || {};
 
     this.directives = [];
-    this.model = new Model(data);
+    this.model = buildModel(data);
     this.binders = Object.assign({}, View.binders, this.options.binders);
     this.components = Object.assign({}, View.components, this.options.components);
     this.prefix = new RegExp("^" + (this.options.prefix || "wd") + "-(.+)$");
@@ -117,41 +207,25 @@ export class View {
    */
 
   public bind() {
-    const { model, directives } = this;
-
-    for (const directive of directives) {
-      // observed model path
-      const path = directive.path;
-
-      // initialize the directive passing the publish function
-      directive.bind((value) => {
-        // update the model on directive publishing
-        model.set(path, value);
-      });
-
-      // start model observing
-      model.observe(path, (value) => {
-        // notify the directive that the model has changed
-        directive.write(value);
-      });
-
-      // initialize the directive value
-      directive.write(model.get(path));
+    for (const directive of this.directives) {
+      directive.bind();
+    }
+    for (const observer of this.observers) {
+      observer.watch();
     }
   }
 
   /**
-   * Stop data binding
+   * Stop data binding and restore the DOM status
    */
 
   public unbind() {
-    const { model, directives } = this;
-
-    for (const directive of directives) {
+    for (const observer of this.observers) {
+      observer.ignore();
+    }
+    for (const directive of this.directives) {
       directive.unbind();
     }
-
-    model.unobserve();
   }
 
   /**
@@ -159,19 +233,9 @@ export class View {
    */
 
   public refresh() {
-    const { model, directives } = this;
-
-    for (const directive of directives) {
-      directive.write(model.get(directive.path));
+    for (const directive of this.directives) {
+      directive.routine();
     }
-  }
-
-  /**
-   * Create a new view with the same data binding
-   */
-
-  public clone(el: HTMLElement): View {
-    return new View(el, this.data);
   }
 
   /**
@@ -204,35 +268,29 @@ export class View {
    * Load a component
    */
 
-  private loadComponent(node: HTMLElement): void {
-    // create the component context
+  private loadComponent(el: HTMLElement): void {
+
+    function updateComponent() {
+
+
+    }
+
     const context: any = {};
 
-    // tslint:disable-next-line: prefer-for-of
-    for (let i = 0; i < node.attributes.length; i++) {
-      const attr: Attr = node.attributes[i];
+    for (let i = 0; i < el.attributes.length; i++) {
 
-      // component context update function
-      function write(value: any): void {
-        context[attr.name] = value;
-      }
+      const attr: Attr = el.attributes[i];
 
-      // initialize the component context
-      write(this.model.get(attr.value));
+      const binding: IBinding = buildBinding(el, attr.name, '', this.model, updateComponent);
 
-      // save the directive for this path
-      this.directives.push({
-        path: attr.value,
-        bind: () => undefined,
-        write,
-        unbind: () => undefined
-      });
+      this.observers.push(binding.observer);
+
     }
 
     // create the component directive
     this.directives.push(
       new ComponentDirective(
-        node,
+        el,
         context,
         this.options,
         function resolveComponentName(name: string): Component {
