@@ -1,147 +1,70 @@
-import { Directive } from "../Directive";
-import { View, ViewOptions } from "../View";
+import { IBinding } from "../interfaces/IBinding";
+import { IComponent } from "../interfaces/IComponent";
+import { IDirective } from "../interfaces/IDirective";
 
-/**
- * Component context
- */
+import { View } from "../View";
 
-export interface ComponentContext { [key: string]: any; }
 
-/**
- * Component interface
- */
 
-export interface Component {
 
-  /**
-   * The component HTML template
-   */
 
-  template: string;
 
-  /**
-   * Component loaded, data-binding and DOM not initialized
-   */
 
-  create?(this: ComponentContext): void;
 
-  /**
-   * DOM initialized, data-binding is not running
-   */
 
-  attach?(this: ComponentContext, el: HTMLElement): void;
 
-  /**
-   * Both DOM and data-binding are initialized
-   */
 
-  bind?(this: ComponentContext, view: View): void;
 
-  /**
-   * The data-binding and the DOM are still running
-   */
 
-  unbind?(this: ComponentContext, view: View): void;
 
-  /**
-   * The data-binding is stopped, the DOM is still untached
-   */
 
-  detach?(this: ComponentContext, el: HTMLElement): void;
 
-  /**
-   * Both data-biding and DOM are dead
-   */
 
-  destroy?(this: ComponentContext): void;
 
+
+export interface IComponentDirectiveOptions {
+  node: HTMLElement;
+  bindings: IBinding[];
+  components: (name: string) => IComponent;
+  view: (el: HTMLElement, data: object) => View;
 }
 
-/**
- * Function that resolve a component name into a component object
- */
-
-export type ResolveComponentName = (name: string) => Component;
-
-/**
- * Directive that manages the component lifecycle
- */
-
-export class ComponentDirective implements Directive {
-
-  /**
-   * Observed path, the component name
-   */
-
-  public readonly path: string;
-
-  /**
-   * The parent DOM node of this component
-   */
+export class ComponentDirective implements IDirective {
 
   private parentNode: HTMLElement;
-
-  /**
-   * Original node where the conponent was configured
-   */
-
   private originalNode: HTMLElement;
-
-  /**
-   * Current rendered node
-   */
-
   private currentNode: HTMLElement;
-
-  /**
-   * The loaded component object
-   */
-
-  private component: Component;
-
-  /**
-   * Currently bound view
-   */
-
+  private component: IComponent;
   private view: View;
-
-  /**
-   * Component context
-   */
-
   private context: any;
 
-  /**
-   * Parent view configuration
-   */
+  private isBinding: IBinding;
 
-  private options: ViewOptions;
+  private bindings: IBinding[];
 
-  /**
-   * Component name resolution function
-   */
-
-  private resolve: ResolveComponentName;
+  private getComponentPrototoype: (name: string) => IComponent;
+  private buildView: (el: HTMLElement, data: object) => View;
 
   /**
    * @constructor
    */
 
-  constructor(node: HTMLElement, context: any, options: ViewOptions, resolve: ResolveComponentName) {
+  constructor(options: IComponentDirectiveOptions) {
+
+    const node: HTMLElement = options.node;
+
     this.parentNode = node.parentElement;
     this.originalNode = node;
     this.currentNode = node;
-    this.context = context;
-    this.resolve = resolve;
-    this.options = options;
 
-    const name = node.tagName.toLowerCase();
-    if (name === "component") {
-      this.path = node.getAttribute("is");
-    } else {
-      this.path = "__";
-      this.component = this.resolve(name);
-    }
+    this.context = context;
+
+    this.bindings = options.bindings;
+    this.getComponentPrototoype = options.components;
+    this.buildView = options.view;
+
+
+
   }
 
   /**
@@ -149,6 +72,32 @@ export class ComponentDirective implements Directive {
    */
 
   public bind(): void {
+
+    const nodeName = this.originalNode.tagName.toLowerCase();
+
+    let componentName: string;
+
+    if (nodeName === "component") {
+
+      const binding = this.bindings.find(
+        (b: IBinding): boolean => b.path === "is"
+      );
+
+      if (binding) {
+        componentName = binding.get();
+      } else {
+        throw new Error("Missing is attribute");
+      }
+
+    } else {
+      componentName = nodeName;
+    }
+
+    this.component = this.getComponentPrototoype(componentName);
+
+
+
+
     if (this.component) {
       // DOM and data-binding both not initialized
       if (this.component.create) {
@@ -182,7 +131,7 @@ export class ComponentDirective implements Directive {
    * Chaneg the current component
    */
 
-  public write(value: string): void {
+  public routine(): void {
     if (this.component) {
       this.unbind();
     }
