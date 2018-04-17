@@ -1,26 +1,28 @@
-import { Directive } from "../Directive";
+import { IDirective } from "../interfaces/IDirective";
+import { IObserver } from "../interfaces/IObserver";
 
-export class TextDirective implements Directive {
-
-  public readonly path: string;
+export class TextDirective implements IDirective {
 
   private node: Text;
 
-  constructor(node: Text, path: string) {
+  private observer: IObserver;
+
+  constructor(node: Text, observer: IObserver) {
     this.node = node;
-    this.path = path;
+    this.observer = observer;
   }
 
   public bind(): void {
     // nothing to do
   }
 
-  public write(value: string): void {
+  public routine(): void {
+    const value: any = this.observer.get();
     this.node.data = value == null ? "" : value.toString();
   }
 
   public unbind(): void {
-    this.node.data = `{ ${this.path} }`;
+    // noting to do
   }
 
 }
