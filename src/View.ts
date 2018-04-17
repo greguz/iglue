@@ -1,33 +1,19 @@
+import { IBinder, IBinderHook } from "./interfaces/IBinder";
 import { IBinding } from "./interfaces/IBinding";
+import { IComponent } from "./interfaces/IComponent";
 import { IDirective } from "./interfaces/IDirective";
-import { IModel, IModelCallback } from "./interfaces/IModel";
+import { IModel } from "./interfaces/IModel";
 import { IObserver } from "./interfaces/IObserver";
 
 import { buildModel } from "./model";
 
-import { Binder, BinderDirective } from "./directives/BinderDirective";
-import { Component, ComponentDirective } from "./directives/ComponentDirective";
+import { BinderDirective } from "./directives/BinderDirective";
+import { ComponentDirective } from "./directives/ComponentDirective";
 import { TextDirective } from "./directives/TextDirective";
 
-export interface Collection<T> {
-  [key: string]: T;
+function extractBindingPath(attrValue: string): string {
+  return attrValue;
 }
-
-export interface ViewOptions {
-  prefix?: string;
-  binders?: Collection<Binder<any>>;
-  components?: Collection<Component>;
-}
-
-
-
-
-
-
-
-
-
-
 
 function extractBindingArgument(attrName: string): string {
   const regex = /.+:(.+)$/;
@@ -39,7 +25,7 @@ function extractBindingArgument(attrName: string): string {
 }
 
 function extractBindingName(attrName: string, prefix: string): string {
-  const regex = new RegExp(prefix + "-([^:]+)");
+  const regex = new RegExp(prefix + "([^:]+)");
   if (regex.test(attrName)) {
     return attrName.match(regex)[1];
   } else {
@@ -47,12 +33,11 @@ function extractBindingName(attrName: string, prefix: string): string {
   }
 }
 
-function buildBinding(el: HTMLElement, attributeName: string, prefix: string, model: IModel, callback: IModelCallback): IBinding {
+function buildBinding(el: HTMLElement, attributeName: string, prefix: string, observer: IObserver): IBinding {
   const attributeValue: string = el.getAttribute(attributeName);
   const name: string = extractBindingName(attributeName, prefix);
-  const path: string = attributeValue;
+  const path: string = extractBindingPath(attributeValue);
   const arg: string = extractBindingArgument(attributeName);
-  const observer: IObserver = model.observe(path, callback);
 
   function get(): any {
     return observer.get();
@@ -69,54 +54,33 @@ function buildBinding(el: HTMLElement, attributeName: string, prefix: string, mo
     name,
     path,
     arg,
-    observer,
     get,
     set
   };
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * Build the default binder
- */
-
-function buildDefaultBinder(attrName: string): Binder<any> {
-  return function bindAttributeValue(el: HTMLElement, value: any): void {
+function buildDefaultBinder(attrName: string): IBinderHook {
+  return function bindAttributeValue(binding: IBinding): void {
+    const value: boolean = binding.get();
     if (value == null) {
-      el.removeAttribute(attrName);
+      binding.el.removeAttribute(attrName);
     } else {
-      el.setAttribute(attrName, value.toString());
+      binding.el.setAttribute(attrName, value.toString());
     }
   };
 }
 
+export interface Collection<T> {
+  [key: string]: T;
+}
+
+export interface IViewOptions {
+  prefix?: string;
+  binders?: Collection<IBinder | IBinderHook>;
+  components?: Collection<IComponent>;
+}
+
 export class View {
-
-  /**
-   * Binders collection
-   */
-
-  public static binders: Collection<Binder<any>> = binders;
-
-  /**
-   * Binders collection
-   */
-
-  public static components: Collection<Component> = {};
 
   /**
    * Bound DOM element
@@ -131,22 +95,28 @@ export class View {
   public readonly data: any;
 
   /**
-   * View options
+   * Binders prefix
    */
 
-  public readonly options: ViewOptions;
+  private prefix: string;
+
+  /**
+   * Binders prefix
+   */
+
+  private prefixRegExp: RegExp;
 
   /**
    * Binders collection
    */
 
-  private binders: Collection<Binder<any>>;
+  private binders: Collection<IBinder | IBinderHook>;
 
   /**
    * Binders collection
    */
 
-  private components: Collection<Component>;
+  private components: Collection<IComponent>;
 
   /**
    * View model instance
@@ -155,49 +125,35 @@ export class View {
   private model: IModel;
 
   /**
-   * Parsed DOM-data links
-   */
-
-  private directives: IDirective[];
-
-  /**
-   * Attribute name regular expression
-   */
-
-  private prefix: RegExp;
-
-
-
-
-
-
-
-
-
-
-
-
-
-  /**
    * Bound observers
    */
 
   private observers: IObserver[];
 
   /**
+   * Parsed DOM-data links
+   */
+
+  private directives: IDirective[];
+
+  /**
    * @constructor
    */
 
-  constructor(el: HTMLElement, data: object, options?: ViewOptions) {
+  constructor(el: HTMLElement, data: object, options: IViewOptions = {}) {
     this.el = el;
     this.data = data;
-    this.options = options || {};
 
-    this.directives = [];
+    this.prefix = options.prefix || "wd-";
+    this.prefixRegExp = new RegExp("^" + this.prefix + "(.+)$");
+
+    this.binders = options.binders || {};
+    this.components = options.components || {};
+
     this.model = buildModel(data);
-    this.binders = Object.assign({}, View.binders, this.options.binders);
-    this.components = Object.assign({}, View.components, this.options.components);
-    this.prefix = new RegExp("^" + (this.options.prefix || "wd") + "-(.+)$");
+
+    this.observers = [];
+    this.directives = [];
 
     this.traverse(el);
   }
@@ -207,9 +163,15 @@ export class View {
    */
 
   public bind() {
+    // initialize directives
     for (const directive of this.directives) {
       directive.bind();
     }
+    // call first routine
+    for (const directive of this.directives) {
+      directive.routine();
+    }
+    // start values watching
     for (const observer of this.observers) {
       observer.watch();
     }
@@ -220,9 +182,11 @@ export class View {
    */
 
   public unbind() {
+    // stop values watching
     for (const observer of this.observers) {
       observer.ignore();
     }
+    // de-init all directives
     for (const directive of this.directives) {
       directive.unbind();
     }
@@ -233,6 +197,7 @@ export class View {
    */
 
   public refresh() {
+    // call the routine for all directives
     for (const directive of this.directives) {
       directive.routine();
     }
@@ -268,40 +233,43 @@ export class View {
    * Load a component
    */
 
-  private loadComponent(el: HTMLElement): void {
+  private loadComponent(node: HTMLElement): void {
+    const observers: IObserver[] = [];
+    const bindings: IBinding[] = [];
 
-    function updateComponent() {
-
-
+    for (let i = 0; i < node.attributes.length; i++) {
+      const attr: Attr = node.attributes[i];
+      const observer: IObserver = this.model.observe(extractBindingPath(attr.value));
+      observers.push(observer);
+      bindings.push(buildBinding(node, attr.name, '', observer));
     }
 
-    const context: any = {};
-
-    for (let i = 0; i < el.attributes.length; i++) {
-
-      const attr: Attr = el.attributes[i];
-
-      const binding: IBinding = buildBinding(el, attr.name, '', this.model, updateComponent);
-
-      this.observers.push(binding.observer);
-
-    }
-
-    // create the component directive
-    this.directives.push(
-      new ComponentDirective(
-        el,
-        context,
-        this.options,
-        function resolveComponentName(name: string): Component {
-          const component = this.components[name];
-          if (!component) {
-            throw new Error(`Unable to load component "${name}"`);
-          }
+    const directive: IDirective = new ComponentDirective({
+      node,
+      bindings,
+      components: (name: string): IComponent => {
+        const component = this.components[name];
+        if (component) {
           return component;
+        } else {
+          throw new Error(`Unable to find component "${name}"`);
         }
-      )
-    );
+      },
+      view: (el: HTMLElement, data: any): View => {
+        return new View(el, data, {
+          prefix: this.prefix,
+          components: this.components,
+          binders: this.binders
+        });
+      }
+    });
+
+    for (const observer of observers) {
+      observer.bindTo(directive);
+    }
+
+    this.observers.push(...observers);
+    this.directives.push(directive);
   }
 
   /**
@@ -309,24 +277,28 @@ export class View {
    */
 
   private loadBinders(node: HTMLElement): void {
-    // tslint:disable-next-line: prefer-for-of
     for (let i = 0; i < node.attributes.length; i++) {
       const attr: Attr = node.attributes[i];
 
-      const matches = attr.name.match(this.prefix);
+      const matches = attr.name.match(this.prefixRegExp);
       if (!matches) {
         continue;
       }
 
+      const observer: IObserver = this.model.observe(extractBindingPath(attr.value));
+
+      const binding: IBinding = buildBinding(node, attr.name, this.prefix, observer);
+
       const binderName: string = matches[1];
 
-      this.directives.push(
-        new BinderDirective(
-          node,
-          attr.name,
-          this.binders[binderName] || buildDefaultBinder(binderName)
-        )
-      );
+      const binder: IBinder | IBinderHook = this.binders[binderName] || buildDefaultBinder(binderName);
+
+      const directive: IDirective = new BinderDirective(binding, binder);
+
+      observer.bindTo(directive);
+
+      this.observers.push(observer);
+      this.directives.push(directive);
     }
   }
 
@@ -358,15 +330,20 @@ export class View {
           throw new Error("Invalid text binding");
         }
 
-        this.directives.push(
-          new TextDirective(
-            parent.insertBefore(
-              document.createTextNode(`{ ${path} }`),
-              node
-            ),
-            path
-          )
+        const observer: IObserver = this.model.observe(path);
+
+        const directive: IDirective = new TextDirective(
+          parent.insertBefore(
+            document.createTextNode(`{ ${path} }`),
+            node
+          ),
+          observer
         );
+
+        observer.bindTo(directive);
+
+        this.observers.push(observer);
+        this.directives.push(directive);
 
         chunk = "";
       } else {
