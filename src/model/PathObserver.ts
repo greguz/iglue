@@ -1,4 +1,4 @@
-import { observe, unobserve } from "./observe";
+import { observeProperty, unobserveProperty } from "./object";
 
 export class PathObserver {
 
@@ -62,7 +62,7 @@ export class PathObserver {
       const obj: any = values[i];
 
       if (typeof obj === "object") {
-        observe(
+        observeProperty(
           obj,
           token,
           this.update
@@ -128,7 +128,7 @@ export class PathObserver {
       const obj: any = values[i];
 
       if (typeof obj === "object") {
-        unobserve(
+        unobserveProperty(
           obj,
           token,
           this.update
@@ -155,10 +155,10 @@ export class PathObserver {
 
       if (current !== previous) {
         if (typeof previous === "object") {
-          unobserve(previous, token, this.update);
+          unobserveProperty(previous, token, this.update);
         }
         if (typeof current === "object") {
-          observe(current, token, this.update);
+          observeProperty(current, token, this.update);
         }
         if (i === tokens.length) {
           this.callback(current);
