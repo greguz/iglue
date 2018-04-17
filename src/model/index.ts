@@ -1,11 +1,21 @@
-import { IModel, IModelCallback } from "../interfaces/IModel";
+import { IDirective } from "../interfaces/IDirective";
+import { IModel } from "../interfaces/IModel";
 import { IObserver } from "../interfaces/IObserver";
 
 import { PathObserver } from "./PathObserver";
 
-function buildObserver(obj: object, path: string, callback: IModelCallback): IObserver {
+function buildObserver(obj: object, path: string): IObserver {
+  const directives: IDirective[] = [];
   const po: PathObserver = new PathObserver(obj, path);
+
   let watching: boolean = false;
+
+  // fire the routine for all bound directives
+  function routine() {
+    for (const directive of directives) {
+      directive.routine();
+    }
+  }
 
   // get current value
   function get(): any {
@@ -20,7 +30,7 @@ function buildObserver(obj: object, path: string, callback: IModelCallback): IOb
   // watch for changes
   function watch(): void {
     if (watching === false) {
-      po.observe(callback);
+      po.observe(routine);
       watching = true;
     }
   }
@@ -44,7 +54,8 @@ function buildObserver(obj: object, path: string, callback: IModelCallback): IOb
     set,
     watch,
     ignore,
-    isWatching
+    isWatching,
+    bindTo: directives.push.bind(directives)
   };
 }
 
@@ -53,8 +64,8 @@ export function buildModel(obj: object): IModel {
     throw new Error('The model data is not an object');
   }
 
-  function observe(path: string, callback: IModelCallback): IObserver {
-    return buildObserver(obj, path, callback);
+  function observe(path: string): IObserver {
+    return buildObserver(obj, path);
   }
 
   return {

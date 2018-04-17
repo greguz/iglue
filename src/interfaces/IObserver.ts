@@ -1,3 +1,5 @@
+import { IDirective } from "./IDirective";
+
 /**
  * Represents an observed value
  */
@@ -33,5 +35,11 @@ export interface IObserver {
    */
 
   isWatching(): boolean;
+
+  /**
+   * Bind this observer to directives
+   */
+
+  bindTo(...directives: IDirective[]): void
 
 }
