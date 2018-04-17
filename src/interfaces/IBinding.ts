@@ -1,5 +1,3 @@
-import { IObserver } from "./IObserver";
-
 export interface IBinding {
 
   /**
@@ -38,12 +36,6 @@ export interface IBinding {
    */
 
   readonly arg: string | null;
-
-  /**
-   * Modal observer for this path
-   */
-
-  readonly observer: IObserver;
 
   /**
    * Get the parsed value from model
