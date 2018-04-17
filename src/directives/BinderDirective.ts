@@ -1,4 +1,4 @@
-import { IBinder } from "../interfaces/IBinder";
+import { IBinder, IBinderHook } from "../interfaces/IBinder";
 import { IBinding } from "../interfaces/IBinding";
 import { IDirective } from "../interfaces/IDirective";
 
@@ -26,7 +26,7 @@ export class BinderDirective implements IDirective {
    * @constructor
    */
 
-  constructor(binding: IBinding, binder: any) { // TODO types
+  constructor(binding: IBinding, binder: IBinder | IBinderHook) {
     this.binding = binding;
     this.context = undefined;
     if (typeof binder === "function") {

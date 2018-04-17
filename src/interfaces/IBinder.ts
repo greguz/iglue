@@ -1,23 +1,25 @@
 import { IBinding } from "./IBinding";
 
-export interface IBinder {
+export type IBinderHook<T = any> = (this: T, binding: IBinding) => void;
+
+export interface IBinder<T = any> {
 
   /**
    * Triggered when the binding is created
    */
 
-  bind?(this: any, binding: IBinding): void;
+  bind?: IBinderHook<T>;
 
   /**
    * Triggered when the watched value changes
    */
 
-  routine?(this: any, binding: IBinding): void;
+  routine?: IBinderHook<T>;
 
   /**
    * Triggered when the binding is destroyed
    */
 
-  unbind?(this: any, binding: IBinding): void;
+  unbind?: IBinderHook<T>;
 
 }
