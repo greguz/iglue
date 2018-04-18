@@ -1,4 +1,6 @@
-export interface IBinding {
+import { IAttributeInfo } from "./IAttributeInfo";
+
+export interface IBinding extends Readonly<IAttributeInfo> {
 
   /**
    * Bound element
@@ -7,44 +9,13 @@ export interface IBinding {
   readonly el: HTMLElement;
 
   /**
-   * Raw attribute name
-   */
-
-  readonly attributeName: string;
-
-  /**
-   * Raw attribute value
-   */
-
-  readonly attributeValue: string;
-
-  /**
-   * Binding name
-   */
-
-  readonly name: string;
-
-  /**
-   * Value path
-   */
-
-  readonly path: string;
-
-  /**
-   * Binding argument
-   * @example wd-test:arg="event.name"
-   */
-
-  readonly arg: string | null;
-
-  /**
-   * Get the parsed value from model
+   * Get value from model
    */
 
   get(): any;
 
   /**
-   * Set the parsed value into model
+   * Update model value
    */
 
   set(value: any): void;
