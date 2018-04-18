@@ -4,6 +4,7 @@ import { IComponent } from "./interfaces/IComponent";
 import { IDirective } from "./interfaces/IDirective";
 import { IModel } from "./interfaces/IModel";
 import { IObserver } from "./interfaces/IObserver";
+import { IView } from "./interfaces/IView";
 
 import { buildModel } from "./model";
 
@@ -80,13 +81,13 @@ export interface IViewOptions {
   components?: Collection<IComponent>;
 }
 
-export class View {
+export class View implements IView {
 
   /**
    * Bound DOM element
    */
 
-  public readonly el: HTMLElement;
+  public readonly node: HTMLElement;
 
   /**
    * Bound data
@@ -137,11 +138,17 @@ export class View {
   private directives: IDirective[];
 
   /**
+   * Binding status
+   */
+
+  private bound: boolean;
+
+  /**
    * @constructor
    */
 
-  constructor(el: HTMLElement, data: object, options: IViewOptions = {}) {
-    this.el = el;
+  constructor(node: HTMLElement, data: object, options: IViewOptions = {}) {
+    this.node = node;
     this.data = data;
 
     this.prefix = options.prefix || "wd-";
@@ -154,8 +161,9 @@ export class View {
 
     this.observers = [];
     this.directives = [];
+    this.bound = false;
 
-    this.traverse(el);
+    this.traverse(node);
   }
 
   /**
@@ -175,6 +183,19 @@ export class View {
     for (const observer of this.observers) {
       observer.watch();
     }
+    // update status
+    this.bound = true;
+  }
+
+  /**
+   * Refresh the DOM
+   */
+
+  public refresh() {
+    // call the routine for all directives
+    for (const directive of this.directives) {
+      directive.routine();
+    }
   }
 
   /**
@@ -190,17 +211,32 @@ export class View {
     for (const directive of this.directives) {
       directive.unbind();
     }
+    // update status
+    this.bound = false;
   }
 
   /**
-   * Refresh the DOM
+   * Clone the current view configuration and optinally the model
    */
 
-  public refresh() {
-    // call the routine for all directives
-    for (const directive of this.directives) {
-      directive.routine();
-    }
+  public clone(node: HTMLElement, data?: object): View {
+    return new View(
+      node,
+      data || this.data,
+      {
+        prefix: this.prefix,
+        binders: this.binders,
+        components: this.components
+      }
+    );
+  }
+
+  /**
+   * Returns true when the view is bound to the element
+   */
+
+  public isBound(): boolean {
+    return this.bound;
   }
 
   /**

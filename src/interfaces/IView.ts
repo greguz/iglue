@@ -36,4 +36,10 @@ export interface IView {
 
   clone(node: HTMLElement, data?: object): IView;
 
+  /**
+   * Returns true when the view is bound to the element
+   */
+
+  isBound(): boolean;
+
 }
