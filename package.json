@@ -1,8 +1,8 @@
 {
   "name": "iglue",
   "version": "0.1.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Intuitive Data Binding engine",
+  "main": "iglue.js",
   "scripts": {
     "check": "tsc --noEmit",
     "lint": "tslint -c tslint.json src/**/*.ts",
