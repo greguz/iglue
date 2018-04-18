@@ -1,3 +1,3 @@
-# weld
+# iglue
 
-Data binding engine
+Intuitive Data Binding engine
