@@ -20,7 +20,7 @@ export interface IAttributeNameInfo {
 export interface IAttributeValueInfo {
   path: string;
   formatter: string;
-  // TODO formatter arguments
+  args: IFormatterArgument[];
 }
 
 export interface IFormatterArgument {

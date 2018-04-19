@@ -1,4 +1,4 @@
-import { View } from "../View";
+import { IView } from "./IView";
 
 export interface IComponent<T = any> {
 
@@ -24,13 +24,13 @@ export interface IComponent<T = any> {
    * Both DOM and data-binding are initialized
    */
 
-  bind?: (this: T, view: View) => void;
+  bind?: (this: T, view: IView) => void;
 
   /**
    * The data-binding and the DOM are still running
    */
 
-  unbind?: (this: T, view: View) => void;
+  unbind?: (this: T, view: IView) => void;
 
   /**
    * The data-binding is stopped, the DOM is still untached
