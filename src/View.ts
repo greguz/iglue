@@ -1,5 +1,6 @@
 import { IBinder, IBinderHook } from "./interfaces/IBinder";
 import { IBinding } from "./interfaces/IBinding";
+import { ICollection } from "./interfaces/ICollection";
 import { IComponent } from "./interfaces/IComponent";
 import { IDirective } from "./interfaces/IDirective";
 import { IModel } from "./interfaces/IModel";
@@ -71,14 +72,10 @@ function buildDefaultBinder(attrName: string): IBinderHook {
   };
 }
 
-export interface Collection<T> {
-  [key: string]: T;
-}
-
 export interface IViewOptions {
   prefix?: string;
-  binders?: Collection<IBinder | IBinderHook>;
-  components?: Collection<IComponent>;
+  binders?: ICollection<IBinder | IBinderHook>;
+  components?: ICollection<IComponent>;
 }
 
 export class View implements IView {
@@ -111,13 +108,13 @@ export class View implements IView {
    * Binders collection
    */
 
-  private binders: Collection<IBinder | IBinderHook>;
+  private binders: ICollection<IBinder | IBinderHook>;
 
   /**
    * Binders collection
    */
 
-  private components: Collection<IComponent>;
+  private components: ICollection<IComponent>;
 
   /**
    * View model instance
