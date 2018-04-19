@@ -1,4 +1,4 @@
-import { IAttributeInfo } from "./IAttributeInfo";
+import { IAttributeInfo } from "./IAttributeParser";
 
 export interface IBinding extends Readonly<IAttributeInfo> {
 
