@@ -34,6 +34,7 @@ export interface IAttributeInfo extends IAttributeNameInfo, IAttributeValueInfo 
 }
 
 export interface IAttributeParser {
+  match: (attrName: string) => boolean;
   parseName: (attrName: string) => IAttributeNameInfo;
   parseValue: (attrValue: string) => IAttributeValueInfo;
   parse: (el: HTMLElement, attrName: string) => IAttributeInfo;

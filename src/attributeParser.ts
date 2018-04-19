@@ -1,19 +1,5 @@
 import { IAttributeParser, IAttributeInfo, IAttributeNameInfo, IAttributeValueInfo } from "./interfaces/IAttributeParser";
 
-function buildDirectiveParser(prefix: string): (attrName: string) => string {
-  const regex = new RegExp("^" + prefix + "([^:\.]+)");
-
-  return function parseDirective(attrName: string): string {
-    const match = attrName.match(regex);
-
-    if (match) {
-      return match[1];
-    } else {
-      throw new Error(`The attribute name "${attrName}" does not match with prefix "${prefix}"`);
-    }
-  }
-}
-
 function parseArgument(attrName: string): string {
   const match = attrName.match(/:([^\.]+)/);
 
@@ -57,7 +43,17 @@ function parseFormatter(attrValue: string): string {
 }
 
 export function buildAttributeParser(prefix: string): IAttributeParser {
-  const parseDirective = buildDirectiveParser(prefix);
+  const regex = new RegExp("^" + prefix + "([^:\.]+)");
+
+  function parseDirective(attrName: string): string {
+    const match = attrName.match(regex);
+
+    if (match) {
+      return match[1];
+    } else {
+      throw new Error(`The attribute name "${attrName}" does not match with prefix "${prefix}"`);
+    }
+  }
 
   function parseName(attrName: string): IAttributeNameInfo {
     return {
@@ -101,7 +97,12 @@ export function buildAttributeParser(prefix: string): IAttributeParser {
     return false;
   }
 
+  function match(attrName: string): boolean {
+    return regex.test(attrName);
+  }
+
   return {
+    match,
     parseName,
     parseValue,
     parse,

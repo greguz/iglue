@@ -1,3 +1,4 @@
+import { IAttributeParser, IAttributeInfo } from "./interfaces/IAttributeParser";
 import { IBinder, IBinderHook } from "./interfaces/IBinder";
 import { IBinding } from "./interfaces/IBinding";
 import { ICollection } from "./interfaces/ICollection";
@@ -8,58 +9,11 @@ import { IObserver } from "./interfaces/IObserver";
 import { IView } from "./interfaces/IView";
 
 import { buildModel } from "./model";
+import { buildAttributeParser } from "./attributeParser";
 
 import { BinderDirective } from "./directives/BinderDirective";
 import { ComponentDirective } from "./directives/ComponentDirective";
 import { TextDirective } from "./directives/TextDirective";
-
-function extractBindingPath(attrValue: string): string {
-  return attrValue;
-}
-
-function extractBindingArgument(attrName: string): string {
-  const regex = /.+:(.+)$/;
-  if (regex.test(attrName)) {
-    return attrName.match(regex)[1];
-  } else {
-    return null;
-  }
-}
-
-function extractBindingName(attrName: string, prefix: string): string {
-  const regex = new RegExp(prefix + "([^:]+)");
-  if (regex.test(attrName)) {
-    return attrName.match(regex)[1];
-  } else {
-    throw new Error('Invalid attribute');
-  }
-}
-
-function buildBinding(el: HTMLElement, attributeName: string, prefix: string, observer: IObserver): IBinding {
-  const attributeValue: string = el.getAttribute(attributeName);
-  const name: string = extractBindingName(attributeName, prefix);
-  const path: string = extractBindingPath(attributeValue);
-  const arg: string = extractBindingArgument(attributeName);
-
-  function get(): any {
-    return observer.get();
-  }
-
-  function set(value: any): void {
-    observer.set(value);
-  }
-
-  return {
-    el,
-    attributeName,
-    attributeValue,
-    name,
-    path,
-    arg,
-    get,
-    set
-  };
-}
 
 function buildDefaultBinder(attrName: string): IBinderHook {
   return function bindAttributeValue(binding: IBinding): void {
@@ -91,18 +45,6 @@ export class View implements IView {
    */
 
   public readonly data: any;
-
-  /**
-   * Binders prefix
-   */
-
-  private prefix: string;
-
-  /**
-   * Binders prefix
-   */
-
-  private prefixRegExp: RegExp;
 
   /**
    * Binders collection
@@ -141,6 +83,18 @@ export class View implements IView {
   private bound: boolean;
 
   /**
+   * Attribute parser
+   */
+
+  private parser: IAttributeParser;
+
+  /**
+   * Configured directive prefix
+   */
+
+  private prefix: string;
+
+  /**
    * @constructor
    */
 
@@ -149,16 +103,15 @@ export class View implements IView {
     this.data = data;
 
     this.prefix = options.prefix || "wd-";
-    this.prefixRegExp = new RegExp("^" + this.prefix + "(.+)$");
+    this.observers = [];
+    this.directives = [];
+    this.bound = false;
 
     this.binders = options.binders || {};
     this.components = options.components || {};
 
+    this.parser = buildAttributeParser(this.prefix);
     this.model = buildModel(data);
-
-    this.observers = [];
-    this.directives = [];
-    this.bound = false;
 
     this.traverse(node);
   }
@@ -272,9 +225,20 @@ export class View implements IView {
 
     for (let i = 0; i < node.attributes.length; i++) {
       const attr: Attr = node.attributes[i];
-      const observer: IObserver = this.model.observe(extractBindingPath(attr.value));
+      const info: IAttributeInfo = {
+        attrName: attr.name,
+        attrValue: attr.value,
+        prefix: '',
+        directive: attr.name,
+        arg: null,
+        modifiers: [],
+        path: attr.value,
+        formatter: null,
+        args: []
+      };
+      const observer: IObserver = this.model.observe(info.path);
       observers.push(observer);
-      bindings.push(buildBinding(node, attr.name, '', observer));
+      bindings.push(this.buildBinding(node, info, observer));
     }
 
     const directive: IDirective = new ComponentDirective({
@@ -313,18 +277,17 @@ export class View implements IView {
     for (let i = 0; i < node.attributes.length; i++) {
       const attr: Attr = node.attributes[i];
 
-      const matches = attr.name.match(this.prefixRegExp);
-      if (!matches) {
+      if (!this.parser.match(attr.name)) {
         continue;
       }
 
-      const observer: IObserver = this.model.observe(extractBindingPath(attr.value));
+      const info: IAttributeInfo = this.parser.parse(node, attr.name);
 
-      const binding: IBinding = buildBinding(node, attr.name, this.prefix, observer);
+      const observer: IObserver = this.model.observe(info.path);
 
-      const binderName: string = matches[1];
+      const binding: IBinding = this.buildBinding(node, info, observer);
 
-      const binder: IBinder | IBinderHook = this.binders[binderName] || buildDefaultBinder(binderName);
+      const binder: IBinder | IBinderHook = this.binders[info.directive] || buildDefaultBinder(info.directive);
 
       const directive: IDirective = new BinderDirective(binding, binder);
 
@@ -392,6 +355,24 @@ export class View implements IView {
     }
 
     node.parentElement.removeChild(node);
+  }
+
+  /**
+   * Build attribute binding
+   */
+
+  private buildBinding(el: HTMLElement, info: IAttributeInfo, observer: IObserver): IBinding {
+    // TODO formatter
+
+    function get(): any {
+      return observer.get();
+    }
+
+    function set(value: any): void {
+      observer.set(value);
+    }
+
+    return Object.assign({ el, get, set }, info);
   }
 
 }
