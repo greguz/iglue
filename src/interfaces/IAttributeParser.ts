@@ -32,3 +32,10 @@ export interface IAttributeInfo extends IAttributeNameInfo, IAttributeValueInfo 
   attrName: string;
   attrValue: string;
 }
+
+export interface IAttributeParser {
+  parseName: (attrName: string) => IAttributeNameInfo;
+  parseValue: (attrValue: string) => IAttributeValueInfo;
+  parse: (el: HTMLElement, attrName: string) => IAttributeInfo;
+  hasDirective: (el: HTMLElement, directive: string) => boolean;
+}
