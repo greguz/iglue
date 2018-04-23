@@ -13,7 +13,7 @@ import { buildAttributeParser } from "./attributeParser";
 
 import { buildBinderDirective } from "./directives/binder";
 import { ComponentDirective } from "./directives/ComponentDirective";
-import { TextDirective } from "./directives/TextDirective";
+import { buildTextDirective } from "./directives/text";
 
 function buildDefaultBinder(attrName: string): IBinderHook {
   return function bindAttributeValue(binding: IBinding): void {
@@ -328,7 +328,7 @@ export class View implements IView {
 
         const observer: IObserver = this.model.observe(path);
 
-        const directive: IDirective = new TextDirective(
+        const directive: IDirective = buildTextDirective(
           parent.insertBefore(
             document.createTextNode(`{ ${path} }`),
             node
