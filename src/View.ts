@@ -11,7 +11,7 @@ import { IView } from "./interfaces/IView";
 import { buildModel } from "./model";
 import { buildAttributeParser } from "./attributeParser";
 
-import { BinderDirective } from "./directives/BinderDirective";
+import { buildBinderDirective } from "./directives/binder";
 import { ComponentDirective } from "./directives/ComponentDirective";
 import { TextDirective } from "./directives/TextDirective";
 
@@ -289,7 +289,7 @@ export class View implements IView {
 
       const binder: IBinder | IBinderHook = this.binders[info.directive] || buildDefaultBinder(info.directive);
 
-      const directive: IDirective = new BinderDirective(binding, binder);
+      const directive: IDirective = buildBinderDirective(binding, binder);
 
       observer.bindTo(directive);
 
