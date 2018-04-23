@@ -13,6 +13,7 @@ import { buildAttributeParser } from "./attributeParser";
 
 import { buildBinderDirective } from "./directives/binder";
 import { ComponentDirective } from "./directives/ComponentDirective";
+import { buildListDirective } from "./directives/list";
 import { buildTextDirective } from "./directives/text";
 
 function buildDefaultBinder(attrName: string): IBinderHook {
