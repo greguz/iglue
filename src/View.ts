@@ -199,13 +199,26 @@ export class View implements IView {
     if (node.nodeType === 3) {
       this.injectTextNodes(node as Text);
     } else if (node.nodeType === 1) {
-      const tag: string = node.nodeName.toLowerCase();
+      const eachAttr: string = this.parser.getAttributeByDirective(node as HTMLElement, 'each');
+      const ifAttr: string = this.parser.getAttributeByDirective(node as HTMLElement, 'if');
+      const cName: string = node.nodeName.toLowerCase();
 
-      // TODO rv-for
+      if (eachAttr) {
+        // TODO
+      } else if (ifAttr) {
+        const info: IAttributeInfo = this.parser.parse(node as HTMLElement, ifAttr);
+        const observer: IObserver = this.model.observe(info.path);
+        const binding: IBinding = this.buildBinding(node as HTMLElement, info, observer);
+        const directive: IDirective = buildConditionalDirective({
+          binding,
+          view: this.clone.bind(this)
+        })
 
-      // TODO rv-if
+        observer.notify(directive);
 
-      if (tag === "component" || this.components[tag]) {
+        this.observers.push(observer);
+        this.directives.push(directive);
+      } else if (cName === "component" || this.components[cName]) {
         this.loadComponent(node as HTMLElement);
       } else {
         this.loadBinders(node as HTMLElement);
