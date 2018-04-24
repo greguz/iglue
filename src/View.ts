@@ -1,5 +1,5 @@
 import { IAttributeParser, IAttributeInfo } from "./interfaces/IAttributeParser";
-import { IBinder, IBinderHook } from "./interfaces/IBinder";
+import { IBinder, IBinderRoutine } from "./interfaces/IBinder";
 import { IBinding } from "./interfaces/IBinding";
 import { ICollection } from "./interfaces/ICollection";
 import { IComponent } from "./interfaces/IComponent";
@@ -12,11 +12,12 @@ import { buildModel } from "./model";
 import { buildAttributeParser } from "./attributeParser";
 
 import { buildBinderDirective } from "./directives/binder";
-import { ComponentDirective } from "./directives/ComponentDirective";
+import { buildComponentDirective } from "./directives/component";
+import { buildConditionalDirective } from "./directives/conditional";
 import { buildListDirective } from "./directives/list";
 import { buildTextDirective } from "./directives/text";
 
-function buildDefaultBinder(attrName: string): IBinderHook {
+function buildDefaultBinder(attrName: string): IBinderRoutine {
   return function bindAttributeValue(binding: IBinding): void {
     const value: boolean = binding.get();
     if (value == null) {
@@ -29,7 +30,7 @@ function buildDefaultBinder(attrName: string): IBinderHook {
 
 export interface IViewOptions {
   prefix?: string;
-  binders?: ICollection<IBinder | IBinderHook>;
+  binders?: ICollection<IBinder | IBinderRoutine>;
   components?: ICollection<IComponent>;
 }
 
@@ -51,7 +52,7 @@ export class View implements IView {
    * Binders collection
    */
 
-  private binders: ICollection<IBinder | IBinderHook>;
+  private binders: ICollection<IBinder | IBinderRoutine>;
 
   /**
    * Binders collection
@@ -242,7 +243,7 @@ export class View implements IView {
       bindings.push(this.buildBinding(node, info, observer));
     }
 
-    const directive: IDirective = new ComponentDirective({
+    const directive: IDirective = buildComponentDirective({
       node,
       bindings,
       components: (name: string): IComponent => {
@@ -253,17 +254,11 @@ export class View implements IView {
           throw new Error(`Unable to find component "${name}"`);
         }
       },
-      view: (el: HTMLElement, data: any): View => {
-        return new View(el, data, {
-          prefix: this.prefix,
-          components: this.components,
-          binders: this.binders
-        });
-      }
+      view: this.clone.bind(this)
     });
 
     for (const observer of observers) {
-      observer.bindTo(directive);
+      observer.notify(directive);
     }
 
     this.observers.push(...observers);
@@ -288,11 +283,11 @@ export class View implements IView {
 
       const binding: IBinding = this.buildBinding(node, info, observer);
 
-      const binder: IBinder | IBinderHook = this.binders[info.directive] || buildDefaultBinder(info.directive);
+      const binder: IBinder | IBinderRoutine = this.binders[info.directive] || buildDefaultBinder(info.directive);
 
       const directive: IDirective = buildBinderDirective(binding, binder);
 
-      observer.bindTo(directive);
+      observer.notify(directive);
 
       this.observers.push(observer);
       this.directives.push(directive);
@@ -337,7 +332,7 @@ export class View implements IView {
           observer
         );
 
-        observer.bindTo(directive);
+        observer.notify(directive);
 
         this.observers.push(observer);
         this.directives.push(directive);
