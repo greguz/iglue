@@ -1,4 +1,4 @@
-import { IAttributeParser, IAttributeInfo } from "./interfaces/IAttributeParser";
+import { IAttributeInfo, IAttributeParser } from "./interfaces/IAttributeParser";
 import { IBinder, IBinderRoutine } from "./interfaces/IBinder";
 import { IBinding } from "./interfaces/IBinding";
 import { ICollection } from "./interfaces/ICollection";
@@ -8,8 +8,8 @@ import { IModel } from "./interfaces/IModel";
 import { IObserver } from "./interfaces/IObserver";
 import { IView } from "./interfaces/IView";
 
-import { buildModel } from "./model";
 import { buildAttributeParser } from "./attributeParser";
+import { buildModel } from "./model";
 
 import { buildBinderDirective } from "./directives/binder";
 import { buildComponentDirective } from "./directives/component";
@@ -199,8 +199,8 @@ export class View implements IView {
     if (node.nodeType === 3) {
       this.injectTextNodes(node as Text);
     } else if (node.nodeType === 1) {
-      const eachAttr: string = this.parser.getAttributeByDirective(node as HTMLElement, 'each');
-      const ifAttr: string = this.parser.getAttributeByDirective(node as HTMLElement, 'if');
+      const eachAttr: string = this.parser.getAttributeByDirective(node as HTMLElement, "each");
+      const ifAttr: string = this.parser.getAttributeByDirective(node as HTMLElement, "if");
       const cName: string = node.nodeName.toLowerCase();
 
       if (eachAttr) {
@@ -212,7 +212,7 @@ export class View implements IView {
         const directive: IDirective = buildConditionalDirective({
           binding,
           view: this.clone.bind(this)
-        })
+        });
 
         observer.notify(directive);
 
@@ -243,7 +243,7 @@ export class View implements IView {
       const info: IAttributeInfo = {
         attrName: attr.name,
         attrValue: attr.value,
-        prefix: '',
+        prefix: "",
         directive: attr.name,
         arg: null,
         modifiers: [],

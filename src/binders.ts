@@ -17,23 +17,23 @@ export const binders: ICollection<IBinder | IBinderRoutine> = {
   },
 
   hide: function hide(value: any, binding: IBinding): void {
-    binding.el.style.display = value ? 'none' : '';
+    binding.el.style.display = value ? "none" : "";
   },
 
   show: function show(value: any, binding: IBinding): void {
-    binding.el.style.display = value ? '' : 'none';
+    binding.el.style.display = value ? "" : "none";
   },
 
   html: function html(value: any, binding: IBinding): void {
-    binding.el.innerHTML = value == null ? '' : value;
+    binding.el.innerHTML = value == null ? "" : value;
   },
 
   text: function text(value: any, binding: IBinding): void {
     const el: HTMLElement = binding.el;
     if (el.textContent) {
-      el.textContent = value == null ? '' : value;
+      el.textContent = value == null ? "" : value;
     } else {
-      el.innerText = value == null ? '' : value;
+      el.innerText = value == null ? "" : value;
     }
   }
 

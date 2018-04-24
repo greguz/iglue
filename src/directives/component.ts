@@ -27,7 +27,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
   const context: any = {};
 
   // true if the component is not static
-  const dynamic: boolean = options.node.tagName !== 'COMPONENT';
+  const dynamic: boolean = options.node.tagName !== "COMPONENT";
 
   /**
    * Sync context with current values

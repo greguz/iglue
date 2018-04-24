@@ -32,7 +32,7 @@ function applyMiddleware(obj: any, property: string) {
     // wrap the setter (if exists)
     if (descriptor.set) {
       function notify() {
-        let value: any = get.call(obj);
+        const value: any = get.call(obj);
         for (const listener of listeners) {
           listener(value);
         }

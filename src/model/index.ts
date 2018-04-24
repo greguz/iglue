@@ -65,8 +65,8 @@ function buildObserver(obj: object, path: string): IObserver {
 }
 
 export function buildModel(obj: object): IModel {
-  if (typeof obj !== 'object') {
-    throw new Error('The model data is not an object');
+  if (typeof obj !== "object") {
+    throw new Error("The model data is not an object");
   }
 
   function observe(path: string): IObserver {

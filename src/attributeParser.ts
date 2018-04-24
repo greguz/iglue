@@ -1,4 +1,9 @@
-import { IAttributeParser, IAttributeInfo, IAttributeNameInfo, IAttributeValueInfo } from "./interfaces/IAttributeParser";
+import {
+  IAttributeInfo,
+  IAttributeNameInfo,
+  IAttributeParser,
+  IAttributeValueInfo
+} from "./interfaces/IAttributeParser";
 
 function parseArgument(attrName: string): string {
   const match = attrName.match(/:([^\.]+)/);

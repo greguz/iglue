@@ -8,11 +8,11 @@ export interface IConditionalDirectiveOptions {
 }
 
 export function buildConditionalDirective(options: IConditionalDirectiveOptions): IDirective {
-  let status: boolean;
-  let container: HTMLElement = options.binding.el.parentElement;
+  const container: HTMLElement = options.binding.el.parentElement;
+  const comment: Comment = document.createComment(` IF : ${options.binding.path} `);
   let node: Comment | HTMLElement = options.binding.el;
+  let status: boolean;
   let view: IView;
-  let comment: Comment = document.createComment(` IF : ${options.binding.path} `);
 
   function swap(update: Comment | HTMLElement): void {
     if (update !== node) {
