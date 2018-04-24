@@ -23,9 +23,16 @@ export interface IAttributeValueInfo {
   args: IFormatterArgument[];
 }
 
-export interface IFormatterArgument {
-  type: "path" | "primitive";
-  value: any;
+export type IFormatterArgument = IFormatterPathArgument | IFormatterPrimitiveArgument
+
+export interface IFormatterPathArgument {
+  type: "path";
+  value: string;
+}
+
+export interface IFormatterPrimitiveArgument {
+  type: "primitive";
+  value: string | number | boolean | null | undefined;
 }
 
 export interface IAttributeInfo extends IAttributeNameInfo, IAttributeValueInfo {
