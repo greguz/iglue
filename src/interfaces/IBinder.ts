@@ -1,6 +1,6 @@
 import { IBinding } from "./IBinding";
 
-export type IBinderHook<T = any> = (this: T, binding: IBinding) => void;
+export type IBinderRoutine<T = any> = (this: T, value: any, binding: IBinding) => void;
 
 export interface IBinder<T = any> {
 
@@ -8,18 +8,18 @@ export interface IBinder<T = any> {
    * Triggered when the binding is created
    */
 
-  bind?: IBinderHook<T>;
+  bind?: (this: T, binding: IBinding) => void;
 
   /**
    * Triggered when the watched value changes
    */
 
-  routine?: IBinderHook<T>;
+  routine?: IBinderRoutine<T>;
 
   /**
    * Triggered when the binding is destroyed
    */
 
-  unbind?: IBinderHook<T>;
+  unbind?: (this: T, binding: IBinding) => void;
 
 }
