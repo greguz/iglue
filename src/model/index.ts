@@ -5,15 +5,15 @@ import { IObserver } from "../interfaces/IObserver";
 import { PathObserver } from "./PathObserver";
 
 function buildObserver(obj: object, path: string): IObserver {
-  const directives: IDirective[] = [];
   const po: PathObserver = new PathObserver(obj, path);
 
+  let target: IDirective;
   let watching: boolean = false;
 
   // fire the routine for all bound directives
   function routine() {
-    for (const directive of directives) {
-      directive.routine();
+    if (target) {
+      target.routine();
     }
   }
 
@@ -48,6 +48,11 @@ function buildObserver(obj: object, path: string): IObserver {
     return watching;
   }
 
+  // notify changes to a target directive
+  function notify(directive: IDirective) {
+    target = directive;
+  }
+
   // return observer
   return {
     get,
@@ -55,7 +60,7 @@ function buildObserver(obj: object, path: string): IObserver {
     watch,
     ignore,
     isWatching,
-    bindTo: directives.push.bind(directives)
+    notify
   };
 }
 

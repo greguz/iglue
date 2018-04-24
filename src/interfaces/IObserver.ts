@@ -40,6 +40,6 @@ export interface IObserver {
    * Bind this observer to directives
    */
 
-  bindTo(...directives: IDirective[]): void
+  notify(directive: IDirective): void
 
 }
