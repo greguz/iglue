@@ -44,10 +44,4 @@ export interface IComponent<T = any> {
 
   destroy?: (this: T) => void;
 
-  /**
-   * Any other component method
-   */
-
-  [key: string]: (this: T, ...args: any[]) => any;
-
 }
