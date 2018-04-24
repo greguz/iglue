@@ -88,13 +88,13 @@ export function buildAttributeParser(prefix: string): IAttributeParser {
     };
   }
 
-  function hasDirective(el: HTMLElement, directive: string): boolean {
+  function getAttributeByDirective(el: HTMLElement, directive: string): string | null {
     for (let i = 0; i < el.attributes.length; i++) {
       if (directive === parseDirective(el.attributes[i].name)) {
-        return true;
+        return el.attributes[i].name;
       }
     }
-    return false;
+    return null;
   }
 
   function match(attrName: string): boolean {
@@ -106,6 +106,6 @@ export function buildAttributeParser(prefix: string): IAttributeParser {
     parseName,
     parseValue,
     parse,
-    hasDirective
+    getAttributeByDirective
   };
 }
