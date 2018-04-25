@@ -62,7 +62,7 @@ function buildPrimitiveArgument(value: string | number | boolean | null | undefi
 function parseFormatterArguments(attrValue: string): IFormatterArgument[] {
   const matches: string[] = attrValue.match(/\S+/g) || [];
 
-  return matches.slice(2).map((value: string): IFormatterArgument => {
+  return matches.slice(3).map((value: string): IFormatterArgument => {
     if (value === "undefined") {
       return buildPrimitiveArgument(undefined);
     } else if (value === "null") {
@@ -73,8 +73,8 @@ function parseFormatterArguments(attrValue: string): IFormatterArgument[] {
       return buildPrimitiveArgument(false);
     } else if (/^-?\d+\.?\d*$/.test(value)) {
       return buildPrimitiveArgument(parseFloat(value));
-    } else if (/^".*"$/.test(value) || /^ '.*'$ /.test(value)) {
-      return buildPrimitiveArgument(JSON.parse(value));
+    } else if (/^".*"$/.test(value) || /^'.*'$ /.test(value)) {
+      return buildPrimitiveArgument(value.substring(1, value.length - 1));
     } else {
       return buildPathArgument(value);
     }
