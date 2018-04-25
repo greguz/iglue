@@ -203,18 +203,7 @@ export class View implements IView {
       const cName: string = node.nodeName.toLowerCase();
 
       if (eachAttr) {
-        const info: IAttributeInfo = this.parser.parse(node as HTMLElement, eachAttr);
-        const observer: IObserver = this.model.observe(info.path);
-        const binding: IBinding = this.buildBinding(node as HTMLElement, info, observer);
-        const directive: IDirective = buildListDirective({
-          binding,
-          view: this.clone.bind(this)
-        });
-
-        observer.notify(directive);
-
-        this.observers.push(observer);
-        this.directives.push(directive);
+        this.loadListDirective(node as HTMLElement, eachAttr);
       } else if (ifAttr) {
         const info: IAttributeInfo = this.parser.parse(node as HTMLElement, ifAttr);
         const observer: IObserver = this.model.observe(info.path);
@@ -238,6 +227,37 @@ export class View implements IView {
         }
       }
     }
+  }
+
+  /**
+   * Load and initialize a list directive
+   */
+
+  private loadListDirective(node: HTMLElement, attrName: string): void {
+    const info: IAttributeInfo = this.parser.parse(node, attrName);
+
+    const observers: IObserver[] = [
+      this.model.observe(info.path)
+    ];
+
+    const binding: IBinding = this.buildBinding(node, info, observers[0]);
+
+    const directive: IDirective = buildListDirective({
+      binding,
+      view: this.clone.bind(this),
+      model: this.data
+    });
+
+    for (const key in this.data) {
+      observers.push(this.model.observe(key));
+    }
+
+    for (const observer of observers) {
+      observer.notify(directive);
+    }
+
+    this.observers.push(...observers);
+    this.directives.push(directive);
   }
 
   /**
