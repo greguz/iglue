@@ -148,7 +148,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
 
   function unbind(): void {
     unmount();
-    currentNode = currentNode.replaceChild(options.node, currentNode);
+    currentNode = currentNode.parentElement.replaceChild(options.node, currentNode);
   }
 
   // return the directive
