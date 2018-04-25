@@ -95,11 +95,11 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
 
     // call DOM attach hook
     if (component.attach) {
-      component.attach.call(context, currentNode);
+      component.attach.call(context, node);
     }
 
     // create a new view for this component
-    const view: IView = options.view(currentNode, context);
+    const view: IView = options.view(node, context);
 
     // bound the view
     view.bind();
