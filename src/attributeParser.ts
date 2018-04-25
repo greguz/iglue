@@ -2,62 +2,95 @@ import {
   IAttributeInfo,
   IAttributeNameInfo,
   IAttributeParser,
-  IAttributeValueInfo
+  IAttributeValueInfo,
+  IFormatterArgument,
+  IFormatterPathArgument,
+  IFormatterPrimitiveArgument
 } from "./interfaces/IAttributeParser";
 
-function parseArgument(attrName: string): string {
-  const match = attrName.match(/:([^\.]+)/);
+function getRegExpGroup(str: string, regex: RegExp, group: number, err?: Error): string | null {
+  const match: RegExpMatchArray = str.match(regex);
 
   if (match) {
-    return match[1];
+    if (typeof match[group] === "string") {
+      return match[group];
+    }
+  }
+
+  if (err) {
+    throw err;
   } else {
     return null;
   }
+}
+
+function parseArgument(attrName: string): string | null {
+  return getRegExpGroup(attrName, /:([^\.]+)/, 1);
 }
 
 function parseModifiers(attrName: string): string[] {
-  const regex = /\.([^\.]+)/g;
-  const modifiers: string[] = [];
+  const match: RegExpMatchArray = attrName.match(/\.([^\.]+)/g);
 
-  let match: any;
-  while (match = regex.exec(attrName)) {
-    modifiers.push(match[1]);
+  if (match) {
+    return match.map((str: string): string => str.substr(1));
+  } else {
+    return [];
   }
-
-  return modifiers;
 }
 
 function parsePath(attrValue: string): string {
-  const match = attrValue.match(/\s*([^\|\s]+)/);
-
-  if (match) {
-    return match[1];
-  } else {
-    throw new Error("The directive does not contains a target path");
-  }
+  return getRegExpGroup(
+    attrValue,
+    /\s*([^\|\s]+)/,
+    1,
+    new Error("The directive does not contains a target path")
+  );
 }
 
-function parseFormatter(attrValue: string): string {
-  const match = attrValue.match(/\|\s*([^\s]+)/);
+function parseFormatter(attrValue: string): string | null {
+  return getRegExpGroup(attrValue, /\|\s*([^\s]+)/, 1);
+}
 
-  if (match) {
-    return match[1];
-  } else {
-    return null;
-  }
+function buildPathArgument(value: string): IFormatterPathArgument {
+  return { type: "path", value };
+}
+
+function buildPrimitiveArgument(value: string | number | boolean | null | undefined): IFormatterPrimitiveArgument {
+  return { type: "primitive", value };
+}
+
+function parseFormatterArguments(attrValue: string): IFormatterArgument[] {
+  const matches: string[] = attrValue.match(/\S+/g) || [];
+
+  return matches.slice(2).map((value: string): IFormatterArgument => {
+    if (value === "undefined") {
+      return buildPrimitiveArgument(undefined);
+    } else if (value === "null") {
+      return buildPrimitiveArgument(null);
+    } else if (value === "true") {
+      return buildPrimitiveArgument(true);
+    } else if (value === "false") {
+      return buildPrimitiveArgument(false);
+    } else if (/^-?\d+\.?\d*$/.test(value)) {
+      return buildPrimitiveArgument(parseFloat(value));
+    } else if (/^".*"$/.test(value) || /^ '.*'$ /.test(value)) {
+      return buildPrimitiveArgument(JSON.parse(value));
+    } else {
+      return buildPathArgument(value);
+    }
+  });
 }
 
 export function buildAttributeParser(prefix: string): IAttributeParser {
   const regex = new RegExp("^" + prefix + "([^:\.]+)");
 
   function parseDirective(attrName: string): string {
-    const match = attrName.match(regex);
-
-    if (match) {
-      return match[1];
-    } else {
-      throw new Error(`The attribute name "${attrName}" does not match with prefix "${prefix}"`);
-    }
+    return getRegExpGroup(
+      attrName,
+      regex,
+      1,
+      new Error(`The attribute name "${attrName}" does not match with prefix "${prefix}"`)
+    );
   }
 
   function parseName(attrName: string): IAttributeNameInfo {
@@ -73,7 +106,7 @@ export function buildAttributeParser(prefix: string): IAttributeParser {
     return {
       path: parsePath(attrValue),
       formatter: parseFormatter(attrValue),
-      args: [] // TODO formatter arguments
+      args: parseFormatterArguments(attrValue)
     };
   }
 
@@ -89,7 +122,7 @@ export function buildAttributeParser(prefix: string): IAttributeParser {
       modifiers: parseModifiers(attrName),
       path: parsePath(attrValue),
       formatter: parseFormatter(attrValue),
-      args: [] // TODO formatter arguments
+      args: parseFormatterArguments(attrValue)
     };
   }
 
