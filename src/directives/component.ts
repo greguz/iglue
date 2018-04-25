@@ -40,6 +40,19 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
   }
 
   /**
+   * Get target component name
+   */
+
+  function retrieveTargetComponentName(): string {
+    for (const binding of options.bindings) {
+      if (binding.directive === "is") {
+        return binding.get();
+      }
+    }
+    throw new Error("Found an unknown dynamic component");
+  }
+
+  /**
    * Unmount and stop current component data binding
    */
 
@@ -131,14 +144,17 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
    */
 
   function routine(): void {
-    refreshContext();
     if (dynamic) {
-      if (currentName !== context.is) {
+      const cName: string = retrieveTargetComponentName();
+      if (currentName !== cName) {
         if (currentComponent) {
           unmount();
         }
-        mount(context.is);
+        refreshContext();
+        mount(cName);
       }
+    } else {
+      refreshContext();
     }
   }
 
