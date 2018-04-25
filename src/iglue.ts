@@ -7,6 +7,16 @@ import { IView } from "./interfaces/IView";
 import { View, IViewOptions } from "./View";
 
 /**
+ * Public interfaces
+ */
+
+export * from "./interfaces/IBinder";
+export * from "./interfaces/IBinding";
+export * from "./interfaces/ICollection";
+export * from "./interfaces/IComponent";
+export * from "./interfaces/IView";
+
+/**
  * Global binders
  */
 
