@@ -22,27 +22,27 @@ export * from "./interfaces/IView";
 
 export const binders: ICollection<IBinder | IBinderRoutine> = {
 
-  disabled: function disabled(value: any, binding: IBinding): void {
+  disabled(value: any, binding: IBinding): void {
     (binding.el as HTMLFormElement).disabled = !!value;
   },
 
-  enabled: function enabled(value: any, binding: IBinding): void {
+  enabled(value: any, binding: IBinding): void {
     (binding.el as HTMLFormElement).disabled = !value;
   },
 
-  hide: function hide(value: any, binding: IBinding): void {
+  hide(value: any, binding: IBinding): void {
     binding.el.style.display = value ? "none" : "";
   },
 
-  show: function show(value: any, binding: IBinding): void {
+  show(value: any, binding: IBinding): void {
     binding.el.style.display = value ? "" : "none";
   },
 
-  html: function html(value: any, binding: IBinding): void {
+  html(value: any, binding: IBinding): void {
     binding.el.innerHTML = value == null ? "" : value;
   },
 
-  text: function text(value: any, binding: IBinding): void {
+  text(value: any, binding: IBinding): void {
     const el: HTMLElement = binding.el;
     if (el.textContent) {
       el.textContent = value == null ? "" : value;
