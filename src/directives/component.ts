@@ -35,7 +35,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
 
   function refreshContext() {
     for (const binding of options.bindings) {
-      context[binding.path] = binding.get();
+      context[binding.directive] = binding.get();
     }
   }
 
