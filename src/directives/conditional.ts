@@ -26,7 +26,7 @@ export function buildConditionalDirective(options: IConditionalDirectiveOptions)
   }
 
   function routine(): void {
-    const condition: boolean = !!this.binding.get();
+    const condition: boolean = !!options.binding.get();
 
     if (condition !== status) {
       if (view) {
