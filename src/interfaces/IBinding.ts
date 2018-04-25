@@ -1,4 +1,5 @@
 import { IAttributeInfo } from "./IAttributeParser";
+import { IObserver } from "./IObserver";
 
 export interface IBinding extends Readonly<IAttributeInfo> {
 
@@ -7,6 +8,12 @@ export interface IBinding extends Readonly<IAttributeInfo> {
    */
 
   readonly el: HTMLElement;
+
+  /**
+   * Bound observers
+   */
+
+  observers: IObserver[];
 
   /**
    * Get value from model

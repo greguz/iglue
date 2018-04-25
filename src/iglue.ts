@@ -2,6 +2,7 @@ import { IBinder, IBinderRoutine } from "./interfaces/IBinder";
 import { IBinding } from "./interfaces/IBinding";
 import { ICollection } from "./interfaces/ICollection";
 import { IComponent } from "./interfaces/IComponent";
+import { Formatter, IFormatter } from "./interfaces/IFormatter";
 import { IView } from "./interfaces/IView";
 
 import { View, IViewOptions } from "./View";
@@ -60,6 +61,12 @@ export const binders: ICollection<IBinder | IBinderRoutine> = {
 export const components: ICollection<IComponent> = {};
 
 /**
+ * Global formatters
+ */
+
+export const formatters: ICollection<Formatter | IFormatter> = {};
+
+/**
  * Bind a new view
  */
 
@@ -82,6 +89,15 @@ export function bind(el: HTMLElement, data: object, options?: IViewOptions): IVi
     }
   } else {
     options.components = components;
+  }
+
+  // inject global formatters
+  if (options.formatters) {
+    for (const key in formatters) {
+      options.formatters[key] = options.formatters[key] || formatters[key];
+    }
+  } else {
+    options.formatters = formatters;
   }
 
   // create the view and return

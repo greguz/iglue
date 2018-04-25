@@ -1,9 +1,17 @@
-import { IAttributeInfo, IAttributeParser } from "./interfaces/IAttributeParser";
+import {
+  IAttributeInfo,
+  IAttributeParser,
+  IFormatterArgument,
+  IFormatterPathArgument,
+  IFormatterPrimitiveArgument
+} from "./interfaces/IAttributeParser";
+
 import { IBinder, IBinderRoutine } from "./interfaces/IBinder";
 import { IBinding } from "./interfaces/IBinding";
 import { ICollection } from "./interfaces/ICollection";
 import { IComponent } from "./interfaces/IComponent";
 import { IDirective } from "./interfaces/IDirective";
+import { Formatter, IFormatter } from "./interfaces/IFormatter";
 import { IModel } from "./interfaces/IModel";
 import { IObserver } from "./interfaces/IObserver";
 import { IView } from "./interfaces/IView";
@@ -27,10 +35,38 @@ function buildDefaultBinder(attrName: string): IBinderRoutine {
   };
 }
 
+interface IParsedFormatterArgument {
+  observer?: IObserver;
+  get: () => any;
+}
+
+function parseFormatterPathArgument(arg: IFormatterPathArgument, model: IModel): IParsedFormatterArgument {
+  const observer: IObserver = model.observe(arg.value);
+  return {
+    observer,
+    get: () => observer.get()
+  };
+}
+
+function parseFormatterPrimitiveArgument(arg: IFormatterPrimitiveArgument): IParsedFormatterArgument {
+  return {
+    get: () => arg.value
+  };
+}
+
+function parseFormatterArgument(arg: IFormatterArgument, model: IModel) {
+  if (arg.type === "path") {
+    return parseFormatterPathArgument(arg, model);
+  } else {
+    return parseFormatterPrimitiveArgument(arg);
+  }
+}
+
 export interface IViewOptions {
   prefix?: string;
   binders?: ICollection<IBinder | IBinderRoutine>;
   components?: ICollection<IComponent>;
+  formatters?: ICollection<Formatter | IFormatter>;
 }
 
 export class View implements IView {
@@ -58,6 +94,12 @@ export class View implements IView {
    */
 
   private components: ICollection<IComponent>;
+
+  /**
+   * Formatters collection
+   */
+
+  private formatters: ICollection<Formatter | IFormatter>;
 
   /**
    * View model instance
@@ -110,6 +152,7 @@ export class View implements IView {
 
     this.binders = options.binders || {};
     this.components = options.components || {};
+    this.formatters = options.formatters || {};
 
     this.parser = buildAttributeParser(this.prefix);
     this.model = buildModel(data);
@@ -177,7 +220,8 @@ export class View implements IView {
       {
         prefix: this.prefix,
         binders: this.binders,
-        components: this.components
+        components: this.components,
+        formatters: this.formatters
       }
     );
   }
@@ -206,16 +250,17 @@ export class View implements IView {
         this.loadListDirective(node as HTMLElement, eachAttr);
       } else if (ifAttr) {
         const info: IAttributeInfo = this.parser.parse(node as HTMLElement, ifAttr);
-        const observer: IObserver = this.model.observe(info.path);
-        const binding: IBinding = this.buildBinding(node as HTMLElement, info, observer);
+        const binding: IBinding = this.buildBinding(node as HTMLElement, info);
         const directive: IDirective = buildConditionalDirective({
           binding,
           view: this.clone.bind(this)
         });
 
-        observer.notify(directive);
+        for (const observer of binding.observers) {
+          observer.notify(directive);
+        }
 
-        this.observers.push(observer);
+        this.observers.push(...binding.observers);
         this.directives.push(directive);
       } else if (cName === "component" || this.components[cName]) {
         this.loadComponent(node as HTMLElement);
@@ -236,11 +281,11 @@ export class View implements IView {
   private loadListDirective(node: HTMLElement, attrName: string): void {
     const info: IAttributeInfo = this.parser.parse(node, attrName);
 
-    const observers: IObserver[] = [
-      this.model.observe(info.path)
-    ];
+    const binding: IBinding = this.buildBinding(node, info);
 
-    const binding: IBinding = this.buildBinding(node, info, observers[0]);
+    const observers: IObserver[] = [
+      ...binding.observers
+    ];
 
     const directive: IDirective = buildListDirective({
       binding,
@@ -265,7 +310,6 @@ export class View implements IView {
    */
 
   private loadComponent(node: HTMLElement): void {
-    const observers: IObserver[] = [];
     const bindings: IBinding[] = [];
 
     for (let i = 0; i < node.attributes.length; i++) {
@@ -281,9 +325,7 @@ export class View implements IView {
         formatter: null,
         args: []
       };
-      const observer: IObserver = this.model.observe(info.path);
-      observers.push(observer);
-      bindings.push(this.buildBinding(node, info, observer));
+      bindings.push(this.buildBinding(node, info));
     }
 
     const directive: IDirective = buildComponentDirective({
@@ -300,11 +342,13 @@ export class View implements IView {
       view: this.clone.bind(this)
     });
 
-    for (const observer of observers) {
-      observer.notify(directive);
+    for (const binding of bindings) {
+      for (const observer of binding.observers) {
+        observer.notify(directive);
+        this.observers.push(observer);
+      }
     }
 
-    this.observers.push(...observers);
     this.directives.push(directive);
   }
 
@@ -322,17 +366,17 @@ export class View implements IView {
 
       const info: IAttributeInfo = this.parser.parse(node, attr.name);
 
-      const observer: IObserver = this.model.observe(info.path);
-
-      const binding: IBinding = this.buildBinding(node, info, observer);
+      const binding: IBinding = this.buildBinding(node, info);
 
       const binder: IBinder | IBinderRoutine = this.binders[info.directive] || buildDefaultBinder(info.directive);
 
       const directive: IDirective = buildBinderDirective(binding, binder);
 
-      observer.notify(directive);
+      for (const observer of binding.observers) {
+        observer.notify(directive);
+        this.observers.push(observer);
+      }
 
-      this.observers.push(observer);
       this.directives.push(directive);
     }
   }
@@ -397,21 +441,56 @@ export class View implements IView {
   }
 
   /**
+   * Get a normalized formatter
+   */
+
+  private resolveFormatter(name: string): IFormatter {
+    const formatter: Formatter | IFormatter = this.formatters[name];
+
+    if (typeof formatter === "function") {
+      return {
+        read: formatter,
+        write: (value: any) => value
+      };
+    } else if (formatter) {
+      return formatter;
+    } else {
+      return {
+        read: (value: any) => value,
+        write: (value: any) => value
+      };
+    }
+  }
+
+  /**
    * Build attribute binding
    */
 
-  private buildBinding(el: HTMLElement, info: IAttributeInfo, observer: IObserver): IBinding {
-    // TODO formatter
+  private buildBinding(el: HTMLElement, info: IAttributeInfo): IBinding {
+    const observer: IObserver = this.model.observe(info.path);
+    const formatter: IFormatter = this.resolveFormatter(info.formatter);
+    const args: IParsedFormatterArgument[] = info.args.map(arg => parseFormatterArgument(arg, this.model));
+
+    function values(): any[] {
+      return args.map((arg) => arg.get());
+    }
 
     function get(): any {
-      return observer.get();
+      return formatter.read(observer.get(), ...values());
     }
 
     function set(value: any): void {
-      observer.set(value);
+      observer.set(formatter.write(value, ...values()));
     }
 
-    return Object.assign({ el, get, set }, info);
+    const observers: IObserver[] = [observer];
+    for (const arg of args) {
+      if (arg.observer) {
+        observers.push(arg.observer);
+      }
+    }
+
+    return Object.assign({ el, observers, get, set }, info);
   }
 
 }
