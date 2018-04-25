@@ -135,6 +135,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
 
   function bind(): void {
     if (!dynamic) {
+      refreshContext();
       mount(options.node.tagName.toLowerCase());
     }
   }
