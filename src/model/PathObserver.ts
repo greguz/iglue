@@ -149,7 +149,7 @@ export class PathObserver {
     const previousValues: any[] = this.values;
     const currentValues: any[] = this.realize();
 
-    for (let i = 0; i <= tokens.length; i++) {
+    for (let i = 0; i < tokens.length; i++) {
       const token: string = tokens[i];
       const previous: any = previousValues[i];
       const current: any = currentValues[i];
@@ -161,11 +161,10 @@ export class PathObserver {
         if (typeof current === "object") {
           observeProperty(current, token, this.update);
         }
-        if (i === tokens.length) {
-          this.callback(current);
-        }
       }
     }
+
+    this.callback(currentValues[tokens.length]);
 
     this.values = currentValues;
   }
