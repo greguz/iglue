@@ -77,14 +77,19 @@ export const binders: ICollection<IBinder | IBinderRoutine> = {
 
   value: {
     bind(binding: IBinding): void {
+      this.handler = () => {
+        binding.set(
+          (binding.el as HTMLFormElement).value
+        );
+      };
       this.event = binding.el.tagName === "SELECT" ? "change" : "input";
-      binding.el.addEventListener(this.event, binding.set, false);
+      binding.el.addEventListener(this.event, this.handler, false);
     },
     routine(value: any, binding: IBinding): void {
-      (binding.el as HTMLFormElement).value = value;
+      (binding.el as HTMLFormElement).value = value == null ? '' : value;
     },
     unbind(binding: IBinding): void {
-      binding.el.removeEventListener(this.event, binding.set, false);
+      binding.el.removeEventListener(this.event, this.handler, false);
     }
   }
 
