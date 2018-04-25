@@ -204,7 +204,18 @@ export class View implements IView {
       const cName: string = node.nodeName.toLowerCase();
 
       if (eachAttr) {
-        // TODO
+        const info: IAttributeInfo = this.parser.parse(node as HTMLElement, eachAttr);
+        const observer: IObserver = this.model.observe(info.path);
+        const binding: IBinding = this.buildBinding(node as HTMLElement, info, observer);
+        const directive: IDirective = buildListDirective({
+          binding,
+          view: this.clone.bind(this)
+        });
+
+        observer.notify(directive);
+
+        this.observers.push(observer);
+        this.directives.push(directive);
       } else if (ifAttr) {
         const info: IAttributeInfo = this.parser.parse(node as HTMLElement, ifAttr);
         const observer: IObserver = this.model.observe(info.path);
