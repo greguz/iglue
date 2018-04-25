@@ -8,7 +8,7 @@ import {
   IFormatterPrimitiveArgument
 } from "./interfaces/IAttributeParser";
 
-function getRegExpGroup(str: string, regex: RegExp, group: number, err?: Error): string | null {
+function getRegExpGroup(str: string, regex: RegExp, group: number, err?: string): string | null {
   const match: RegExpMatchArray = str.match(regex);
 
   if (match) {
@@ -18,7 +18,7 @@ function getRegExpGroup(str: string, regex: RegExp, group: number, err?: Error):
   }
 
   if (err) {
-    throw err;
+    throw new Error(err);
   } else {
     return null;
   }
@@ -43,7 +43,7 @@ function parsePath(attrValue: string): string {
     attrValue,
     /\s*([^\|\s]+)/,
     1,
-    new Error("The directive does not contains a target path")
+    "The directive does not contains a target path"
   );
 }
 
@@ -84,19 +84,19 @@ function parseFormatterArguments(attrValue: string): IFormatterArgument[] {
 export function buildAttributeParser(prefix: string): IAttributeParser {
   const regex = new RegExp("^" + prefix + "([^:\.]+)");
 
-  function parseDirective(attrName: string): string {
+  function parseDirective(attrName: string, err?: string): string {
     return getRegExpGroup(
       attrName,
       regex,
       1,
-      new Error(`The attribute name "${attrName}" does not match with prefix "${prefix}"`)
+      err
     );
   }
 
   function parseName(attrName: string): IAttributeNameInfo {
     return {
       prefix,
-      directive: parseDirective(attrName),
+      directive: parseDirective(attrName, `The attribute name "${attrName}" does not match with prefix "${prefix}"`),
       arg: parseArgument(attrName),
       modifiers: parseModifiers(attrName)
     };
@@ -117,7 +117,7 @@ export function buildAttributeParser(prefix: string): IAttributeParser {
       attrName,
       attrValue,
       prefix,
-      directive: parseDirective(attrName),
+      directive: parseDirective(attrName, `The attribute name "${attrName}" does not match with prefix "${prefix}"`),
       arg: parseArgument(attrName),
       modifiers: parseModifiers(attrName),
       path: parsePath(attrValue),
