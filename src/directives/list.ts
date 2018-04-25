@@ -42,12 +42,12 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
       let view: IView = views[index];
 
       if (view) {
-        (view.data as any)['$index'] = index;
+        (view.data as any).$index = index;
         (view.data as any)[binding.arg] = model;
       } else {
         const el = clone();
         const data: any = {
-          ['$index']: index,
+          ["$index"]: index,
           [binding.arg]: model
         };
 
