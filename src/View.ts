@@ -18,8 +18,7 @@ import { buildListDirective } from "./directives/list";
 import { buildTextDirective } from "./directives/text";
 
 function buildDefaultBinder(attrName: string): IBinderRoutine {
-  return function bindAttributeValue(binding: IBinding): void {
-    const value: boolean = binding.get();
+  return function bindAttributeValue(value: any, binding: IBinding): void {
     if (value == null) {
       binding.el.removeAttribute(attrName);
     } else {
