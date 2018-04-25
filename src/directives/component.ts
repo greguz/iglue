@@ -95,7 +95,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
     }
 
     // fetch template from component
-    const template: string = component.template.call(context);
+    const template: string = component.template.call(context).trim();
 
     // inject the template into DOM
     currentNode.insertAdjacentHTML("beforebegin", template);
