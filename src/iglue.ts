@@ -74,6 +74,8 @@ export function bind(el: HTMLElement, data: object, options?: IViewOptions): IVi
     options.components = components;
   }
 
-  // create the view
-  return new View(el, data, options);
+  // create the view and return
+  const view = new View(el, data, options);
+  view.bind();
+  return view;
 }
