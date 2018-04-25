@@ -16,7 +16,8 @@ export function buildConditionalDirective(options: IConditionalDirectiveOptions)
 
   function swap(update: Comment | HTMLElement): void {
     if (update !== node) {
-      node = container.replaceChild(update, node);
+      container.replaceChild(update, node);
+      node = update;
     }
   }
 
