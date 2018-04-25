@@ -70,7 +70,9 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
 
   function unbind(): void {
     while (views.length > 0) {
-      views.pop().unbind();
+      const view: IView = views.pop();
+      view.unbind();
+      container.removeChild(view.node);
     }
 
     container.insertBefore(binding.el, marker);
