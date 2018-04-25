@@ -1,9 +1,13 @@
 import { IBinder, IBinderRoutine } from "./interfaces/IBinder";
 import { IBinding } from "./interfaces/IBinding";
 import { ICollection } from "./interfaces/ICollection";
+import { IComponent } from "./interfaces/IComponent";
+import { IView } from "./interfaces/IView";
+
+import { View, IViewOptions } from "./View";
 
 /**
- * Included default binders
+ * Global binders
  */
 
 export const binders: ICollection<IBinder | IBinderRoutine> = {
@@ -38,3 +42,38 @@ export const binders: ICollection<IBinder | IBinderRoutine> = {
   }
 
 };
+
+/**
+ * Global components
+ */
+
+export const components: ICollection<IComponent> = {};
+
+/**
+ * Bind a new view
+ */
+
+export function bind(el: HTMLElement, data: object, options?: IViewOptions): IView {
+  options = options || {};
+
+  // inject global binders
+  if (options.binders) {
+    for (const key in binders) {
+      options.binders[key] = options.binders[key] || binders[key];
+    }
+  } else {
+    options.binders = binders;
+  }
+
+  // inject global components
+  if (options.components) {
+    for (const key in components) {
+      options.components[key] = options.components[key] || components[key];
+    }
+  } else {
+    options.components = components;
+  }
+
+  // create the view
+  return new View(el, data, options);
+}
