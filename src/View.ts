@@ -104,7 +104,7 @@ export class View implements IView {
     this.node = node;
     this.data = data;
 
-    this.prefix = options.prefix || "wd-";
+    this.prefix = options.prefix || "i-";
     this.observers = [];
     this.directives = [];
     this.bound = false;
