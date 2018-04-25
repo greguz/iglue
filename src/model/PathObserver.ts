@@ -116,7 +116,7 @@ export class PathObserver {
    */
 
   public unobserve(): void {
-    if (!this.values) {
+    if (!this.callback) {
       throw new Error("Not observing");
     }
 
@@ -136,6 +136,7 @@ export class PathObserver {
       }
     }
 
+    this.callback = undefined;
     this.values = undefined;
   }
 
