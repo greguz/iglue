@@ -50,6 +50,42 @@ export const binders: ICollection<IBinder | IBinderRoutine> = {
     } else {
       el.innerText = value == null ? "" : value;
     }
+  },
+
+  on: {
+    routine(handler: any, binding: IBinding): void {
+      binding.el.removeEventListener(binding.arg, this.handler, false);
+      binding.el.addEventListener(binding.arg, handler, false);
+      this.handler = handler;
+    },
+    unbind(binding: IBinding): void {
+      binding.el.removeEventListener(binding.arg, this.handler, false);
+    }
+  },
+
+  class(value: any, binding: IBinding): void {
+    const el: HTMLElement = binding.el;
+    const hasClass: boolean = !!value;
+    const className: string = binding.arg;
+
+    if (hasClass) {
+      el.classList.add(className);
+    } else {
+      el.classList.remove(className);
+    }
+  },
+
+  value: {
+    bind(binding: IBinding): void {
+      this.event = binding.el.tagName === "SELECT" ? "change" : "input";
+      binding.el.addEventListener(this.event, binding.set, false);
+    },
+    routine(value: any, binding: IBinding): void {
+      (binding.el as HTMLFormElement).value = value;
+    },
+    unbind(binding: IBinding): void {
+      binding.el.removeEventListener(this.event, binding.set, false);
+    }
   }
 
 };
