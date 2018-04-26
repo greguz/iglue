@@ -249,8 +249,7 @@ export class View implements IView {
       if (eachAttr) {
         this.loadListDirective(node as HTMLElement, eachAttr);
       } else if (ifAttr) {
-        const info: IAttributeInfo = this.parser.parse(node as HTMLElement, ifAttr);
-        const binding: IBinding = this.buildBinding(node as HTMLElement, info);
+        const binding: IBinding = this.buildBinding(node as HTMLElement, ifAttr);
         const directive: IDirective = buildConditionalDirective({
           binding,
           view: this.clone.bind(this)
@@ -279,9 +278,7 @@ export class View implements IView {
    */
 
   private loadListDirective(node: HTMLElement, attrName: string): void {
-    const info: IAttributeInfo = this.parser.parse(node, attrName);
-
-    const binding: IBinding = this.buildBinding(node, info);
+    const binding: IBinding = this.buildBinding(node, attrName);
 
     const observers: IObserver[] = [
       ...binding.observers
@@ -363,12 +360,8 @@ export class View implements IView {
         continue;
       }
 
-      const info: IAttributeInfo = this.parser.parse(node, attr.name);
-
-      const binding: IBinding = this.buildBinding(node, info);
-
-      const binder: IBinder | IBinderRoutine = this.binders[info.directive] || buildDefaultBinder(info.directive);
-
+      const binding: IBinding = this.buildBinding(node, attr.name);
+      const binder: IBinder | IBinderRoutine = this.binders[binding.directive] || buildDefaultBinder(binding.directive);
       const directive: IDirective = buildBinderDirective(binding, binder);
 
       for (const observer of binding.observers) {
@@ -465,7 +458,8 @@ export class View implements IView {
    * Build attribute binding
    */
 
-  private buildBinding(el: HTMLElement, info: IAttributeInfo): IBinding {
+  private buildBinding(el: HTMLElement, attrName: string): IBinding {
+    const info: IAttributeInfo = this.parser.parse(el, attrName);
     const observer: IObserver = this.model.observe(info.path);
     const formatter: IFormatter = this.resolveFormatter(info.formatter);
     const args: IParsedFormatterArgument[] = info.args.map(arg => parseFormatterArgument(arg, this.model));
