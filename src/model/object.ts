@@ -3,13 +3,28 @@ import { observeArray, unobserveArray } from "./array";
 // variable where to inject the property listeners
 const VARIABLE = "_listeners_";
 
-// not defined property default descriptor
-const DEFAULT_DESCRIPTOR: PropertyDescriptor = {
-  configurable: true,
-  enumerable: true,
-  writable: true,
-  value: undefined
-};
+// get property descriptor from object or prototype chain
+function getPropertyDescriptor(obj: object, property: string): PropertyDescriptor {
+  let descriptor: PropertyDescriptor;
+
+  // each all prototype chain
+  while (obj && !descriptor) {
+    descriptor = Object.getOwnPropertyDescriptor(obj, property);
+    obj = Object.getPrototypeOf(obj);
+  }
+
+  // set default descriptor
+  if (!descriptor) {
+    descriptor = {
+      configurable: true,
+      enumerable: true,
+      writable: true,
+      value: undefined
+    };
+  }
+
+  return descriptor;
+}
 
 // apply watch middleware for a property
 function applyMiddleware(obj: any, property: string) {
@@ -17,10 +32,7 @@ function applyMiddleware(obj: any, property: string) {
   obj[VARIABLE][property] = [];
 
   const listeners: PropertyListener[] = obj[VARIABLE][property];
-
-  const descriptor = Object.getOwnPropertyDescriptor(obj, property)
-    || Object.getOwnPropertyDescriptor(Object.getPrototypeOf(obj), property)
-    || DEFAULT_DESCRIPTOR;
+  const descriptor = getPropertyDescriptor(obj, property);
 
   let get: () => any;
   let set: (value: any) => void;
