@@ -310,27 +310,28 @@ export class View implements IView {
    */
 
   private loadComponent(node: HTMLElement): void {
-    const bindings: IBinding[] = [];
+    const observers: IObserver[] = [];
+    const context: object = {};
 
     for (let i = 0; i < node.attributes.length; i++) {
       const attr: Attr = node.attributes[i];
-      const info: IAttributeInfo = {
-        attrName: attr.name,
-        attrValue: attr.value,
-        prefix: "",
-        directive: attr.name,
-        arg: null,
-        modifiers: [],
-        path: attr.value,
-        formatter: null,
-        args: []
-      };
-      bindings.push(this.buildBinding(node, info));
+      const observer: IObserver = this.model.observe(attr.value);
+      Object.defineProperty(context, attr.name, {
+        enumerable: true,
+        configurable: true,
+        get(): void {
+          return observer.get();
+        },
+        set(value: any): void {
+          observer.set(value);
+        }
+      });
+      observers.push(observer);
     }
 
     const directive: IDirective = buildComponentDirective({
       node,
-      bindings,
+      context,
       components: (name: string): IComponent => {
         const component = this.components[name];
         if (component) {
@@ -342,11 +343,9 @@ export class View implements IView {
       view: this.clone.bind(this)
     });
 
-    for (const binding of bindings) {
-      for (const observer of binding.observers) {
-        observer.notify(directive);
-        this.observers.push(observer);
-      }
+    for (const observer of observers) {
+      observer.notify(directive);
+      this.observers.push(observer);
     }
 
     this.directives.push(directive);

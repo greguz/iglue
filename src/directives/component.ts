@@ -1,11 +1,10 @@
-import { IBinding } from "../interfaces/IBinding";
 import { IComponent } from "../interfaces/IComponent";
 import { IDirective } from "../interfaces/IDirective";
 import { IView } from "../interfaces/IView";
 
 export interface IComponentDirectiveOptions {
   node: HTMLElement;
-  bindings: IBinding[];
+  context: object;
   components: (name: string) => IComponent;
   view: (el: HTMLElement, data: object) => IView;
 }
@@ -24,7 +23,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
   let currentComponent: IComponent;
 
   // component context
-  const context: any = {};
+  const context: any = options.context;
 
   // true if the component is not static
   const dynamic: boolean = options.node.tagName === "COMPONENT";
@@ -39,29 +38,6 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
     const componentNode = container.firstChild;
     container.removeChild(componentNode);
     return componentNode as HTMLElement;
-  }
-
-  /**
-   * Sync context with current values
-   */
-
-  function refreshContext() {
-    for (const binding of options.bindings) {
-      context[binding.directive] = binding.get();
-    }
-  }
-
-  /**
-   * Get target component name
-   */
-
-  function retrieveTargetComponentName(): string {
-    for (const binding of options.bindings) {
-      if (binding.directive === "is") {
-        return binding.get();
-      }
-    }
-    throw new Error("Found an unknown dynamic component");
   }
 
   /**
@@ -144,7 +120,6 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
 
   function bind(): void {
     if (!dynamic) {
-      refreshContext();
       mount(options.node.tagName.toLowerCase());
     }
   }
@@ -155,16 +130,15 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
 
   function routine(): void {
     if (dynamic) {
-      const cName: string = retrieveTargetComponentName();
+      const cName: string = context.is;
       if (currentName !== cName) {
         if (currentComponent) {
           unmount();
         }
-        refreshContext();
         mount(cName);
       }
     } else {
-      refreshContext();
+      currentView.refresh();
     }
   }
 
