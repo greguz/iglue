@@ -30,6 +30,18 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
   const dynamic: boolean = options.node.tagName === "COMPONENT";
 
   /**
+   * Parse the template string and get a component node
+   */
+
+  function parseTemplate(template: string): HTMLElement { // TODO this is not secure...
+    const container: HTMLElement = document.createElement('div');
+    container.innerHTML = template.trim();
+    const componentNode = container.firstChild;
+    container.removeChild(componentNode);
+    return componentNode as HTMLElement;
+  }
+
+  /**
    * Sync context with current values
    */
 
@@ -95,24 +107,21 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
     }
 
     // fetch template from component
-    const template: string = component.template.call(context).trim();
+    const template: string = component.template.call(context);
 
-    // inject the template into DOM
-    currentNode.insertAdjacentHTML("beforebegin", template);
-
-    // get the created component node
-    const node: HTMLElement = currentNode.previousSibling as HTMLElement;
+    // create the component HTML node
+    const componentNode: HTMLElement = parseTemplate(template);
 
     // remove current node from DOM
-    currentNode.parentElement.removeChild(currentNode);
+    currentNode.parentElement.replaceChild(componentNode, currentNode);
 
     // call DOM attach hook
     if (component.attach) {
-      component.attach.call(context, node);
+      component.attach.call(context, componentNode);
     }
 
     // create a new view for this component
-    const view: IView = options.view(node, context);
+    const view: IView = options.view(componentNode, context);
 
     // bound the view
     view.bind();
@@ -125,7 +134,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
     // update status
     currentName = name;
     currentComponent = component;
-    currentNode = node;
+    currentNode = componentNode;
     currentView = view;
   }
 
