@@ -119,9 +119,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
    */
 
   function bind(): void {
-    if (!dynamic) {
-      mount(options.node.tagName.toLowerCase());
-    }
+    // nothing to do
   }
 
   /**
@@ -136,9 +134,13 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
           unmount();
         }
         mount(cName);
+      } else if (!currentComponent) {
+        throw new Error(`Unable to load dynamic component`);
       }
-    } else {
+    } else if (currentView) {
       currentView.refresh();
+    } else {
+      mount(options.node.tagName.toLowerCase());
     }
   }
 
