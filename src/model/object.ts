@@ -96,7 +96,7 @@ function applyMiddleware(obj: any, property: string) {
 
   // override property
   Object.defineProperty(obj, property, {
-    enumerable: !descriptor.get,
+    enumerable: true,
     configurable: false,
     get,
     set
