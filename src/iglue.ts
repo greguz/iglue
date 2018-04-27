@@ -65,13 +65,14 @@ export const binders: ICollection<IBinder | IBinderRoutine> = {
 
   class(value: any, binding: IBinding): void {
     const el: HTMLElement = binding.el;
-    const hasClass: boolean = !!value;
-    const className: string = binding.arg;
-
-    if (hasClass) {
-      el.classList.add(className);
+    if (binding.arg) {
+      if (!value) {
+        el.classList.remove(binding.arg);
+      } else {
+        el.classList.add(binding.arg);
+      }
     } else {
-      el.classList.remove(className);
+      el.className = value;
     }
   },
 
