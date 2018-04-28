@@ -104,7 +104,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
 
     // call last life hook
     if (component.bind) {
-      component.bind.call(context, currentView);
+      component.bind.call(context, view);
     }
 
     // update status
