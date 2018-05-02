@@ -11,7 +11,7 @@ export interface IListDirectiveOptions {
 export function buildListDirective(options: IListDirectiveOptions): IDirective {
   const binding: IBinding = options.binding;
   const container: HTMLElement = binding.el.parentElement;
-  const marker: Comment = document.createComment(` EACH ${binding.path} `);
+  const marker: Comment = document.createComment(` EACH ${binding.value.value} `);
 
   let views: IView[] = [];
 
@@ -22,7 +22,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
   function sync(target: object, index: number, model: any): object {
     return Object.assign(target, options.model, {
       ["$index"]: index,
-      [binding.arg]: model
+      [binding.argument]: model
     });
   }
 
@@ -33,7 +33,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
     container.removeChild(binding.el);
   }
 
-  function routine(): void {
+  function refresh(): void {
     const models: any[] = binding.get() || [];
 
     while (views.length > models.length) {
@@ -83,7 +83,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
 
   return {
     bind,
-    routine,
+    refresh,
     unbind
   };
 }

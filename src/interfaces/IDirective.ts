@@ -1,5 +1,5 @@
 export interface IDirective {
   bind(): void;
-  routine(): void;
+  refresh(): void;
   unbind(): void;
 }

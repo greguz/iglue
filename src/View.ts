@@ -1,9 +1,9 @@
 import {
   IAttributeInfo,
   IAttributeParser,
-  IFormatterArgument,
-  IFormatterPathArgument,
-  IFormatterPrimitiveArgument
+  IAttributeValueInfo,
+  IFormatterInfo,
+  ITarget
 } from "./interfaces/IAttributeParser";
 
 import { IBinder, IBinderRoutine } from "./interfaces/IBinder";
@@ -26,40 +26,63 @@ import { buildListDirective } from "./directives/list";
 import { buildTextDirective } from "./directives/text";
 
 function buildDefaultBinder(attrName: string): IBinderRoutine {
-  return function bindAttributeValue(value: any, binding: IBinding): void {
+  return function bindAttributeValue(el: HTMLElement, value: any): void {
     if (value == null) {
-      binding.el.removeAttribute(attrName);
+      el.removeAttribute(attrName);
     } else {
-      binding.el.setAttribute(attrName, value.toString());
+      el.setAttribute(attrName, value.toString());
     }
   };
 }
 
-interface IParsedFormatterArgument {
-  observer?: IObserver;
-  get: () => any;
-}
-
-function parseFormatterPathArgument(arg: IFormatterPathArgument, model: IModel): IParsedFormatterArgument {
-  const observer: IObserver = model.observe(arg.value);
-  return {
-    observer,
-    get: () => observer.get()
-  };
-}
-
-function parseFormatterPrimitiveArgument(arg: IFormatterPrimitiveArgument): IParsedFormatterArgument {
-  return {
-    get: () => arg.value
-  };
-}
-
-function parseFormatterArgument(arg: IFormatterArgument, model: IModel) {
-  if (arg.type === "path") {
-    return parseFormatterPathArgument(arg, model);
+function wrapTarget(target: ITarget, model: IModel): IObserver {
+  if (target.type === "path") {
+    return model.observe(target.value);
   } else {
-    return parseFormatterPrimitiveArgument(arg);
+    return {
+      get(): any {
+        return target.value;
+      },
+      set(): void {
+        throw new Error("It is not possible to update a primitive value");
+      },
+      notify(): void {
+        // nothing
+      }
+    };
   }
+}
+
+function buildFormatters(
+  infos: IFormatterInfo[],
+  model: IModel,
+  resolveFormatter: (name: string) => IFormatter,
+  callback: () => void
+): IFormatter[] {
+  return infos.map((info: IFormatterInfo): IFormatter => {
+    const formatter: IFormatter = resolveFormatter(info.name);
+
+    const observers: IObserver[] = info.arguments.map((target: ITarget): IObserver => {
+      const observer = wrapTarget(target, model);
+      observer.notify(callback);
+      return observer;
+    });
+
+    function args() {
+      return observers.map(
+        (observer: IObserver): any => observer.get()
+      );
+    }
+
+    return {
+      read(value: any): any {
+        return formatter.read(value, ...args());
+      },
+      write(value: any): any {
+        return formatter.write(value, ...args());
+      }
+    };
+  });
 }
 
 export interface IViewOptions {
@@ -108,12 +131,6 @@ export class View implements IView {
   private model: IModel;
 
   /**
-   * Bound observers
-   */
-
-  private observers: IObserver[];
-
-  /**
    * Parsed DOM-data links
    */
 
@@ -146,7 +163,6 @@ export class View implements IView {
     this.data = data;
 
     this.prefix = options.prefix || "i-";
-    this.observers = [];
     this.directives = [];
     this.bound = false;
 
@@ -171,12 +187,10 @@ export class View implements IView {
     }
     // call first routine
     for (const directive of this.directives) {
-      directive.routine();
+      directive.refresh();
     }
-    // start values watching
-    for (const observer of this.observers) {
-      observer.watch();
-    }
+    // start data watching
+    this.model.start();
     // update status
     this.bound = true;
   }
@@ -188,7 +202,7 @@ export class View implements IView {
   public refresh() {
     // call the routine for all directives
     for (const directive of this.directives) {
-      directive.routine();
+      directive.refresh();
     }
   }
 
@@ -197,10 +211,8 @@ export class View implements IView {
    */
 
   public unbind() {
-    // stop values watching
-    for (const observer of this.observers) {
-      observer.ignore();
-    }
+    // stop data watching
+    this.model.stop();
     // de-init all directives
     for (const directive of this.directives) {
       directive.unbind();
@@ -235,6 +247,104 @@ export class View implements IView {
   }
 
   /**
+   * Get a normalized formatter
+   */
+
+  private resolveFormatter(name: string): IFormatter {
+    const formatter: Formatter | IFormatter = this.formatters[name];
+
+    if (typeof formatter === "function") {
+      return {
+        read: formatter,
+        write: (value: any) => value
+      };
+    } else if (formatter) {
+      return formatter;
+    } else {
+      return {
+        read: (value: any) => value,
+        write: (value: any) => value
+      };
+    }
+  }
+
+  /**
+   * Get a normalized formatter
+   */
+
+  private resolveComponent(name: string): IComponent {
+    const component: IComponent = this.components[name];
+
+    if (component) {
+      return component;
+    } else {
+      throw new Error(`Unable to find component "${name}"`);
+    }
+  }
+
+  /**
+   * Parse expression string
+   */
+
+  private parseExpression(expression: string): IObserver {
+    // registered callback for the resulting observer
+    let superCallback: () => void;
+
+    // notification callback function
+    const callback = (): void => {
+      if (superCallback) {
+        superCallback();
+      }
+    };
+
+    // parse expression string
+    const info: IAttributeValueInfo = this.parser.parseValue(expression);
+
+    // root value observer
+    const observer: IObserver = wrapTarget(info.value, this.model);
+
+    // watch base value changes
+    observer.notify(callback);
+
+    // build the formatters
+    const formatters: IFormatter[] = buildFormatters(
+      info.formatters,
+      this.model,
+      this.resolveFormatter.bind(this),
+      callback
+    );
+
+    // get the current value
+    function get(): any {
+      let value: any = observer.get();
+      for (const formatter of formatters) {
+        value = formatter.read(value);
+      }
+      return value;
+    }
+
+    // set the value
+    function set(value: any): void {
+      for (const formatter of formatters) {
+        value = formatter.write(value);
+      }
+      observer.set(value);
+    }
+
+    // register change callback
+    function notify(fn: () => void): void {
+      superCallback = fn;
+    }
+
+    // return the observer
+    return {
+      get,
+      set,
+      notify
+    };
+  }
+
+  /**
    * Traverse DOM nodes and save bindings
    */
 
@@ -242,63 +352,86 @@ export class View implements IView {
     if (node.nodeType === 3) {
       this.injectTextNodes(node as Text);
     } else if (node.nodeType === 1) {
-      const eachAttr: string = this.parser.getAttributeByDirective(node as HTMLElement, "each");
-      const ifAttr: string = this.parser.getAttributeByDirective(node as HTMLElement, "if");
+      const el: HTMLElement = node as HTMLElement;
+
+      const eachAttr: string = this.parser.getAttributeByDirective(el, "each");
+      const ifAttr: string = this.parser.getAttributeByDirective(el, "if");
       const cName: string = node.nodeName.toLowerCase();
 
       if (eachAttr) {
-        this.loadListDirective(node as HTMLElement, eachAttr);
+        this.loadListDirective(el, eachAttr);
       } else if (ifAttr) {
-        const binding: IBinding = this.buildBinding(node as HTMLElement, ifAttr);
-        const directive: IDirective = buildConditionalDirective({
-          binding,
-          view: this.clone.bind(this)
-        });
-
-        for (const observer of binding.observers) {
-          observer.notify(directive);
-        }
-
-        this.observers.push(...binding.observers);
-        this.directives.push(directive);
+        this.loadConditionalDirective(el, ifAttr);
       } else if (cName === "component" || this.components[cName]) {
-        this.loadComponent(node as HTMLElement);
+        this.loadComponent(el);
       } else {
-        this.loadBinders(node as HTMLElement);
-
-        for (const child of node.childNodes) {
-          this.traverse(child as HTMLElement);
+        this.loadBinders(el);
+        for (const child of el.childNodes) {
+          this.traverse(child);
         }
       }
     }
   }
 
   /**
-   * Load and initialize a list directive
+   * Load the custom binders for the current node
    */
 
-  private loadListDirective(node: HTMLElement, attrName: string): void {
-    const binding: IBinding = this.buildBinding(node, attrName);
+  private loadBinders(el: HTMLElement): void {
+    for (let i = 0; i < el.attributes.length; i++) {
+      const attr: Attr = el.attributes[i];
 
-    const observers: IObserver[] = [
-      ...binding.observers
-    ];
+      // skip normal attributes
+      if (!this.parser.match(attr.name)) {
+        continue;
+      }
 
-    const directive: IDirective = buildListDirective({
+      // build the observer for the target value
+      const observer: IObserver = this.parseExpression(el.getAttribute(attr.name));
+
+      // get the binding object
+      const binding: IBinding = this.buildBinding(el, attr.name, observer);
+
+      // resolve the binder name
+      const binder: IBinder | IBinderRoutine = this.binders[binding.directive] || buildDefaultBinder(binding.directive);
+
+      // create the directive
+      const directive: IDirective = buildBinderDirective(binding, binder);
+
+      // schedule directive refresh in value change
+      observer.notify(directive.refresh);
+
+      // save the directive
+      this.directives.push(directive);
+    }
+  }
+
+  /**
+   * Build attribute binding
+   */
+
+  private buildBinding(el: HTMLElement, attrName: string, observer: IObserver): IBinding {
+    const info: IAttributeInfo = this.parser.parse(el, attrName);
+    function get(): any {
+      return observer.get();
+    }
+    function set(value: any): void {
+      observer.set(value);
+    }
+    return Object.assign({ el, get, set }, info);
+  }
+
+  /**
+   * Load conditional directive
+   */
+
+  private loadConditionalDirective(el: HTMLElement, attrName: string): void {
+    const observer: IObserver = this.parseExpression(el.getAttribute(attrName));
+    const binding: IBinding = this.buildBinding(el, attrName, observer);
+    const directive: IDirective = buildConditionalDirective({
       binding,
-      view: this.clone.bind(this),
-      model: this.data
+      view: this.clone.bind(this)
     });
-
-    for (const key in this.data) {
-      observers.push(this.model.observe(key));
-    }
-
-    for (const observer of observers) {
-      observer.notify(directive);
-    }
-
-    this.observers.push(...observers);
     this.directives.push(directive);
   }
 
@@ -329,48 +462,15 @@ export class View implements IView {
     const directive: IDirective = buildComponentDirective({
       node,
       context,
-      components: (name: string): IComponent => {
-        const component = this.components[name];
-        if (component) {
-          return component;
-        } else {
-          throw new Error(`Unable to find component "${name}"`);
-        }
-      },
+      components: this.resolveComponent.bind(this),
       view: this.clone.bind(this)
     });
 
     for (const observer of observers) {
-      observer.notify(directive);
-      this.observers.push(observer);
+      observer.notify(directive.refresh);
     }
 
     this.directives.push(directive);
-  }
-
-  /**
-   * Load the custom binders for the current node
-   */
-
-  private loadBinders(node: HTMLElement): void {
-    for (let i = 0; i < node.attributes.length; i++) {
-      const attr: Attr = node.attributes[i];
-
-      if (!this.parser.match(attr.name)) {
-        continue;
-      }
-
-      const binding: IBinding = this.buildBinding(node, attr.name);
-      const binder: IBinder | IBinderRoutine = this.binders[binding.directive] || buildDefaultBinder(binding.directive);
-      const directive: IDirective = buildBinderDirective(binding, binder);
-
-      for (const observer of binding.observers) {
-        observer.notify(directive);
-        this.observers.push(observer);
-      }
-
-      this.directives.push(directive);
-    }
   }
 
   /**
@@ -395,25 +495,21 @@ export class View implements IView {
           chunk = "";
         }
       } else if (char === "}") {
-        const path: string = chunk.trim();
+        const expression: string = chunk.trim();
 
-        if (!path) {
+        if (!expression) {
           throw new Error("Invalid text binding");
         }
 
-        const observer: IObserver = this.model.observe(path);
-
+        const observer: IObserver = this.parseExpression(expression);
         const directive: IDirective = buildTextDirective(
           parent.insertBefore(
-            document.createTextNode(`{ ${path} }`),
+            document.createTextNode(`{ ${expression} }`),
             node
           ),
           observer
         );
-
-        observer.notify(directive);
-
-        this.observers.push(observer);
+        observer.notify(directive.refresh);
         this.directives.push(directive);
 
         chunk = "";
@@ -433,57 +529,26 @@ export class View implements IView {
   }
 
   /**
-   * Get a normalized formatter
+   * Load and initialize a list directive
    */
 
-  private resolveFormatter(name: string): IFormatter {
-    const formatter: Formatter | IFormatter = this.formatters[name];
+  private loadListDirective(el: HTMLElement, attrName: string): void {
+    const observer: IObserver = this.parseExpression(el.getAttribute(attrName));
 
-    if (typeof formatter === "function") {
-      return {
-        read: formatter,
-        write: (value: any) => value
-      };
-    } else if (formatter) {
-      return formatter;
-    } else {
-      return {
-        read: (value: any) => value,
-        write: (value: any) => value
-      };
-    }
-  }
+    const binding: IBinding = this.buildBinding(el, attrName, observer);
 
-  /**
-   * Build attribute binding
-   */
+    const directive: IDirective = buildListDirective({
+      binding,
+      view: this.clone.bind(this),
+      model: this.data
+    });
 
-  private buildBinding(el: HTMLElement, attrName: string): IBinding {
-    const info: IAttributeInfo = this.parser.parse(el, attrName);
-    const observer: IObserver = this.model.observe(info.path);
-    const formatter: IFormatter = this.resolveFormatter(info.formatter);
-    const args: IParsedFormatterArgument[] = info.args.map(arg => parseFormatterArgument(arg, this.model));
-
-    function values(): any[] {
-      return args.map((arg) => arg.get());
+    observer.notify(directive.refresh);
+    for (const key in this.data) {
+      this.model.observe(key).notify(directive.refresh);
     }
 
-    function get(): any {
-      return formatter.read(observer.get(), ...values());
-    }
-
-    function set(value: any): void {
-      observer.set(formatter.write(value, ...values()));
-    }
-
-    const observers: IObserver[] = [observer];
-    for (const arg of args) {
-      if (arg.observer) {
-        observers.push(arg.observer);
-      }
-    }
-
-    return Object.assign({ el, observers, get, set }, info);
+    this.directives.push(directive);
   }
 
 }

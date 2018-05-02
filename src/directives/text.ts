@@ -6,7 +6,7 @@ export function buildTextDirective(node: Text, observer: IObserver): IDirective 
     // nothing to do
   }
 
-  function routine(): void {
+  function refresh(): void {
     const value: any = observer.get();
     node.data = value == null ? "" : value.toString();
   }
@@ -17,7 +17,7 @@ export function buildTextDirective(node: Text, observer: IObserver): IDirective 
 
   return {
     bind,
-    routine,
+    refresh,
     unbind
   };
 }

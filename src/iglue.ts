@@ -5,7 +5,7 @@ import { IComponent } from "./interfaces/IComponent";
 import { Formatter, IFormatter } from "./interfaces/IFormatter";
 import { IView } from "./interfaces/IView";
 
-import { View, IViewOptions } from "./View";
+import { IViewOptions, View } from "./View";
 
 /**
  * Public interfaces
@@ -23,28 +23,27 @@ export * from "./interfaces/IView";
 
 export const binders: ICollection<IBinder | IBinderRoutine> = {
 
-  disabled(value: any, binding: IBinding): void {
-    (binding.el as HTMLFormElement).disabled = !!value;
+  disabled(el: HTMLFormElement, value: any): void {
+    el.disabled = !!value;
   },
 
-  enabled(value: any, binding: IBinding): void {
-    (binding.el as HTMLFormElement).disabled = !value;
+  enabled(el: HTMLFormElement, value: any): void {
+    el.disabled = !value;
   },
 
-  hide(value: any, binding: IBinding): void {
-    binding.el.style.display = value ? "none" : "";
+  hide(el: HTMLElement, value: any): void {
+    el.style.display = value ? "none" : "";
   },
 
-  show(value: any, binding: IBinding): void {
-    binding.el.style.display = value ? "" : "none";
+  show(el: HTMLElement, value: any): void {
+    el.style.display = value ? "" : "none";
   },
 
-  html(value: any, binding: IBinding): void {
-    binding.el.innerHTML = value == null ? "" : value;
+  html(el: HTMLElement, value: any): void {
+    el.innerHTML = value == null ? "" : value;
   },
 
-  text(value: any, binding: IBinding): void {
-    const el: HTMLElement = binding.el;
+  text(el: HTMLElement, value: any): void {
     if (el.textContent) {
       el.textContent = value == null ? "" : value;
     } else {
@@ -53,23 +52,22 @@ export const binders: ICollection<IBinder | IBinderRoutine> = {
   },
 
   on: {
-    routine(handler: any, binding: IBinding): void {
-      binding.el.removeEventListener(binding.arg, this.handler, false);
-      binding.el.addEventListener(binding.arg, handler, false);
+    routine(el: HTMLElement, handler: any, binding: IBinding): void {
+      el.removeEventListener(binding.argument, this.handler, false);
+      el.addEventListener(binding.argument, handler, false);
       this.handler = handler;
     },
-    unbind(binding: IBinding): void {
-      binding.el.removeEventListener(binding.arg, this.handler, false);
+    unbind(el: HTMLElement, binding: IBinding): void {
+      el.removeEventListener(binding.argument, this.handler, false);
     }
   },
 
-  class(value: any, binding: IBinding): void {
-    const el: HTMLElement = binding.el;
-    if (binding.arg) {
+  class(el: HTMLElement, value: any, binding: IBinding): void {
+    if (binding.argument) {
       if (!value) {
-        el.classList.remove(binding.arg);
+        el.classList.remove(binding.argument);
       } else {
-        el.classList.add(binding.arg);
+        el.classList.add(binding.argument);
       }
     } else {
       el.className = value;
@@ -77,10 +75,9 @@ export const binders: ICollection<IBinder | IBinderRoutine> = {
   },
 
   value: {
-    bind(binding: IBinding): void {
-      const el: HTMLFormElement = binding.el as HTMLFormElement;
+    bind(el: HTMLFormElement, binding: IBinding): void {
       this.handler = () => {
-        if (el.type === 'checkbox') {
+        if (el.type === "checkbox") {
           binding.set(el.checked);
         } else {
           binding.set(el.value);
@@ -89,16 +86,15 @@ export const binders: ICollection<IBinder | IBinderRoutine> = {
       this.event = el.tagName !== "SELECT" ? "change" : "input";
       binding.el.addEventListener(this.event, this.handler, false);
     },
-    routine(value: any, binding: IBinding): void {
-      const el: HTMLFormElement = binding.el as HTMLFormElement;
-      if (el.type === 'checkbox') {
+    routine(el: HTMLFormElement, value: any): void {
+      if (el.type === "checkbox") {
         el.checked = !!value;
       } else {
-        el.value = value == null ? '' : value;
+        el.value = value == null ? "" : value;
       }
     },
-    unbind(binding: IBinding): void {
-      binding.el.removeEventListener(this.event, this.handler, false);
+    unbind(el: HTMLElement): void {
+      el.removeEventListener(this.event, this.handler, false);
     }
   }
 

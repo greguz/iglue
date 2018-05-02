@@ -2,6 +2,12 @@ import { IComponent } from "../interfaces/IComponent";
 import { IDirective } from "../interfaces/IDirective";
 import { IView } from "../interfaces/IView";
 
+function parseTemplate(template: string): HTMLElement {
+  const container: HTMLTemplateElement = document.createElement("template");
+  container.innerHTML = template.trim();
+  return document.importNode(container.content.firstChild, true) as HTMLElement;
+}
+
 export interface IComponentDirectiveOptions {
   node: HTMLElement;
   context: object;
@@ -27,18 +33,6 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
 
   // true if the component is not static
   const dynamic: boolean = options.node.tagName === "COMPONENT";
-
-  /**
-   * Parse the template string and get a component node
-   */
-
-  function parseTemplate(template: string): HTMLElement { // TODO this is not secure...
-    const container: HTMLElement = document.createElement('div');
-    container.innerHTML = template.trim();
-    const componentNode = container.firstChild;
-    container.removeChild(componentNode);
-    return componentNode as HTMLElement;
-  }
 
   /**
    * Unmount and stop current component data binding
@@ -126,7 +120,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
    * Triggered when the model has changed
    */
 
-  function routine(): void {
+  function refresh(): void {
     if (dynamic) {
       const cName: string = context.is;
       if (currentName !== cName) {
@@ -157,7 +151,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
   // return the directive
   return {
     bind,
-    routine,
+    refresh,
     unbind
   };
 }

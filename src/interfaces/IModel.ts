@@ -12,4 +12,16 @@ export interface IModel {
 
   observe(path: string): IObserver;
 
+  /**
+   * Start data watching
+   */
+
+  start(): void;
+
+  /**
+   * Stop data watching
+   */
+
+  stop(): void;
+
 }

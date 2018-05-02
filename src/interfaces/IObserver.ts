@@ -1,5 +1,3 @@
-import { IDirective } from "./IDirective";
-
 /**
  * Represents an observed value
  */
@@ -19,27 +17,9 @@ export interface IObserver {
   set(value: any): void;
 
   /**
-   * Watch for changes and notify
+   * Register a change callback
    */
 
-  watch(): void;
-
-  /**
-   * Stop watching
-   */
-
-  ignore(): void;
-
-  /**
-   * Returns true while watching
-   */
-
-  isWatching(): boolean;
-
-  /**
-   * Bind this observer to directives
-   */
-
-  notify(directive: IDirective): void;
+  notify(callback: () => void): void;
 
 }

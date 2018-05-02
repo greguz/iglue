@@ -9,7 +9,7 @@ export interface IConditionalDirectiveOptions {
 
 export function buildConditionalDirective(options: IConditionalDirectiveOptions): IDirective {
   const container: HTMLElement = options.binding.el.parentElement;
-  const comment: Comment = document.createComment(` IF : ${options.binding.path} `);
+  const comment: Comment = document.createComment(` IF : ${options.binding.attrValue} `);
   let node: Comment | HTMLElement = options.binding.el;
   let status: boolean;
   let view: IView;
@@ -25,7 +25,7 @@ export function buildConditionalDirective(options: IConditionalDirectiveOptions)
     options.binding.el.removeAttribute(options.binding.attrName);
   }
 
-  function routine(): void {
+  function refresh(): void {
     const condition: boolean = !!options.binding.get();
 
     if (condition !== status) {
@@ -58,7 +58,7 @@ export function buildConditionalDirective(options: IConditionalDirectiveOptions)
 
   return {
     bind,
-    routine,
+    refresh,
     unbind
   };
 }
