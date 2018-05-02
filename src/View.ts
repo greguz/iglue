@@ -418,7 +418,7 @@ export class View implements IView {
     function set(value: any): void {
       observer.set(value);
     }
-    return Object.assign({ el, get, set }, info);
+    return Object.assign({ el, context: this.data, get, set }, info);
   }
 
   /**

@@ -1,4 +1,5 @@
 import { IAttributeInfo } from "./IAttributeParser";
+import { ICollection } from "./ICollection";
 
 export interface IBinding extends Readonly<IAttributeInfo> {
 
@@ -7,6 +8,12 @@ export interface IBinding extends Readonly<IAttributeInfo> {
    */
 
   readonly el: HTMLElement;
+
+  /**
+   * Binding object context
+   */
+
+  readonly context: ICollection<any>;
 
   /**
    * Get value from model

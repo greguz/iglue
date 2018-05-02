@@ -52,13 +52,19 @@ export const binders: ICollection<IBinder | IBinderRoutine> = {
   },
 
   on: {
-    routine(el: HTMLElement, handler: any, binding: IBinding): void {
-      el.removeEventListener(binding.argument, this.handler, false);
-      el.addEventListener(binding.argument, handler, false);
+    bind(el: HTMLElement, binding: IBinding): void {
+      const self = this;
+      this.listener = function (...args: any[]): void {
+        args.push(binding.context);
+        self.handler.apply(this, args);
+      };
+      el.addEventListener(binding.argument, this.listener, false);
+    },
+    routine(el: HTMLElement, handler: any): void {
       this.handler = handler;
     },
     unbind(el: HTMLElement, binding: IBinding): void {
-      el.removeEventListener(binding.argument, this.handler, false);
+      el.removeEventListener(binding.argument, this.listener, false);
     }
   },
 
