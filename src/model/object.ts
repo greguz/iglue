@@ -1,7 +1,7 @@
 import { observeArray, unobserveArray, isArray } from "./array";
 
 // variable where to inject the property listeners
-const VARIABLE = "_listeners_";
+const VARIABLE = "_ol_";
 
 // get property descriptor from object or prototype chain
 function getPropertyDescriptor(obj: object, property: string): PropertyDescriptor {
@@ -28,10 +28,15 @@ function getPropertyDescriptor(obj: object, property: string): PropertyDescripto
 
 // apply watch middleware for a property
 function applyMiddleware(obj: any, property: string) {
-  obj[VARIABLE] = obj[VARIABLE] || {};
-  obj[VARIABLE][property] = [];
+  // lock and hide the listeners container
+  Object.defineProperty(obj, VARIABLE, {
+    enumerable: false,
+    writable: false,
+    configurable: false,
+    value: {}
+  });
 
-  const listeners: PropertyListener[] = obj[VARIABLE][property];
+  const listeners: PropertyListener[] = obj[VARIABLE][property] = []
   const descriptor = getPropertyDescriptor(obj, property);
 
   let get: () => any;

@@ -2,11 +2,19 @@
 const METHODS: string[] = ["push", "pop", "shift", "unshift", "sort", "reverse", "splice"];
 
 // variable name to inject into tha array
-const VARIABLE: string = "_listeners_";
+const VARIABLE: string = "_al_";
 
 // inject the watch middleware and set the listeners variable
 function applyMiddleware(arr: any): void {
-  const listeners: ArrayListener[] = arr[VARIABLE] = [];
+  // lock and hide the listeners container
+  Object.defineProperty(arr, VARIABLE, {
+    enumerable: false,
+    writable: false,
+    configurable: false,
+    value: []
+  });
+
+  const listeners: ArrayListener[] = arr[VARIABLE];
 
   function notify() {
     for (const listener of listeners) {
