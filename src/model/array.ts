@@ -4,11 +4,6 @@ const METHODS: string[] = ["push", "pop", "shift", "unshift", "sort", "reverse",
 // variable name to inject into tha array
 const VARIABLE: string = "_listeners_";
 
-// utility
-function isArray(arr: any): boolean {
-  return arr instanceof Array;
-}
-
 // inject the watch middleware and set the listeners variable
 function applyMiddleware(arr: any): void {
   const listeners: ArrayListener[] = arr[VARIABLE] = [];
@@ -30,6 +25,14 @@ function applyMiddleware(arr: any): void {
       }
     });
   }
+}
+
+/**
+ * Returns true if the argument is an array
+ */
+
+export function isArray(arr: any): boolean {
+  return arr instanceof Array;
 }
 
 /**
