@@ -1,3 +1,4 @@
+import { isArray } from "./array";
 import { observeProperty, unobserveProperty } from "./object";
 
 export class PathObserver {
@@ -30,7 +31,7 @@ export class PathObserver {
    * Registered change callback
    */
 
-  private callback: (value: any) => void;
+  private callback: (newValue: any, oldValue: any) => void;
 
   /**
    * @constructor
@@ -47,7 +48,7 @@ export class PathObserver {
    * Start data observing
    */
 
-  public observe(callback: (value: any) => void): void {
+  public observe(callback: (newValue: any, oldValue: any) => void): void {
     if (this.callback) {
       throw new Error("Currently observing");
     }
@@ -61,7 +62,7 @@ export class PathObserver {
       const token: string = tokens[i];
       const obj: any = values[i];
 
-      if (typeof obj === "object") {
+      if (typeof obj === "object" && obj !== null) {
         observeProperty(
           obj,
           token,
@@ -103,7 +104,7 @@ export class PathObserver {
     for (i = 0; i < tokens.length - 1; i++) {
       const token: string = tokens[i];
       if (typeof obj[token] !== "object") {
-        throw new Error("NOPE");
+        throw new Error("Unable to set the target object");
       }
       obj = obj[token];
     }
@@ -146,27 +147,31 @@ export class PathObserver {
 
   private update(): void {
     const tokens: string[] = this.tokens;
-    const previousValues: any[] = this.values;
-    const currentValues: any[] = this.realize();
+    const oldValues: any[] = this.values;
+    const newValues: any[] = this.realize();
 
     for (let i = 0; i < tokens.length; i++) {
       const token: string = tokens[i];
-      const previous: any = previousValues[i];
-      const current: any = currentValues[i];
+      const oldValue: any = oldValues[i];
+      const newValue: any = newValues[i];
 
-      if (current !== previous) {
-        if (typeof previous === "object") {
-          unobserveProperty(previous, token, this.update);
+      if (oldValue !== newValue) {
+        if (typeof oldValue === "object") {
+          unobserveProperty(oldValue, token, this.update);
         }
-        if (typeof current === "object") {
-          observeProperty(current, token, this.update);
+        if (typeof newValue === "object" && newValue !== null) {
+          observeProperty(newValue, token, this.update);
         }
       }
     }
 
-    this.callback(currentValues[tokens.length]);
+    const previousValue: any = oldValues[tokens.length];
+    const currentValue: any = newValues[tokens.length];
+    if (currentValue !== previousValue || isArray(currentValue)) {
+      this.callback(currentValue, previousValue);
+    }
 
-    this.values = currentValues;
+    this.values = newValues;
   }
 
   /**
@@ -179,7 +184,7 @@ export class PathObserver {
 
     for (const token of this.tokens) {
       values.push(obj);
-      if (typeof obj === "object") {
+      if (typeof obj === "object" && obj !== null) {
         obj = obj[token];
       } else {
         obj = undefined;
