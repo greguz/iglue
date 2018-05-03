@@ -114,7 +114,7 @@ export type PropertyListener = (value: any) => void;
  */
 
 export function isObservedObject(obj: any, property?: string): boolean {
-  if (typeof obj === "object") {
+  if (typeof obj === "object" && obj !== null) {
     if (obj[VARIABLE]) {
       if (property) {
         return !!obj[VARIABLE][property];
@@ -131,7 +131,7 @@ export function isObservedObject(obj: any, property?: string): boolean {
  */
 
 export function observeProperty(obj: any, property: string, listener: PropertyListener): void {
-  if (typeof obj !== "object") {
+  if (typeof obj !== "object" || obj === null) {
     throw new Error("Unexpected object to observe");
   }
   if (!isObservedObject(obj, property)) {
