@@ -1,4 +1,4 @@
-import { observeArray, unobserveArray } from "./array";
+import { observeArray, unobserveArray, isArray } from "./array";
 
 // variable where to inject the property listeners
 const VARIABLE = "_listeners_";
@@ -134,10 +134,14 @@ export function observeProperty(obj: any, property: string, listener: PropertyLi
   if (typeof obj !== "object" || obj === null) {
     throw new Error("Unexpected object to observe");
   }
-  if (!isObservedObject(obj, property)) {
-    applyMiddleware(obj, property);
+  if (property === "length" && isArray(obj)) {
+    observeArray(obj, listener);
+  } else {
+    if (!isObservedObject(obj, property)) {
+      applyMiddleware(obj, property);
+    }
+    obj[VARIABLE][property].push(listener);
   }
-  obj[VARIABLE][property].push(listener);
 }
 
 /**
@@ -145,7 +149,9 @@ export function observeProperty(obj: any, property: string, listener: PropertyLi
  */
 
 export function unobserveProperty(obj: any, property: string, listener: PropertyListener): void {
-  if (isObservedObject(obj, property)) {
+  if (property === "length" && isArray(obj)) {
+    unobserveArray(obj, listener);
+  } else if (isObservedObject(obj, property)) {
     const listeners: PropertyListener[] = obj[VARIABLE][property];
     const index: number = listeners.findIndex((l) => l === listener);
     if (index >= 0) {
