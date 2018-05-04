@@ -29,12 +29,14 @@ function getPropertyDescriptor(obj: object, property: string): PropertyDescripto
 // apply watch middleware for a property
 function applyMiddleware(obj: any, property: string) {
   // lock and hide the listeners container
-  Object.defineProperty(obj, VARIABLE, {
-    enumerable: false,
-    writable: false,
-    configurable: false,
-    value: {}
-  });
+  if (!obj[VARIABLE]) {
+    Object.defineProperty(obj, VARIABLE, {
+      enumerable: false,
+      writable: false,
+      configurable: false,
+      value: {}
+    });
+  }
 
   const listeners: PropertyListener[] = obj[VARIABLE][property] = []
   const descriptor = getPropertyDescriptor(obj, property);
