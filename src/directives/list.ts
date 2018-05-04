@@ -41,7 +41,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
 
       view.unbind();
 
-      container.removeChild(view.node);
+      container.removeChild(view.el);
     }
 
     let previous: Node = marker;
@@ -61,7 +61,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
         view.bind();
       }
 
-      previous = view.node;
+      previous = view.el;
 
       return view;
     });
@@ -72,7 +72,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
     while (views.length > 0) {
       const view: IView = views.pop();
       view.unbind();
-      container.removeChild(view.node);
+      container.removeChild(view.el);
     }
 
     container.insertBefore(binding.el, marker);

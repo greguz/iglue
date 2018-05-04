@@ -98,7 +98,7 @@ export class View implements IView {
    * Bound DOM element
    */
 
-  public readonly node: HTMLElement;
+  public readonly el: HTMLElement;
 
   /**
    * Bound data
@@ -158,8 +158,8 @@ export class View implements IView {
    * @constructor
    */
 
-  constructor(node: HTMLElement, data: object, options: IViewOptions = {}) {
-    this.node = node;
+  constructor(el: HTMLElement, data: object, options: IViewOptions = {}) {
+    this.el = el;
     this.data = data;
 
     this.prefix = options.prefix || "i-";
@@ -173,7 +173,7 @@ export class View implements IView {
     this.parser = buildAttributeParser(this.prefix);
     this.model = buildModel(data);
 
-    this.traverse(node);
+    this.traverse(el);
   }
 
   /**
@@ -225,9 +225,9 @@ export class View implements IView {
    * Clone the current view configuration and optinally the model
    */
 
-  public clone(node: HTMLElement, data?: object): View {
+  public clone(el: HTMLElement, data?: object): View {
     return new View(
-      node,
+      el,
       data || this.data,
       {
         prefix: this.prefix,

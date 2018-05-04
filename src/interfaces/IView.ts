@@ -1,10 +1,10 @@
 export interface IView {
 
   /**
-   * Bound node
+   * Bound DOM element
    */
 
-  readonly node: HTMLElement;
+  readonly el: HTMLElement;
 
   /**
    * Bound data model
