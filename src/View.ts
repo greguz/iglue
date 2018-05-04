@@ -432,6 +432,7 @@ export class View implements IView {
       binding,
       view: this.clone.bind(this)
     });
+    observer.notify(directive.refresh);
     this.directives.push(directive);
   }
 
