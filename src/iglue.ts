@@ -89,7 +89,7 @@ export const binders: ICollection<IBinder | IBinderRoutine> = {
           binding.set(el.value);
         }
       };
-      this.event = el.tagName !== "SELECT" ? "change" : "input";
+      this.event = el.type === "checkbox" || el.tagName === "SELECT" ? "change" : "input";
       binding.el.addEventListener(this.event, this.handler, false);
     },
     routine(el: HTMLFormElement, value: any): void {
