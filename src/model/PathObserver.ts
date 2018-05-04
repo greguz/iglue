@@ -82,7 +82,7 @@ export class PathObserver {
     let obj: any = this.data;
 
     for (const token of this.tokens) {
-      if (typeof obj === "object") {
+      if (typeof obj === "object" && obj !== null) {
         obj = obj[token];
       } else {
         return undefined;
