@@ -8,6 +8,7 @@ export interface IAttributeNameInfo {
 export interface IAttributeValueInfo {
   value: ITarget;
   formatters: IFormatterInfo[];
+  watch: string[];
 }
 
 export interface IFormatterInfo {

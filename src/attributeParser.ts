@@ -101,6 +101,10 @@ function parseFormatters(attrValue: string): IFormatterInfo[] {
   });
 }
 
+function parseWatchedPaths(attrValue: string): string[] {
+  return [];
+}
+
 export function buildAttributeParser(prefix: string): IAttributeParser {
   const regex = new RegExp("^" + prefix + "([^:\.]+)");
 
@@ -125,7 +129,8 @@ export function buildAttributeParser(prefix: string): IAttributeParser {
   function parseAttributeValue(attrValue: string): IAttributeValueInfo {
     return {
       value: parseValue(attrValue),
-      formatters: parseFormatters(attrValue)
+      formatters: parseFormatters(attrValue),
+      watch: parseWatchedPaths(attrValue)
     };
   }
 
@@ -140,7 +145,8 @@ export function buildAttributeParser(prefix: string): IAttributeParser {
       argument: parseArgument(attrName),
       modifiers: parseModifiers(attrName),
       value: parseValue(attrValue),
-      formatters: parseFormatters(attrValue)
+      formatters: parseFormatters(attrValue),
+      watch: parseWatchedPaths(attrValue)
     };
   }
 

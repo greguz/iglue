@@ -314,6 +314,11 @@ export class View implements IView {
       callback
     );
 
+    // register watched paths
+    for (const watchedPath of info.watch) {
+      this.model.observe(watchedPath).notify(callback);
+    }
+
     // get the current value
     function get(): any {
       let value: any = observer.get();
