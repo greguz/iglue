@@ -1,4 +1,4 @@
-import { observeArray, unobserveArray, isArray } from "./array";
+import { isArray, observeArray, unobserveArray } from "./array";
 
 // variable where to inject the property listeners
 const VARIABLE = "_ol_";
@@ -38,7 +38,7 @@ function applyMiddleware(obj: any, property: string) {
     });
   }
 
-  const listeners: PropertyListener[] = obj[VARIABLE][property] = []
+  const listeners: PropertyListener[] = obj[VARIABLE][property] = [];
   const descriptor = getPropertyDescriptor(obj, property);
 
   let get: () => any;
