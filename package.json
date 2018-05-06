@@ -2,8 +2,10 @@
   "name": "iglue",
   "version": "0.1.0",
   "description": "Intuitive Data Binding engine",
-  "main": "iglue.js",
+  "main": "dist/index.js",
+  "types": "types/index.d.ts",
   "scripts": {
+    "types": "tsc --declaration --declarationDir types",
     "check": "tsc --noEmit",
     "lint": "tslint -c tslint.json src/**/*.ts",
     "build": "tsc"
