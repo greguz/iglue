@@ -7,12 +7,12 @@
         "checkJs": false,
         "emitBOM": false,
         "experimentalDecorators": false,
-        "module": "es6",
+        "module": "commonjs",
         "moduleResolution": "node",
         "noImplicitAny": true,
         "noImplicitReturns": true,
         "noUnusedLocals": true,
-        "noUnusedParameters": true,
+        "noUnusedParameters": false,
         "outDir": "dist",
         "removeComments": true,
         "rootDir": "src",
@@ -24,7 +24,7 @@
         ]
     },
     "include": [
-        "src/**/*.ts"
+        "src/index.ts"
     ],
     "exclude": [
         "node_modules"
