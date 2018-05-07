@@ -55,8 +55,12 @@ export const binders: ICollection<IBinder | IBinderRoutine> = {
     bind(el: HTMLElement, binding: IBinding): void {
       const self = this;
       this.listener = function (...args: any[]): void {
-        args.push(binding.context);
-        self.handler.apply(this, args);
+        if (typeof self.handler === "function") {
+          args.push(binding.context);
+          self.handler.apply(this, args);
+        } else {
+          throw new Error(`The target value bound with "${binding.attrValue}" is not a valid handler for event "${binding.argument}"`);
+        }
       };
       el.addEventListener(binding.argument, this.listener, false);
     },
