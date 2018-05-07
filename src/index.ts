@@ -3,9 +3,9 @@ import { IBinding } from "./interfaces/IBinding";
 import { ICollection } from "./interfaces/ICollection";
 import { IComponent } from "./interfaces/IComponent";
 import { Formatter, IFormatter } from "./interfaces/IFormatter";
-import { IView } from "./interfaces/IView";
+import { IView, IViewOptions } from "./interfaces/IView";
 
-import { IViewOptions, View } from "./View";
+import { View } from "./View";
 
 /**
  * Public interfaces

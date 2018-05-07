@@ -1,3 +1,8 @@
+import { IBinder, IBinderRoutine } from "./IBinder";
+import { ICollection } from "./ICollection";
+import { IComponent } from "./IComponent";
+import { Formatter, IFormatter } from "./IFormatter";
+
 export interface IView {
 
   /**
@@ -42,4 +47,11 @@ export interface IView {
 
   isBound(): boolean;
 
+}
+
+export interface IViewOptions {
+  prefix?: string;
+  binders?: ICollection<IBinder | IBinderRoutine>;
+  components?: ICollection<IComponent>;
+  formatters?: ICollection<Formatter | IFormatter>;
 }

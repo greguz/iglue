@@ -14,7 +14,7 @@ import { IDirective } from "./interfaces/IDirective";
 import { Formatter, IFormatter } from "./interfaces/IFormatter";
 import { IModel } from "./interfaces/IModel";
 import { IObserver } from "./interfaces/IObserver";
-import { IView } from "./interfaces/IView";
+import { IView, IViewOptions } from "./interfaces/IView";
 
 import { buildAttributeParser } from "./attributeParser";
 import { buildModel } from "./model";
@@ -83,13 +83,6 @@ function buildFormatters(
       }
     };
   });
-}
-
-export interface IViewOptions {
-  prefix?: string;
-  binders?: ICollection<IBinder | IBinderRoutine>;
-  components?: ICollection<IComponent>;
-  formatters?: ICollection<Formatter | IFormatter>;
 }
 
 export class View implements IView {
