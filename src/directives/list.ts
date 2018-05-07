@@ -58,18 +58,13 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
         container.insertBefore(el, previous.nextSibling);
 
         view = options.view(el, data);
+        view.bind();
       }
 
-      previous = view.el;
+      previous = previous.nextSibling;
 
       return view;
     });
-
-    for (const view of views) {
-      if (!view.isBound()) {
-        view.bind();
-      }
-    }
   }
 
   function unbind(): void {
