@@ -69,7 +69,7 @@ function parseValue(attrValue: string): ITarget {
   return parseTarget(
     getRegExpGroup(
       attrValue,
-      /\s*([^\|\s]+)/,
+      /\s*([^\|\s<]+)/,
       1,
       "The directive does not target a value"
     )
@@ -93,7 +93,11 @@ function parseFormatterArguments(chunk: string): ITarget[] {
 }
 
 function parseFormatters(attrValue: string): IFormatterInfo[] {
-  return attrValue.split("|").slice(1).map((chunk: string): IFormatterInfo => {
+  const definition: string = getRegExpGroup(attrValue, /\|([^<]+)/, 1);
+  if (!definition) {
+    return [];
+  }
+  return definition.split("|").map((chunk: string): IFormatterInfo => {
     return {
       name: parseFormatterName(chunk),
       arguments: parseFormatterArguments(chunk)
@@ -102,7 +106,12 @@ function parseFormatters(attrValue: string): IFormatterInfo[] {
 }
 
 function parseWatchedPaths(attrValue: string): string[] {
-  return [];
+  const definition: string = getRegExpGroup(attrValue, /<(.+)/, 1);
+  if (definition) {
+    return definition.match(/\S+/g);
+  } else {
+    return [];
+  }
 }
 
 export function buildAttributeParser(prefix: string): IAttributeParser {
