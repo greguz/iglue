@@ -39,7 +39,7 @@ export interface IView {
    * Clone the current view configuration and optinally the model
    */
 
-  clone(node: HTMLElement, data?: object): IView;
+  clone(el: HTMLElement, data?: object): IView;
 
   /**
    * Returns true when the view is bound to the element
@@ -50,8 +50,29 @@ export interface IView {
 }
 
 export interface IViewOptions {
+
+  /**
+   * Global binders prefix
+   */
+
   prefix?: string;
+
+  /**
+   * Binders collection
+   */
+
   binders?: ICollection<IBinder | IBinderRoutine>;
+
+  /**
+   * Components collection
+   */
+
   components?: ICollection<IComponent>;
+
+  /**
+   * Formatters collection
+   */
+
   formatters?: ICollection<Formatter | IFormatter>;
+
 }

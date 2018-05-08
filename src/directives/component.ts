@@ -1,14 +1,13 @@
 import { IComponent } from "../interfaces/IComponent";
 import { IDirective } from "../interfaces/IDirective";
 import { IView } from "../interfaces/IView";
+import { buildHTML } from "../htmlParser";
 
 function parseTemplate(template: string | HTMLElement): HTMLElement {
   if (typeof template === "string") {
-    const container: HTMLTemplateElement = document.createElement("template");
-    container.innerHTML = template.trim();
-    return document.importNode(container.content.firstChild, true) as HTMLElement;
+    return buildHTML(template);
   } else {
-    return template.cloneNode(true) as HTMLElement;
+    return template;
   }
 }
 
