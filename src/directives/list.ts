@@ -1,3 +1,5 @@
+import assign from 'object-assign';
+
 import { IBinding } from "../interfaces/IBinding";
 import { IDirective } from "../interfaces/IDirective";
 import { IView } from "../interfaces/IView";
@@ -20,7 +22,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
   }
 
   function sync(target: object, index: number, model: any): object {
-    return Object.assign(target, options.model, {
+    return assign(target, options.model, {
       ["$index"]: index,
       [binding.argument]: model
     });

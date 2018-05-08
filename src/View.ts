@@ -1,3 +1,5 @@
+import assign from 'object-assign';
+
 import {
   IAttributeInfo,
   IAttributeParser,
@@ -364,8 +366,8 @@ export class View implements IView {
         this.loadComponent(el);
       } else {
         this.loadBinders(el);
-        for (const child of el.childNodes) {
-          this.traverse(child);
+        for (let i = 0; i < el.childNodes.length; i++) {
+          this.traverse(el.childNodes[i]);
         }
       }
     }
@@ -416,7 +418,7 @@ export class View implements IView {
     function set(value: any): void {
       observer.set(value);
     }
-    return Object.assign({ el, context: this.data, get, set }, info);
+    return assign({ el, context: this.data, get, set }, info);
   }
 
   /**

@@ -82,9 +82,11 @@ export function observeArray(arr: any, listener: ArrayListener): void {
 export function unobserveArray(arr: any, listener: ArrayListener): void {
   if (isObservedArray(arr)) {
     const listeners: ArrayListener[] = arr[VARIABLE];
-    const index: number = listeners.findIndex((l) => l === listener);
-    if (index >= 0) {
-      listeners.splice(index, 1);
+    for (let i = 0; i < listeners.length; i++) {
+      if (listeners[i] === listener) {
+        listeners.splice(i, 1);
+        break;
+      }
     }
   }
 }

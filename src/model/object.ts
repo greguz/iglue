@@ -51,9 +51,21 @@ function applyMiddleware(obj: any, property: string) {
     }
   }
 
+  // handle array observation
+  function handleArrays(update: any): any {
+    if (isArray(value)) {
+      unobserveArray(value, notify);
+    }
+    if (isArray(update)) {
+      observeArray(update, notify);
+    }
+    return update;
+  }
+
   // create the custom wrapped getter and setter
   let get: () => any;
   let set: (value: any) => void;
+
   if (descriptor.get || descriptor.set) {
     // save the getter as is
     get = descriptor.get;
@@ -67,17 +79,6 @@ function applyMiddleware(obj: any, property: string) {
       };
     }
   } else {
-    // handle array observation
-    function handleArrays(update: any): any {
-      if (isArray(value)) {
-        unobserveArray(value, notify);
-      }
-      if (isArray(update)) {
-        observeArray(update, notify);
-      }
-      return update;
-    }
-
     // init with the current value
     value = handleArrays(descriptor.value);
 
@@ -154,9 +155,11 @@ export function unobserveProperty(obj: any, property: string, listener: Property
     unobserveArray(obj, listener);
   } else if (isObservedObject(obj, property)) {
     const listeners: PropertyListener[] = obj[VARIABLE][property];
-    const index: number = listeners.findIndex((l) => l === listener);
-    if (index >= 0) {
-      listeners.splice(index, 1);
+    for (let i = 0; i < listeners.length; i++) {
+      if (listeners[i] === listener) {
+        listeners.splice(i, 1);
+        break;
+      }
     }
   }
 }
