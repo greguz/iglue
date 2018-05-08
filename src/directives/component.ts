@@ -2,10 +2,14 @@ import { IComponent } from "../interfaces/IComponent";
 import { IDirective } from "../interfaces/IDirective";
 import { IView } from "../interfaces/IView";
 
-function parseTemplate(template: string): HTMLElement {
-  const container: HTMLTemplateElement = document.createElement("template");
-  container.innerHTML = template.trim();
-  return document.importNode(container.content.firstChild, true) as HTMLElement;
+function parseTemplate(template: string | HTMLElement): HTMLElement {
+  if (typeof template === "string") {
+    const container: HTMLTemplateElement = document.createElement("template");
+    container.innerHTML = template.trim();
+    return document.importNode(container.content.firstChild, true) as HTMLElement;
+  } else {
+    return template.cloneNode(true) as HTMLElement;
+  }
 }
 
 export interface IComponentDirectiveOptions {
@@ -77,7 +81,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
     }
 
     // fetch template from component
-    const template: string = component.template.call(context);
+    const template: string | HTMLElement = component.template.call(context);
 
     // create the component HTML node
     const componentNode: HTMLElement = parseTemplate(template);

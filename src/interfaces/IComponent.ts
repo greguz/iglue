@@ -6,7 +6,7 @@ export interface IComponent<T = any> {
    * Returns the component HTML template
    */
 
-  template: (this: T) => string;
+  template: (this: T) => string | HTMLElement;
 
   /**
    * Component loaded, data-binding and DOM not initialized
