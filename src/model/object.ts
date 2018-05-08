@@ -72,8 +72,8 @@ function applyMiddleware(obj: any, property: string) {
 
     // wrap the setter
     if (descriptor.set) {
-      set = function getter(value: any): void {
-        descriptor.set.call(this, value);
+      set = function getter(update: any): void {
+        descriptor.set.call(this, update);
         value = descriptor.get.call(this);
         notify();
       };

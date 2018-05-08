@@ -1,6 +1,7 @@
 import { IComponent } from "../interfaces/IComponent";
 import { IDirective } from "../interfaces/IDirective";
 import { IView } from "../interfaces/IView";
+
 import { buildHTML } from "../htmlParser";
 
 function parseTemplate(template: string | HTMLElement): HTMLElement {

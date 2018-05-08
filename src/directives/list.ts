@@ -1,4 +1,4 @@
-import assign from 'object-assign';
+import assign from "object-assign";
 
 import { IBinding } from "../interfaces/IBinding";
 import { IDirective } from "../interfaces/IDirective";
