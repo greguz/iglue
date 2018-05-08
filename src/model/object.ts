@@ -41,51 +41,45 @@ function applyMiddleware(obj: any, property: string) {
   const listeners: PropertyListener[] = obj[VARIABLE][property] = [];
   const descriptor = getPropertyDescriptor(obj, property);
 
+  // current property value
+  let value: any;
+
+  // notification callback
+  function notify() {
+    for (const listener of listeners) {
+      listener(value);
+    }
+  }
+
+  // create the custom wrapped getter and setter
   let get: () => any;
   let set: (value: any) => void;
-
   if (descriptor.get || descriptor.set) {
     // save the getter as is
     get = descriptor.get;
 
-    // wrap the setter (if exists)
+    // wrap the setter
     if (descriptor.set) {
-      function notify() {
-        const value: any = get.call(obj);
-        for (const listener of listeners) {
-          listener(value);
-        }
-      }
-
       set = function getter(value: any): void {
         descriptor.set.call(this, value);
+        value = descriptor.get.call(this);
         notify();
       };
     }
   } else {
-    // init with the current value
-    let value = descriptor.value;
-
-    // function that call all listeners with the current value
-    function notify() {
-      for (const listener of listeners) {
-        listener(value);
-      }
-    }
-
     // handle array observation
-    function handleArrays(newValue: any): any {
-      if (value instanceof Array) {
+    function handleArrays(update: any): any {
+      if (isArray(value)) {
         unobserveArray(value, notify);
       }
-      if (newValue instanceof Array) {
-        observeArray(newValue, notify);
+      if (isArray(update)) {
+        observeArray(update, notify);
       }
-      return newValue;
+      return update;
     }
 
-    // initialize array (if exists)
-    value = handleArrays(value);
+    // init with the current value
+    value = handleArrays(descriptor.value);
 
     // create getter
     get = function getter(): any {
