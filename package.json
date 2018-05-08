@@ -5,11 +5,12 @@
   "main": "dist/index.js",
   "types": "types/index.d.ts",
   "scripts": {
-    "types": "tsc --declaration --declarationDir types",
-    "check": "tsc --noEmit",
+    "prepublishOnly": "npm run test && npm run build && npm run types",
     "lint": "tslint -c tslint.json src/**/*.ts",
+    "test": "mocha -r ts-node/register src/**/*.spec.ts",
     "build": "tsc",
-    "test": "mocha -r ts-node/register src/**/*.spec.ts"
+    "types": "tsc --declaration --declarationDir types",
+    "check": "tsc --noEmit"
   },
   "author": {
     "name": "Giacomo Gregoletto",
