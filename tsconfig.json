@@ -19,6 +19,7 @@
         "strictNullChecks": false,
         "sourceMap": false,
         "target": "es5",
+        "types": [],
         "typeRoots": [
             "node_modules/@types"
         ]
