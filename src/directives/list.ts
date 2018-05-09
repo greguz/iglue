@@ -1,5 +1,3 @@
-import assign from "object-assign";
-
 import { IBinding } from "../interfaces/IBinding";
 import { IDirective } from "../interfaces/IDirective";
 import { IView } from "../interfaces/IView";
@@ -21,11 +19,13 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
     return binding.el.cloneNode(true) as HTMLElement;
   }
 
-  function sync(target: object, index: number, model: any): object {
-    return assign(target, options.model, {
-      ["$index"]: index,
-      [binding.argument]: model
-    });
+  function sync(target: any, index: number, model: any): object {
+    for (const key in options.model) {
+      target[key] = (options.model as any)[key];
+    }
+    target["$index"] = index;
+    target[binding.argument] = model;
+    return target;
   }
 
   function bind(): void {

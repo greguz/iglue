@@ -1,5 +1,3 @@
-import assign from "object-assign";
-
 import {
   IAttributeInfo,
   IAttributeParser,
@@ -412,13 +410,25 @@ export class View implements IView {
 
   private buildBinding(el: HTMLElement, attrName: string, observer: IObserver): IBinding {
     const info: IAttributeInfo = this.parser.parse(el, attrName);
-    function get(): any {
-      return observer.get();
-    }
-    function set(value: any): void {
-      observer.set(value);
-    }
-    return assign({ el, context: this.data, get, set }, info);
+    return {
+      el,
+      context: this.data,
+      get(): any {
+        return observer.get();
+      },
+      set(value: any): void {
+        observer.set(value);
+      },
+      argument: info.argument,
+      attrName: info.attrName,
+      attrValue: info.attrValue,
+      directive: info.directive,
+      formatters: info.formatters,
+      modifiers: info.modifiers,
+      prefix: info.prefix,
+      value: info.value,
+      watch: info.watch
+    };
   }
 
   /**
