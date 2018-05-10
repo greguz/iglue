@@ -75,11 +75,11 @@ function buildFormatters(
     }
 
     return {
-      read(value: any): any {
-        return formatter.read(value, ...args());
+      pull(value: any): any {
+        return formatter.pull(value, ...args());
       },
-      write(value: any): any {
-        return formatter.write(value, ...args());
+      push(value: any): any {
+        return formatter.push(value, ...args());
       }
     };
   });
@@ -248,15 +248,15 @@ export class View implements IView {
 
     if (typeof formatter === "function") {
       return {
-        read: formatter,
-        write: (value: any) => value
+        pull: formatter,
+        push: (value: any) => value
       };
     } else if (formatter) {
       return formatter;
     } else {
       return {
-        read: (value: any) => value,
-        write: (value: any) => value
+        pull: (value: any) => value,
+        push: (value: any) => value
       };
     }
   }
@@ -316,7 +316,7 @@ export class View implements IView {
     function get(): any {
       let value: any = observer.get();
       for (const formatter of formatters) {
-        value = formatter.read(value);
+        value = formatter.pull(value);
       }
       return value;
     }
@@ -324,7 +324,7 @@ export class View implements IView {
     // set the value
     function set(value: any): void {
       for (const formatter of formatters) {
-        value = formatter.write(value);
+        value = formatter.push(value);
       }
       observer.set(value);
     }
