@@ -1,34 +1,34 @@
 {
-    "compilerOptions": {
-        "allowJs": false,
-        "allowSyntheticDefaultImports": true,
-        "alwaysStrict": true,
-        "charset": "utf8",
-        "checkJs": false,
-        "emitBOM": false,
-        "experimentalDecorators": false,
-        "module": "commonjs",
-        "moduleResolution": "node",
-        "noImplicitAny": true,
-        "noImplicitReturns": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": false,
-        "outDir": "dist",
-        "removeComments": true,
-        "rootDir": "src",
-        "strictNullChecks": false,
-        "sourceMap": false,
-        "target": "es5",
-        "types": [],
-        "typeRoots": [
-            "node_modules/@types"
-        ]
-    },
-    "include": [
-        "src/index.ts",
-        "src/**/*.spec.ts"
-    ],
-    "exclude": [
-        "node_modules"
+  "compilerOptions": {
+    "allowJs": false,
+    "allowSyntheticDefaultImports": true,
+    "alwaysStrict": true,
+    "charset": "utf8",
+    "checkJs": false,
+    "emitBOM": false,
+    "experimentalDecorators": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": false,
+    "outDir": "dist",
+    "removeComments": true,
+    "rootDir": "src",
+    "strictNullChecks": false,
+    "sourceMap": false,
+    "target": "es5",
+    "types": [],
+    "typeRoots": [
+      "node_modules/@types"
     ]
+  },
+  "include": [
+    "src/index.ts",
+    "src/**/*.spec.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
