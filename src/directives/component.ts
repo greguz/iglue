@@ -4,11 +4,13 @@ import { IView } from "../interfaces/IView";
 
 import { buildHTML } from "../htmlParser";
 
-function parseTemplate(template: string | HTMLElement): HTMLElement {
-  if (typeof template === "string") {
-    return buildHTML(template);
+function parseTemplate(component: IComponent, context: object): HTMLElement {
+  if (component.render) {
+    return component.render.call(context);
+  } else if (component.template) {
+    return buildHTML(component.template);
   } else {
-    return template;
+    throw new Error("Invalid component template detected");
   }
 }
 
@@ -80,11 +82,8 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
       component.create.call(context);
     }
 
-    // fetch template from component
-    const template: string | HTMLElement = component.template.call(context);
-
     // create the component HTML node
-    const componentNode: HTMLElement = parseTemplate(template);
+    const componentNode: HTMLElement = parseTemplate(component, context);
 
     // remove current node from DOM
     currentNode.parentElement.replaceChild(componentNode, currentNode);

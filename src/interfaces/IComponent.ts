@@ -3,10 +3,16 @@ import { IView } from "./IView";
 export interface IComponent<T = any> {
 
   /**
-   * Returns the component HTML template
+   * HTML template
    */
 
-  template: (this: T) => string | HTMLElement;
+  template?: string;
+
+  /**
+   * Custom rendering function
+   */
+
+  render?: (this: T) => HTMLElement;
 
   /**
    * Component loaded, data-binding and DOM not initialized
