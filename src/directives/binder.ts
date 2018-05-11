@@ -1,12 +1,40 @@
-import { IBinder, IBinderRoutine, IBinderValue } from "../interfaces/IBinder";
+import { IBinder, IBinderRoutine } from "../interfaces/IBinder";
 import { IBinding } from "../interfaces/IBinding";
 import { IDirective } from "../interfaces/IDirective";
+import { IValueSpecification } from "../interfaces/IValueSpecification";
 
 export function buildBinderDirective(binding: IBinding, definition: IBinder | IBinderRoutine): IDirective {
   const binder: IBinder = typeof definition === "function" ? { routine: definition } : definition;
 
   const el: HTMLElement = binding.el;
   let context: any;
+
+  function applyValueSpecification(value: any, spec: IValueSpecification): any {
+    if (value === null || value === undefined) {
+      if (spec.required === true) {
+        throw new Error(`The required bound value "${binding.attrValue}" is not defined`);
+      }
+      if (spec.hasOwnProperty("default")) {
+        value = spec.default;
+      }
+    } else {
+      if (typeof spec.type === "string" && typeof value !== spec.type) {
+        throw new Error(`The bound value "${binding.attrValue}" is not a "${spec.type}"`);
+      }
+      if (typeof spec.type === "function" && !(value instanceof spec.type)) {
+        throw new Error(`The bound value "${binding.attrValue}" is not an instance of ${spec.type}`);
+      }
+
+      if (spec.validator) {
+        const valid: boolean = spec.validator.call(context, value);
+        if (!valid) {
+          throw new Error(`The bound value "${value}" from "${binding.attrValue}" is not valid`);
+        }
+      }
+    }
+
+    return value;
+  }
 
   function bind(): void {
     binding.el.removeAttribute(binding.attrName);
@@ -18,35 +46,9 @@ export function buildBinderDirective(binding: IBinding, definition: IBinder | IB
 
   function refresh(): void {
     let value: any = binding.get();
-
     if (binder.value) {
-      const options: IBinderValue = binder.value;
-
-      if (value === null || value === undefined) {
-        if (options.required) {
-          throw new Error(`The required bound value "${binding.attrValue}" is not defined`);
-        }
-        if (options.default !== undefined) {
-          value = options.default;
-        }
-      } else {
-        if (typeof options.type === "string" && typeof value !== options.type) {
-          throw new Error(`The bound value "${binding.attrValue}" is not a "${options.type}"`);
-        }
-        if (typeof options.type === "function" && !(value instanceof options.type)) {
-          throw new Error(`The bound value "${binding.attrValue}" is not an instance of ${options.type}`);
-        }
-
-        if (options.validator) {
-          const valid: boolean = options.validator.call(context, value);
-
-          if (!valid) {
-            throw new Error(`The bound value "${value}" from "${binding.attrValue}" is not valid`);
-          }
-        }
-      }
+      value = applyValueSpecification(value, binder.value);
     }
-
     if (binder.routine) {
       binder.routine.call(context, el, value, binding);
     }
