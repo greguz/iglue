@@ -254,10 +254,7 @@ export class View implements IView {
     } else if (formatter) {
       return formatter;
     } else {
-      return {
-        pull: (value: any) => value,
-        push: (value: any) => value
-      };
+      throw new Error(`Formatter "${name}" not found`);
     }
   }
 
