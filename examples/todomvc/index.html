@@ -10,7 +10,7 @@
     <section class="todoapp">
       <header class="header">
         <h1>todos</h1>
-        <input class="new-todo" autofocus autocomplete="off" placeholder="What needs to be done?" i-value="newTodo" />
+        <input class="new-todo" autofocus autocomplete="off" placeholder="What needs to be done?" i-value="newTodo" i-on:keyup="onNewTodoKeyUp" />
       </header>
       <section class="main" i-show="todos.length">
         <input id="toggle-all" class="toggle-all" type="checkbox" i-on:change="allDone" />
@@ -19,7 +19,7 @@
           <li class="todo" i-each:todo="todos | filterBy visibility" i-class:completed="todo.completed">
             <div class="view">
               <input class="toggle" type="checkbox" i-value="todo.completed" />
-              <label @dblclick="editTodo(todo)">{ todo.title }</label>
+              <label>{ todo.title }</label>
               <button class="destroy" i-on:click="removeTodo | bind todo"></button>
             </div>
             <input class="edit" type="text" i-value="todo.title" />
@@ -41,7 +41,7 @@
       </footer>
     </section>
     <footer class="info">
-      <p>Double-click to edit a todo</p>
+      <!--<p>Double-click to edit a todo</p>-->
       <p>Written by <a href="https://github.com/greguz">Giacomo Gregoletto</a></p>
       <p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
     </footer>
