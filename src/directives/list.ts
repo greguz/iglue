@@ -3,7 +3,6 @@ import { IDirective } from "../interfaces/IDirective";
 import { IView } from "../interfaces/IView";
 
 export interface IListDirectiveOptions {
-  model: object;
   binding: IBinding;
   view: (el: HTMLElement, data: object) => IView;
 }
@@ -19,10 +18,26 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
     return binding.el.cloneNode(true) as HTMLElement;
   }
 
-  function sync(target: any, index: number, model: any): object {
-    for (const key in options.model) {
-      target[key] = (options.model as any)[key];
+  function buildContext(): any {
+    const context: any = {};
+    for (const key in binding.context) {
+      if (key !== binding.argument && key !== "$index") {
+        Object.defineProperty(context, key, {
+          enumerable: true,
+          configurable: true,
+          get(): any {
+            return binding.context[key];
+          },
+          set(value: any): void {
+            binding.context[key] = value;
+          }
+        });
+      }
     }
+    return context;
+  }
+
+  function sync(target: any, index: number, model: any): object {
     target["$index"] = index;
     target[binding.argument] = model;
     return target;
@@ -55,7 +70,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
         sync(view.data, index, model);
       } else {
         const el: HTMLElement = clone();
-        const data: object = sync({}, index, model);
+        const data: object = sync(buildContext(), index, model);
 
         container.insertBefore(el, previous.nextSibling);
 

@@ -550,8 +550,7 @@ export class View implements IView {
 
     const directive: IDirective = buildListDirective({
       binding,
-      view: this.clone.bind(this),
-      model: this.data
+      view: this.clone.bind(this)
     });
 
     observer.notify(directive.refresh);
