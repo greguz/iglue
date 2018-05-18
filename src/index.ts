@@ -120,7 +120,38 @@ export const components: ICollection<IComponent> = {};
  * Global formatters
  */
 
-export const formatters: ICollection<Formatter | IFormatter> = {};
+export const formatters: ICollection<Formatter | IFormatter> = {
+
+  bind(method: any, ...boundArgs: any[]) {
+    if (typeof method !== "function") {
+      throw new Error("The target bound value is not a function");
+    }
+    return function boundMethod(...args: any[]) {
+      method.apply(this, boundArgs.concat(args));
+    };
+  },
+
+  eq(value: any, target: any): boolean {
+    return value === target;
+  },
+
+  gt(value: any, target: any): boolean {
+    return value > target;
+  },
+
+  gte(value: any, target: any): boolean {
+    return value >= target;
+  },
+
+  lt(value: any, target: any): boolean {
+    return value < target;
+  },
+
+  lte(value: any, target: any): boolean {
+    return value <= target;
+  }
+
+};
 
 /**
  * Bind a new view
