@@ -1,0 +1,11 @@
+{
+  "name": "todomvc-iglue",
+  "version": "0.1.0",
+  "description": "TodoMVC iglue example",
+  "license": "MIT",
+  "dependencies": {
+    "todomvc-app-css": "^2.1.2",
+    "todomvc-common": "^1.0.5"
+  },
+  "private": true
+}

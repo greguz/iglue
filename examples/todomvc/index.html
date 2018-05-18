@@ -1,0 +1,52 @@
+<!doctype html>
+<html data-framework="iglue">
+  <head>
+    <meta charset="utf-8" />
+    <title>iglue.js • TodoMVC</title>
+    <link rel="stylesheet" href="node_modules/todomvc-common/base.css" />
+    <link rel="stylesheet" href="node_modules/todomvc-app-css/index.css" />
+  </head>
+  <body>
+    <section class="todoapp">
+      <header class="header">
+        <h1>todos</h1>
+        <input class="new-todo" autofocus autocomplete="off" placeholder="What needs to be done?" i-value="newTodo" />
+      </header>
+      <section class="main" i-show="todos.length">
+        <input id="toggle-all" class="toggle-all" type="checkbox" i-on:change="allDone" />
+        <label for="toggle-all">Mark all as complete</label>
+        <ul class="todo-list">
+          <li class="todo" i-each:todo="todos | filterBy visibility" i-class:completed="todo.completed">
+            <div class="view">
+              <input class="toggle" type="checkbox" i-value="todo.completed" />
+              <label @dblclick="editTodo(todo)">{ todo.title }</label>
+              <button class="destroy" i-on:click="removeTodo | bind todo"></button>
+            </div>
+            <input class="edit" type="text" i-value="todo.title" />
+          </li>
+        </ul>
+      </section>
+      <footer class="footer" i-show="todos.length">
+        <span class="todo-count">
+          <strong i-text="todos | remaining"></strong> items left
+        </span>
+        <ul class="filters">
+          <li><a href="#" i-class:selected="visibility | eq 'all'" i-on:click="setVisibility | bind 'all'">All</a></li>
+          <li><a href="#" i-class:selected="visibility | eq 'active'" i-on:click="setVisibility | bind 'active'">Active</a></li>
+          <li><a href="#" i-class:selected="visibility | eq 'completed'" i-on:click="setVisibility | bind 'completed'">Completed</a></li>
+        </ul>
+        <button class="clear-completed" i-on:click="removeCompleted" i-show="todos.length">
+          Clear completed
+        </button>
+      </footer>
+    </section>
+    <footer class="info">
+      <p>Double-click to edit a todo</p>
+      <p>Written by <a href="https://github.com/greguz">Giacomo Gregoletto</a></p>
+      <p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
+    </footer>
+    <script src="node_modules/todomvc-common/base.js"></script>
+    <script src="../../dist/iglue.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
