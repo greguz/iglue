@@ -35,5 +35,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/greguz/iglue.git"
-  }
+  },
+  "files": [
+    "dist",
+    "types"
+  ]
 }
