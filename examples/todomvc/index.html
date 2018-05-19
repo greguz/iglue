@@ -19,7 +19,7 @@
           <li class="todo" i-each:todo="todos | filterBy visibility" i-class:completed="todo.completed" i-class:editing="todo.editing">
             <div class="view">
               <input class="toggle" type="checkbox" i-value="todo.completed" i-on:change="refreshTodo | bind $index" />
-              <label i-on:click="editTodo | bind todo">{ todo.title }</label>
+              <label i-on:dblclick="editTodo | bind todo">{ todo.title }</label>
               <button class="destroy" i-on:click="removeTodo | bind todo"></button>
             </div>
             <input class="edit" type="text" i-value="todo.title" i-focus="todo.editing" i-on:blur="doneEdit" />
@@ -35,13 +35,13 @@
           <li><a href="#" i-class:selected="visibility | eq 'active'" i-on:click="setVisibility | bind 'active'">Active</a></li>
           <li><a href="#" i-class:selected="visibility | eq 'completed'" i-on:click="setVisibility | bind 'completed'">Completed</a></li>
         </ul>
-        <button class="clear-completed" i-on:click="removeCompleted" i-show="todos.length">
+        <button class="clear-completed" i-on:click="removeCompleted" i-show="todos | filterBy 'completed' | property 'length' | gt 0">
           Clear completed
         </button>
       </footer>
     </section>
     <footer class="info">
-      <p>Click to edit a todo</p>
+      <p>Double-click to edit a todo</p>
       <p>Written by <a href="https://github.com/greguz">Giacomo Gregoletto</a></p>
       <p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
     </footer>
