@@ -39,5 +39,8 @@
   "files": [
     "dist",
     "types"
-  ]
+  ],
+  "engines": {
+    "npm": ">=4.0.0"
+  }
 }
