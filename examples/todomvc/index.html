@@ -18,7 +18,7 @@
         <ul class="todo-list">
           <li class="todo" i-each:todo="todos | filterBy visibility" i-class:completed="todo.completed" i-class:editing="todo.editing">
             <div class="view">
-              <input class="toggle" type="checkbox" i-value="todo.completed" />
+              <input class="toggle" type="checkbox" i-value="todo.completed" i-on:change="refreshTodo | bind $index" />
               <label i-on:click="editTodo | bind todo">{ todo.title }</label>
               <button class="destroy" i-on:click="removeTodo | bind todo"></button>
             </div>

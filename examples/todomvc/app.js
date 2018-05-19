@@ -1,30 +1,6 @@
 (function (window, iglue) {
 
-  iglue.binders.focus = function (el, editing) {
-    if (editing === true) {
-      el.focus();
-    }
-  };
-
-  iglue.formatters.remaining = function (todos) {
-    return todos.filter(function (todo) {
-      return todo.completed !== true;
-    }).length;
-  };
-
-  iglue.formatters.filterBy = function (todos, visibility) {
-    return todos.filter(function (todo) {
-      if (visibility === "active") {
-        return todo.completed !== true;
-      } else if (visibility === "completed") {
-        return todo.completed === true;
-      } else {
-        return true;
-      }
-    });
-  };
-
-  window.data = {
+  var data = {
 
     newTodo: "",
 
@@ -77,10 +53,45 @@
         todo.editing = false;
         return todo;
       });
+    },
+
+    refreshTodo(index) {
+      var todo = this.todos[index];
+      this.todos.splice(index, 1, todo);
     }
 
   };
 
-  window.view = iglue.bind(document.body, window.data);
+  var formatters = {
+
+    focus: function (el, editing) {
+      if (editing === true) {
+        el.focus();
+      }
+    },
+
+    remaining: function (todos) {
+      return todos.filter(function (todo) {
+        return todo.completed !== true;
+      }).length;
+    },
+
+    filterBy: function (todos, visibility) {
+      return todos.filter(function (todo) {
+        if (visibility === "active") {
+          return todo.completed !== true;
+        } else if (visibility === "completed") {
+          return todo.completed === true;
+        } else {
+          return true;
+        }
+      });
+    }
+
+  };
+
+  window.view = iglue.bind(document.body, data, {
+    formatters: formatters
+  });
 
 })(window, iglue);
