@@ -85,6 +85,65 @@ function buildFormatters(
   });
 }
 
+interface IParsedTextNode {
+  type: "text" | "expression";
+  from: number;
+  to: number;
+  content: string;
+}
+
+function parseText(text: string, regex: RegExp): IParsedTextNode[] {
+  // ensure global flag
+  if (!regex.global) {
+    throw new Error("The interpolation regular expression must be global");
+  }
+
+  // resulting array
+  const matches: IParsedTextNode[] = [];
+
+  // current match
+  let match: RegExpExecArray;
+
+  // current text index
+  let index = 0;
+
+  // each all regexp matches
+  while (match = regex.exec(text)) {
+    // extract previous text
+    if (index !== match.index) {
+      matches.push({
+        type: "text",
+        from: index,
+        to: match.index - 1,
+        content: text.substring(index, match.index)
+      });
+    }
+
+    // extract matched path
+    matches.push({
+      type: "expression",
+      from: match.index,
+      to: match.index + match[0].length - 1,
+      content: match[1]
+    });
+
+    // update current index
+    index = match.index + match[0].length;
+  }
+
+  // extract text after last match
+  if (index !== text.length) {
+    matches.push({
+      type: "text",
+      from: index,
+      to: text.length - 1,
+      content: text.substring(index, text.length)
+    });
+  }
+
+  return matches;
+}
+
 export class View implements IView {
 
   /**
@@ -487,29 +546,18 @@ export class View implements IView {
 
   private injectTextNodes(node: Text): void {
     const parent: HTMLElement = node.parentElement;
-    const text: string = node.data;
-    let chunk: string = "";
+    const matches = parseText(node.data, /{([^}]+)}/g);
 
-    // tslint:disable-next-line: prefer-for-of
-    for (let i = 0; i < text.length; i++) {
-      const char: string = text[i];
-
-      if (char === "{") {
-        if (chunk) {
-          parent.insertBefore(
-            document.createTextNode(chunk),
-            node
-          );
-          chunk = "";
-        }
-      } else if (char === "}") {
-        const expression: string = chunk.trim();
-
-        if (!expression) {
-          throw new Error("Invalid text binding");
-        }
-
+    for (const match of matches) {
+      if (match.type === "text") {
+        parent.insertBefore(
+          document.createTextNode(match.content),
+          node
+        );
+      } else {
+        const expression: string = match.content;
         const observer: IObserver = this.parseExpression(expression);
+
         const directive: IDirective = buildTextDirective(
           parent.insertBefore(
             document.createTextNode(`{ ${expression} }`),
@@ -517,20 +565,11 @@ export class View implements IView {
           ),
           observer
         );
+
         observer.notify(directive.refresh);
+
         this.directives.push(directive);
-
-        chunk = "";
-      } else {
-        chunk += char;
       }
-    }
-
-    if (chunk) {
-      parent.insertBefore(
-        document.createTextNode(chunk),
-        node
-      );
     }
 
     node.parentElement.removeChild(node);
