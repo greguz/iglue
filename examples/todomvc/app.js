@@ -1,10 +1,16 @@
-(function(window, iglue) {
+(function (window, iglue) {
+
+  iglue.binders.focus = function (el, editing) {
+    if (editing === true) {
+      el.focus();
+    }
+  };
 
   iglue.formatters.remaining = function (todos) {
-    return todos.filter(function(todo) {
+    return todos.filter(function (todo) {
       return todo.completed !== true;
     }).length;
-  }
+  };
 
   iglue.formatters.filterBy = function (todos, visibility) {
     return todos.filter(function (todo) {
@@ -16,7 +22,7 @@
         return true;
       }
     });
-  }
+  };
 
   window.data = {
 
@@ -60,13 +66,21 @@
         this.todos.unshift({ title: this.newTodo });
         this.newTodo = "";
       }
+    },
+
+    editTodo: function (todo) {
+      todo.editing = true;
+    },
+
+    doneEdit: function () {
+      this.todos = this.todos.map(function (todo) {
+        todo.editing = false;
+        return todo;
+      });
     }
 
   };
 
   window.view = iglue.bind(document.body, window.data);
-
-  // TODO editing
-  // TODO fix "items left"
 
 })(window, iglue);

@@ -16,13 +16,13 @@
         <input id="toggle-all" class="toggle-all" type="checkbox" i-on:change="allDone" />
         <label for="toggle-all">Mark all as complete</label>
         <ul class="todo-list">
-          <li class="todo" i-each:todo="todos | filterBy visibility" i-class:completed="todo.completed">
+          <li class="todo" i-each:todo="todos | filterBy visibility" i-class:completed="todo.completed" i-class:editing="todo.editing">
             <div class="view">
               <input class="toggle" type="checkbox" i-value="todo.completed" />
-              <label>{ todo.title }</label>
+              <label i-on:click="editTodo | bind todo">{ todo.title }</label>
               <button class="destroy" i-on:click="removeTodo | bind todo"></button>
             </div>
-            <input class="edit" type="text" i-value="todo.title" />
+            <input class="edit" type="text" i-value="todo.title" i-focus="todo.editing" i-on:blur="doneEdit" />
           </li>
         </ul>
       </section>
