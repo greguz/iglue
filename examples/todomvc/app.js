@@ -10,8 +10,7 @@
       title: "Take the cake",
       completed: true
     }, {
-      title: "Kill Glados",
-      completed: false
+      title: "Kill Glados"
     }],
 
     allDone: function (event, input) {
@@ -39,8 +38,11 @@
 
     onNewTodoKeyUp: function (event) {
       if (event.keyCode === 13) { // ENTER
-        this.todos.unshift({ title: this.newTodo });
-        this.newTodo = "";
+        var title = this.newTodo.trim();
+        if (title) {
+          this.todos.unshift({ title: title });
+          this.newTodo = "";
+        }
       }
     },
 
