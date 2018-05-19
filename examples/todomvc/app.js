@@ -62,13 +62,17 @@
 
   };
 
-  var formatters = {
+  var binders = {
 
     focus: function (el, editing) {
       if (editing === true) {
         el.focus();
       }
-    },
+    }
+
+  };
+
+  var formatters = {
 
     remaining: function (todos) {
       return todos.filter(function (todo) {
@@ -91,6 +95,7 @@
   };
 
   window.view = iglue.bind(document.body, data, {
+    binders: binders,
     formatters: formatters
   });
 
