@@ -131,6 +131,12 @@ export const formatters: ICollection<Formatter | IFormatter> = {
     };
   },
 
+  property(obj: any, property: string): any {
+    if (typeof obj === "object" && obj !== null) {
+      return obj[property];
+    }
+  },
+
   eq(value: any, target: any): boolean {
     return value === target;
   },
