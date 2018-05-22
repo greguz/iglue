@@ -1,4 +1,15 @@
 (function (window, iglue) {
+  "use strict";
+
+  var STORAGE_ITEM = "todos-iglue";
+
+  function fetch() {
+    return JSON.parse(localStorage.getItem(STORAGE_ITEM) || "[]");
+  }
+
+  function write(todos) {
+    localStorage.setItem(STORAGE_ITEM, JSON.stringify(todos));
+  }
 
   var data = {
 
@@ -6,14 +17,9 @@
 
     visibility: "all",
 
-    todos: [{
-      title: "Take the cake",
-      completed: true
-    }, {
-      title: "Kill Glados"
-    }],
+    todos: fetch(),
 
-    allDone: function (event, input) {
+    onToggleAllChange: function (event, input) {
       this.todos = this.todos.map(function (todo) {
         todo.completed = input.checked;
         return todo;
@@ -92,13 +98,32 @@
           return true;
         }
       });
+    },
+
+    allDone: {
+      pull: function (_, todos) {
+        return todos.reduce(function (result, todo) {
+          return result && todo.completed;
+        }, true);
+      },
+      push: function (completed, todos) {
+        todos.forEach(function (todo) {
+          todo.completed = completed;
+        });
+        todos.push(); // trigger changes
+        return completed;
+      }
     }
 
   };
 
-  window.view = iglue.bind(document.body, data, {
+  var view = iglue.bind(document.body, data, {
     binders: binders,
     formatters: formatters
   });
+
+  view.context.$observe("todos", write);
+
+  window.view = view; // happy hacking
 
 })(window, iglue);

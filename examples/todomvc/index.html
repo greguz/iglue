@@ -13,7 +13,7 @@
         <input class="new-todo" autofocus autocomplete="off" placeholder="What needs to be done?" i-value="newTodo" i-on:keyup="onNewTodoKeyUp" />
       </header>
       <section class="main" i-show="todos.length">
-        <input id="toggle-all" class="toggle-all" type="checkbox" i-on:change="allDone" />
+        <input id="toggle-all" class="toggle-all" type="checkbox" i-value="allDone | allDone todos" i-on:change="onToggleAllChange" />
         <label for="toggle-all">Mark all as complete</label>
         <ul class="todo-list">
           <li class="todo" i-each:todo="todos | filterBy visibility" i-class:completed="todo.completed" i-class:editing="todo.editing">
