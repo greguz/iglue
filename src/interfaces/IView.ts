@@ -1,9 +1,10 @@
 import { IBinder, IBinderRoutine } from "./IBinder";
 import { ICollection } from "./ICollection";
 import { IComponent } from "./IComponent";
+import { IContext } from "./IContext";
 import { Formatter, IFormatter } from "./IFormatter";
 
-export interface IView {
+export interface IView<A extends object = {}> {
 
   /**
    * Bound DOM element
@@ -15,7 +16,7 @@ export interface IView {
    * Bound data model
    */
 
-  readonly data: object;
+  readonly context: IContext<A>;
 
   /**
    * Start data binding
@@ -39,7 +40,7 @@ export interface IView {
    * Clone the current view configuration and optinally the model
    */
 
-  clone(el: HTMLElement, data?: object): IView;
+  clone<B extends object = {}>(el: HTMLElement, data?: B): IView<B>;
 
   /**
    * Returns true when the view is bound to the element

@@ -2,7 +2,7 @@ import { IComponent } from "../interfaces/IComponent";
 import { IDirective } from "../interfaces/IDirective";
 import { IView } from "../interfaces/IView";
 
-import { buildHTML } from "../htmlParser";
+import { buildHTML } from "../parse/html";
 
 function parseTemplate(component: IComponent, context: object): HTMLElement {
   if (component.render) {

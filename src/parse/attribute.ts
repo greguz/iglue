@@ -7,7 +7,7 @@ import {
   IPathTarget,
   IPrimitiveTarget,
   ITarget
-} from "./interfaces/IAttributeParser";
+} from "../interfaces/IAttributeParser";
 
 function getRegExpGroup(str: string, regex: RegExp, group: number, err?: string): string | null {
   const match: RegExpMatchArray = str.match(regex);

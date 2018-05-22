@@ -10,14 +10,16 @@ import { IBinder, IBinderRoutine } from "./interfaces/IBinder";
 import { IBinding } from "./interfaces/IBinding";
 import { ICollection } from "./interfaces/ICollection";
 import { IComponent } from "./interfaces/IComponent";
+import { IContext } from "./interfaces/IContext";
 import { IDirective } from "./interfaces/IDirective";
 import { Formatter, IFormatter } from "./interfaces/IFormatter";
-import { IModel } from "./interfaces/IModel";
-import { IObserver } from "./interfaces/IObserver";
+import { IObserver, IObserverCallback } from "./interfaces/IObserver";
 import { IView, IViewOptions } from "./interfaces/IView";
 
-import { buildAttributeParser } from "./attributeParser";
-import { buildModel } from "./model";
+import { buildAttributeParser } from "./parse/attribute";
+import { parseText } from "./parse/text";
+
+import { buildContext } from "./context";
 
 import { buildBinderDirective } from "./directives/binder";
 import { buildComponentDirective } from "./directives/component";
@@ -35,9 +37,9 @@ function buildDefaultBinder(attrName: string): IBinderRoutine {
   };
 }
 
-function wrapTarget(target: ITarget, model: IModel): IObserver {
+function wrapTarget(target: ITarget, context: IContext, callback?: IObserverCallback): IObserver {
   if (target.type === "path") {
-    return model.observe(target.value);
+    return context.$observe(target.value, callback);
   } else {
     return {
       get(): any {
@@ -55,18 +57,16 @@ function wrapTarget(target: ITarget, model: IModel): IObserver {
 
 function buildFormatters(
   infos: IFormatterInfo[],
-  model: IModel,
+  context: IContext,
   resolveFormatter: (name: string) => IFormatter,
-  callback: () => void
+  callback: IObserverCallback
 ): IFormatter[] {
   return infos.map((info: IFormatterInfo): IFormatter => {
     const formatter: IFormatter = resolveFormatter(info.name);
 
-    const observers: IObserver[] = info.arguments.map((target: ITarget): IObserver => {
-      const observer = wrapTarget(target, model);
-      observer.notify(callback);
-      return observer;
-    });
+    const observers: IObserver[] = info.arguments.map(
+      (target: ITarget): IObserver => wrapTarget(target, context, callback)
+    );
 
     function args() {
       return observers.map(
@@ -85,66 +85,7 @@ function buildFormatters(
   });
 }
 
-interface IParsedTextNode {
-  type: "text" | "expression";
-  from: number;
-  to: number;
-  content: string;
-}
-
-function parseText(text: string, regex: RegExp): IParsedTextNode[] {
-  // ensure global flag
-  if (!regex.global) {
-    throw new Error("The interpolation regular expression must be global");
-  }
-
-  // resulting array
-  const matches: IParsedTextNode[] = [];
-
-  // current match
-  let match: RegExpExecArray;
-
-  // current text index
-  let index = 0;
-
-  // each all regexp matches
-  while (match = regex.exec(text)) {
-    // extract previous text
-    if (index !== match.index) {
-      matches.push({
-        type: "text",
-        from: index,
-        to: match.index - 1,
-        content: text.substring(index, match.index)
-      });
-    }
-
-    // extract matched path
-    matches.push({
-      type: "expression",
-      from: match.index,
-      to: match.index + match[0].length - 1,
-      content: match[1]
-    });
-
-    // update current index
-    index = match.index + match[0].length;
-  }
-
-  // extract text after last match
-  if (index !== text.length) {
-    matches.push({
-      type: "text",
-      from: index,
-      to: text.length - 1,
-      content: text.substring(index, text.length)
-    });
-  }
-
-  return matches;
-}
-
-export class View implements IView {
+export class View<A extends object = {}> implements IView<A> {
 
   /**
    * Bound DOM element
@@ -153,10 +94,10 @@ export class View implements IView {
   public readonly el: HTMLElement;
 
   /**
-   * Bound data
+   * View model instance
    */
 
-  public readonly data: any;
+  public readonly context: IContext<A>;
 
   /**
    * Binders collection
@@ -175,12 +116,6 @@ export class View implements IView {
    */
 
   private formatters: ICollection<Formatter | IFormatter>;
-
-  /**
-   * View model instance
-   */
-
-  private model: IModel;
 
   /**
    * Parsed DOM-data links
@@ -210,9 +145,9 @@ export class View implements IView {
    * @constructor
    */
 
-  constructor(el: HTMLElement, data: object, options: IViewOptions = {}) {
+  constructor(el: HTMLElement, obj: A, options: IViewOptions = {}) {
     this.el = el;
-    this.data = data;
+    this.context = buildContext(obj);
 
     this.prefix = options.prefix || "i-";
     this.directives = [];
@@ -223,7 +158,6 @@ export class View implements IView {
     this.formatters = options.formatters || {};
 
     this.parser = buildAttributeParser(this.prefix);
-    this.model = buildModel(data);
 
     this.traverse(el);
   }
@@ -242,7 +176,7 @@ export class View implements IView {
       directive.refresh();
     }
     // start data watching
-    this.model.start();
+    this.context.$start();
     // update status
     this.bound = true;
   }
@@ -264,7 +198,7 @@ export class View implements IView {
 
   public unbind() {
     // stop data watching
-    this.model.stop();
+    this.context.$stop();
     // de-init all directives
     for (const directive of this.directives) {
       directive.unbind();
@@ -277,10 +211,10 @@ export class View implements IView {
    * Clone the current view configuration and optinally the model
    */
 
-  public clone(el: HTMLElement, data?: object): View {
+  public clone<B extends object = {}>(el: HTMLElement, obj?: B): View<B> {
     return new View(
       el,
-      data || this.data,
+      obj,
       {
         prefix: this.prefix,
         binders: this.binders,
@@ -336,21 +270,21 @@ export class View implements IView {
    */
 
   private parseExpression(expression: string): IObserver {
-    // registered callback for the resulting observer
-    let superCallback: () => void;
-
-    // notification callback function
-    const callback = (): void => {
-      if (superCallback) {
-        superCallback();
-      }
-    };
-
     // parse expression string
     const info: IAttributeValueInfo = this.parser.parseValue(expression);
 
     // root value observer
-    const observer: IObserver = wrapTarget(info.value, this.model);
+    const observer: IObserver = wrapTarget(info.value, this.context);
+
+    // registered callback for the resulting observer
+    let superCallback: IObserverCallback;
+
+    // notification callback function
+    const callback = (): void => {
+      if (superCallback) {
+        superCallback(get(), null); // TODO oldValue
+      }
+    };
 
     // watch base value changes
     observer.notify(callback);
@@ -358,14 +292,14 @@ export class View implements IView {
     // build the formatters
     const formatters: IFormatter[] = buildFormatters(
       info.formatters,
-      this.model,
+      this.context,
       this.resolveFormatter.bind(this),
       callback
     );
 
     // register watched paths
     for (const watchedPath of info.watch) {
-      this.model.observe(watchedPath).notify(callback);
+      this.context.$observe(watchedPath).notify(callback);
     }
 
     // get the current value
@@ -386,7 +320,7 @@ export class View implements IView {
     }
 
     // register change callback
-    function notify(fn: () => void): void {
+    function notify(fn: IObserverCallback): void {
       superCallback = fn;
     }
 
@@ -468,7 +402,7 @@ export class View implements IView {
     const info: IAttributeInfo = this.parser.parse(el, attrName);
     return {
       el,
-      context: this.data,
+      context: this.context,
       get(): any {
         return observer.get();
       },
@@ -512,7 +446,7 @@ export class View implements IView {
 
     for (let i = 0; i < node.attributes.length; i++) {
       const attr: Attr = node.attributes[i];
-      const observer: IObserver = this.model.observe(attr.value);
+      const observer: IObserver = this.parseExpression(attr.value);
       Object.defineProperty(context, attr.name, {
         enumerable: true,
         configurable: true,
@@ -590,8 +524,8 @@ export class View implements IView {
     });
 
     observer.notify(directive.refresh);
-    for (const key in this.data) {
-      this.model.observe(key).notify(directive.refresh);
+    for (const key in this.context) {
+      this.context.$observe(key).notify(directive.refresh);
     }
 
     this.directives.push(directive);

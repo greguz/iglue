@@ -67,7 +67,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
       let view: IView = views[index];
 
       if (view) {
-        sync(view.data, index, model);
+        sync(view.context, index, model);
       } else {
         const el: HTMLElement = clone();
         const data: object = sync(buildContext(), index, model);
