@@ -122,7 +122,7 @@ export const components: ICollection<IComponent> = {};
 
 export const formatters: ICollection<Formatter | IFormatter> = {
 
-  bind(method: any, ...boundArgs: any[]): (...args: any[]) => any {
+  args(method: any, ...boundArgs: any[]): (...args: any[]) => any {
     if (typeof method !== "function") {
       throw new Error("The target bound value is not a function");
     }
