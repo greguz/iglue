@@ -141,6 +141,10 @@ export const formatters: ICollection<Formatter | IFormatter> = {
     return value === target;
   },
 
+  neq(value: any, target: any): boolean {
+    return value !== target;
+  },
+
   gt(value: any, target: any): boolean {
     return value > target;
   },
