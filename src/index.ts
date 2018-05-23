@@ -131,9 +131,9 @@ export const formatters: ICollection<Formatter | IFormatter> = {
     };
   },
 
-  property(obj: any, property: string): any {
+  prop(obj: any, prop: string): any {
     if (typeof obj === "object" && obj !== null) {
-      return obj[property];
+      return obj[prop];
     }
   },
 
