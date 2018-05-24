@@ -1,13 +1,15 @@
 import { IObserver, IObserverCallback } from "../interfaces/IObserver";
 
-import { isArray } from "./array";
+import { isArray, observeArray, unobserveArray } from "./array";
 import { observeProperty, unobserveProperty } from "./object";
+
+type Token = string | number;
 
 /**
  * Fetch current values chain
  */
 
-function realize(obj: any, tokens: string[]): any[] {
+function realize(obj: any, tokens: Token[]): any[] {
   const values: any[] = [];
 
   for (const token of tokens) {
@@ -24,12 +26,20 @@ function realize(obj: any, tokens: string[]): any[] {
 }
 
 /**
+ * TODO docs
+ */
+
+function parseTokens(path: string): Token[] {
+  return path.split("."); // TODO parse tokens like a.b[3].k[4][6]
+}
+
+/**
  * Create an observer
  */
 
 export function observePath(obj: object, path: string, callback?: IObserverCallback): IObserver {
   // path tokens
-  const tokens: string[] = path.split(".");
+  const tokens: Token[] = parseTokens(path);
 
   // last chain values
   let oldValues: any[];
@@ -55,7 +65,7 @@ export function observePath(obj: object, path: string, callback?: IObserverCallb
     let i: number;
 
     for (i = 0; i < tokens.length - 1; i++) {
-      const token: string = tokens[i];
+      const token: Token = tokens[i];
       if (typeof o[token] !== "object") {
         throw new Error("Unable to set the target object");
       }
@@ -69,26 +79,29 @@ export function observePath(obj: object, path: string, callback?: IObserverCallb
   function update(): void {
     const newValues: any[] = realize(obj, tokens);
 
-    for (let i = 0; i < tokens.length; i++) {
-      const token: string = tokens[i];
+    for (let i = 0; i <= tokens.length; i++) {
+      const token: Token = tokens[i];
       const oldValue: any = oldValues[i];
       const newValue: any = newValues[i];
 
       if (oldValue !== newValue) {
-        if (typeof oldValue === "object") {
-          unobserveProperty(oldValue, token, update);
+        if (isArray(oldValue)) {
+          unobserveArray(oldValue, update);
+        } else if (typeof oldValue === "object" && token) {
+          unobserveProperty(oldValue, token.toString(), update);
         }
-        if (typeof newValue === "object" && newValue !== null) {
-          observeProperty(newValue, token, update);
+        if (isArray(newValue)) {
+          observeArray(newValue, update);
+        } else if (typeof newValue === "object" && token && newValue !== null) {
+          observeProperty(newValue, token.toString(), update);
         }
       }
     }
 
-    const oldValue: any = oldValues[tokens.length];
-    const newValue: any = newValues[tokens.length];
-    if (newValue !== oldValue || isArray(newValue)) {
-      callback(newValue, oldValue);
-    }
+    callback(
+      newValues[tokens.length],
+      oldValues[tokens.length]
+    );
 
     oldValues = newValues;
   }
@@ -97,32 +110,28 @@ export function observePath(obj: object, path: string, callback?: IObserverCallb
   function observe(): void {
     oldValues = realize(obj, tokens);
 
-    for (let i = 0; i < tokens.length; i++) {
-      const token: string = tokens[i];
+    for (let i = 0; i <= tokens.length; i++) {
+      const token: Token = tokens[i];
       const o: any = oldValues[i];
 
-      if (typeof o === "object" && o !== null) {
-        observeProperty(
-          o,
-          token,
-          update
-        );
+      if (isArray(o)) {
+        observeArray(o, update);
+      } else if (typeof o === "object" && token && o !== null) {
+        observeProperty(o, token.toString(), update);
       }
     }
   }
 
   // stop data observing
   function unobserve(): void {
-    for (let i = 0; i < tokens.length; i++) {
-      const token: string = tokens[i];
+    for (let i = 0; i <= tokens.length; i++) {
+      const token: Token = tokens[i];
       const o: any = oldValues[i];
 
-      if (typeof o === "object") {
-        unobserveProperty(
-          o,
-          token,
-          update
-        );
+      if (isArray(o)) {
+        unobserveArray(o, update);
+      } else if (typeof o === "object" && token) {
+        unobserveProperty(o, token.toString(), update);
       }
     }
 

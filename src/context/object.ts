@@ -1,5 +1,3 @@
-import { isArray, observeArray, unobserveArray } from "./array";
-
 // variable where to inject the property listeners
 const VARIABLE = "_ol_";
 
@@ -51,17 +49,6 @@ function applyMiddleware(obj: any, property: string) {
     }
   }
 
-  // handle array observation
-  function handleArrays(update: any): any {
-    if (isArray(value)) {
-      unobserveArray(value, notify);
-    }
-    if (isArray(update)) {
-      observeArray(update, notify);
-    }
-    return update;
-  }
-
   // create the custom wrapped getter and setter
   let get: () => any;
   let set: (value: any) => void;
@@ -80,7 +67,7 @@ function applyMiddleware(obj: any, property: string) {
     }
   } else {
     // init with the current value
-    value = handleArrays(descriptor.value);
+    value = descriptor.value;
 
     // create getter
     get = function getter(): any {
@@ -90,7 +77,7 @@ function applyMiddleware(obj: any, property: string) {
     // create setter with middleware
     set = function setter(update: any): void {
       if (update !== value) {
-        value = handleArrays(update);
+        value = update;
         notify();
       }
     };
@@ -136,14 +123,10 @@ export function observeProperty(obj: any, property: string, listener: PropertyLi
   if (typeof obj !== "object" || obj === null) {
     throw new Error("Unexpected object to observe");
   }
-  if (property === "length" && isArray(obj)) {
-    observeArray(obj, listener);
-  } else {
-    if (!isObservedObject(obj, property)) {
-      applyMiddleware(obj, property);
-    }
-    obj[VARIABLE][property].push(listener);
+  if (!isObservedObject(obj, property)) {
+    applyMiddleware(obj, property);
   }
+  obj[VARIABLE][property].push(listener);
 }
 
 /**
@@ -151,9 +134,7 @@ export function observeProperty(obj: any, property: string, listener: PropertyLi
  */
 
 export function unobserveProperty(obj: any, property: string, listener: PropertyListener): void {
-  if (property === "length" && isArray(obj)) {
-    unobserveArray(obj, listener);
-  } else if (isObservedObject(obj, property)) {
+  if (isObservedObject(obj, property)) {
     const listeners: PropertyListener[] = obj[VARIABLE][property];
     for (let i = 0; i < listeners.length; i++) {
       if (listeners[i] === listener) {
