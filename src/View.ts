@@ -147,7 +147,12 @@ export class View<A extends object = {}> implements IView<A> {
 
   constructor(el: HTMLElement, obj: A, options: IViewOptions = {}) {
     this.el = el;
-    this.context = buildContext(obj);
+
+    if (obj.hasOwnProperty("$observe")) {
+      this.context = obj as IContext<A>;
+    } else {
+      this.context = buildContext(obj);
+    }
 
     this.prefix = options.prefix || "i-";
     this.directives = [];
@@ -211,10 +216,12 @@ export class View<A extends object = {}> implements IView<A> {
    * Clone the current view configuration and optinally the model
    */
 
-  public clone<B extends object = {}>(el: HTMLElement, obj?: B): View<B> {
+  public clone(el: HTMLElement): View<A>
+  public clone<B extends object = {}>(el: HTMLElement, obj: B): View<B>
+  public clone<B extends object = {}>(el: HTMLElement, obj?: B): View<A | B> {
     return new View(
       el,
-      obj,
+      obj || this.context,
       {
         prefix: this.prefix,
         binders: this.binders,

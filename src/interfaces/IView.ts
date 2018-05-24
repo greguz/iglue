@@ -37,10 +37,11 @@ export interface IView<A extends object = {}> {
   unbind(): void;
 
   /**
-   * Clone the current view configuration and optinally the model
+   * Clone the current view configuration and optinally the data context
    */
 
-  clone<B extends object = {}>(el: HTMLElement, data?: B): IView<B>;
+  clone(el: HTMLElement): IView<A>;
+  clone<B extends object = {}>(el: HTMLElement, data: B): IView<B>;
 
   /**
    * Returns true when the view is bound to the element
