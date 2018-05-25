@@ -26,11 +26,36 @@ function realize(obj: any, tokens: Token[]): any[] {
 }
 
 /**
- * TODO docs
+ * Parse value to into tokens
  */
 
-function parseTokens(path: string): Token[] {
-  return path.split("."); // TODO parse tokens like a.b[3].k[4][6]
+function parsePath(path: string): Token[] { // TODO you can do better than this...
+  const tokens: Token[] = [];
+
+  while (path.length > 0) {
+    if (path[0] === "[") {
+      const end: number = path.indexOf("]");
+      if (end === -1) {
+        throw new Error(`"${path}" is not a valid path`);
+      }
+      const index: number = parseInt(path.substring(1, end), 10);
+      if (isNaN(index)) {
+        throw new Error(`"${path}" is not a valid path`);
+      }
+      tokens.push(index);
+      path = path.substr(end + 1);
+    } else {
+      const match = path.match(/^[^\.|\[]+/);
+      const token: string = match[0];
+      tokens.push(token);
+      path = path.substr(token.length);
+    }
+    if (path[0] === ".") {
+      path = path.substr(1);
+    }
+  }
+
+  return tokens;
 }
 
 /**
@@ -39,7 +64,7 @@ function parseTokens(path: string): Token[] {
 
 export function observePath(obj: object, path: string, callback?: IObserverCallback): IObserver {
   // path tokens
-  const tokens: Token[] = parseTokens(path);
+  const tokens: Token[] = parsePath(path);
 
   // last chain values
   let oldValues: any[];
@@ -75,6 +100,21 @@ export function observePath(obj: object, path: string, callback?: IObserverCallb
     o[tokens[i]] = value;
   }
 
+  // observe/unobserve registration utility
+  function register(action: "observe" | "unobserve", value: any, token: Token, callback: () => void): void {
+    if (token === undefined) {
+      if (isArray(value)) {
+        (action === "observe" ? observeArray : unobserveArray)(value, callback);
+      }
+    } else if (typeof value === "object" && value !== null) {
+      if (isArray(value) && (typeof token === "number" || token === "length")) {
+        (action === "observe" ? observeArray : unobserveArray)(value, callback);
+      } else {
+        (action === "observe" ? observeProperty : unobserveProperty)(value, token.toString(), callback);
+      }
+    }
+  }
+
   // private function triggered on every change
   function update(): void {
     const newValues: any[] = realize(obj, tokens);
@@ -85,23 +125,12 @@ export function observePath(obj: object, path: string, callback?: IObserverCallb
       const newValue: any = newValues[i];
 
       if (oldValue !== newValue) {
-        if (isArray(oldValue)) {
-          unobserveArray(oldValue, update);
-        } else if (typeof oldValue === "object" && token) {
-          unobserveProperty(oldValue, token.toString(), update);
-        }
-        if (isArray(newValue)) {
-          observeArray(newValue, update);
-        } else if (typeof newValue === "object" && token && newValue !== null) {
-          observeProperty(newValue, token.toString(), update);
-        }
+        register("unobserve", oldValue, token, update);
+        register("observe", newValue, token, update);
       }
     }
 
-    callback(
-      newValues[tokens.length],
-      oldValues[tokens.length]
-    );
+    callback(newValues[tokens.length], oldValues[tokens.length]);
 
     oldValues = newValues;
   }
@@ -111,28 +140,24 @@ export function observePath(obj: object, path: string, callback?: IObserverCallb
     oldValues = realize(obj, tokens);
 
     for (let i = 0; i <= tokens.length; i++) {
-      const token: Token = tokens[i];
-      const o: any = oldValues[i];
-
-      if (isArray(o)) {
-        observeArray(o, update);
-      } else if (typeof o === "object" && token && o !== null) {
-        observeProperty(o, token.toString(), update);
-      }
+      register(
+        "observe",
+        oldValues[i],
+        tokens[i],
+        update
+      );
     }
   }
 
   // stop data observing
   function unobserve(): void {
     for (let i = 0; i <= tokens.length; i++) {
-      const token: Token = tokens[i];
-      const o: any = oldValues[i];
-
-      if (isArray(o)) {
-        unobserveArray(o, update);
-      } else if (typeof o === "object" && token) {
-        unobserveProperty(o, token.toString(), update);
-      }
+      register(
+        "unobserve",
+        oldValues[i],
+        tokens[i],
+        update
+      );
     }
 
     oldValues = undefined;
