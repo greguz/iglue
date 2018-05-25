@@ -57,7 +57,14 @@ export function buildContext<T extends object = any>(obj: T): IContext<T> {
     writable: false,
     configurable: true,
     value: function observe(path: string, callback?: IObserverCallback): IObserver {
-      return wrapObserver(observePath(obj, path, callback), isObserving);
+      return wrapObserver(
+        observePath(
+          obj,
+          path,
+          callback ? wrapObserverCallback(callback, isObserving) : null
+        ),
+        isObserving
+      );
     }
   });
 
