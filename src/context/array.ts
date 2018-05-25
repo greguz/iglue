@@ -14,11 +14,11 @@ function applyMiddleware(arr: any): void {
     value: []
   });
 
-  const listeners: ArrayListener[] = arr[VARIABLE];
+  const listeners: VoidFunction[] = arr[VARIABLE];
 
   function notify() {
     for (const listener of listeners) {
-      listener(arr);
+      listener();
     }
   }
 
@@ -44,12 +44,6 @@ export function isArray(arr: any): boolean {
 }
 
 /**
- * Array is changed callback
- */
-
-export type ArrayListener = (arr: any[]) => void;
-
-/**
  * Returns true when the array is observed
  */
 
@@ -65,7 +59,7 @@ export function isObservedArray(arr: any): boolean {
  * Observe the array
  */
 
-export function observeArray(arr: any, listener: ArrayListener): void {
+export function observeArray(arr: any, listener: VoidFunction): void {
   if (!isArray(arr)) {
     throw new Error("Unexpected array to observe");
   }
@@ -79,9 +73,9 @@ export function observeArray(arr: any, listener: ArrayListener): void {
  * Remove the observe listener
  */
 
-export function unobserveArray(arr: any, listener: ArrayListener): void {
+export function unobserveArray(arr: any, listener: VoidFunction): void {
   if (isObservedArray(arr)) {
-    const listeners: ArrayListener[] = arr[VARIABLE];
+    const listeners: VoidFunction[] = arr[VARIABLE];
     for (let i = 0; i < listeners.length; i++) {
       if (listeners[i] === listener) {
         listeners.splice(i, 1);
