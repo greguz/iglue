@@ -36,16 +36,13 @@ function applyMiddleware(obj: any, property: string) {
     });
   }
 
-  const listeners: PropertyListener[] = obj[VARIABLE][property] = [];
+  const listeners: VoidFunction[] = obj[VARIABLE][property] = [];
   const descriptor = getPropertyDescriptor(obj, property);
 
-  // current property value
-  let value: any;
-
   // notification callback
-  function notify() {
+  function notify(): void {
     for (const listener of listeners) {
-      listener(value);
+      listener();
     }
   }
 
@@ -61,13 +58,12 @@ function applyMiddleware(obj: any, property: string) {
     if (descriptor.set) {
       set = function getter(update: any): void {
         descriptor.set.call(this, update);
-        value = descriptor.get.call(this);
         notify();
       };
     }
   } else {
     // init with the current value
-    value = descriptor.value;
+    let value: any = descriptor.value;
 
     // create getter
     get = function getter(): any {
@@ -77,7 +73,7 @@ function applyMiddleware(obj: any, property: string) {
     // create setter with middleware
     set = function setter(update: any): void {
       if (update !== value) {
-        value = update;
+        value = update
         notify();
       }
     };
@@ -91,12 +87,6 @@ function applyMiddleware(obj: any, property: string) {
     set
   });
 }
-
-/**
- * Property has changed callback
- */
-
-export type PropertyListener = (value: any) => void;
 
 /**
  * Returns true the object is observed, optionally the property may be specified
@@ -119,7 +109,7 @@ export function isObservedObject(obj: any, property?: string): boolean {
  * Start property observing
  */
 
-export function observeProperty(obj: any, property: string, listener: PropertyListener): void {
+export function observeProperty(obj: any, property: string, listener: VoidFunction): void {
   if (typeof obj !== "object" || obj === null) {
     throw new Error("Unexpected object to observe");
   }
@@ -133,9 +123,9 @@ export function observeProperty(obj: any, property: string, listener: PropertyLi
  * Stop property observing and remove the listener
  */
 
-export function unobserveProperty(obj: any, property: string, listener: PropertyListener): void {
+export function unobserveProperty(obj: any, property: string, listener: VoidFunction): void {
   if (isObservedObject(obj, property)) {
-    const listeners: PropertyListener[] = obj[VARIABLE][property];
+    const listeners: VoidFunction[] = obj[VARIABLE][property];
     for (let i = 0; i < listeners.length; i++) {
       if (listeners[i] === listener) {
         listeners.splice(i, 1);

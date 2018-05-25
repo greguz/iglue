@@ -1,42 +1,9 @@
 import { expect } from "chai";
 import "mocha";
 
-import { isObservedObject, observeProperty, unobserveProperty, PropertyListener } from "./object";
+import { isObservedObject, observeProperty, unobserveProperty } from "./object";
 
-interface IUtil {
-  count: number;
-  history: any[];
-  listener: PropertyListener;
-}
-
-function makeUtil(): IUtil {
-  const history: any[] = [];
-
-  let count: number = 0;
-
-  function listener(value: any): void {
-    history.push(value);
-    count++;
-  }
-
-  const util: IUtil = {
-    count,
-    history,
-    listener
-  };
-
-  Object.defineProperty(util, "count", {
-    configurable: false,
-    enumerable: true,
-    get() {
-      return count;
-    }
-  });
-
-  return util;
-}
-
-function noop(): void { }
+function noop() { }
 
 describe("Object observing", function () {
 
@@ -65,28 +32,36 @@ describe("Object observing", function () {
 
   it("assign", function () {
     const obj = { value: 3 };
-    const util = makeUtil();
 
-    observeProperty(obj, "value", util.listener);
+    let expected: any;
+    let count: number = 0;
+    function callback() {
+      count++;
+      expect(obj.value).to.be.equal(expected);
+    }
+
+    observeProperty(obj, "value", callback);
 
     obj.value = 3;
     obj.value = 3;
+
+    expected = 4;
     obj.value = 4;
     obj.value = 4;
+
+    expected = null;
     obj.value = null;
+
+    expected = undefined;
     obj.value = undefined;
 
-    expect(util.count).to.be.equal(3);
+    expect(count).to.be.equal(3);
 
-    expect(util.history[0]).to.be.equal(4);
-    expect(util.history[1]).to.be.null;
-    expect(util.history[2]).to.be.undefined;
-
-    unobserveProperty(obj, "value", util.listener);
+    unobserveProperty(obj, "value", callback);
 
     obj.value = 42;
 
-    expect(util.count).to.be.equal(3);
+    expect(count).to.be.equal(3);
   });
 
 });
