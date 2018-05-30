@@ -252,20 +252,20 @@ export class View implements IView {
    * Observe a target value
    */
 
-  private observe(path: string, callback?: IObserverCallback): IObserver {
+  private observe(path: string, c0?: IObserverCallback): IObserver {
     const observer: IObserver = this.context.$observe(
       path,
-      this.wrapObserverCallback(callback)
+      this.wrapObserverCallback(c0)
     );
     return {
       get: observer.get,
       set: observer.set,
-      notify: (callback: IObserverCallback): void => {
+      notify: (c1: IObserverCallback): void => {
         observer.notify(
-          this.wrapObserverCallback(callback)
+          this.wrapObserverCallback(c1)
         );
       }
-    }
+    };
   }
 
   /**

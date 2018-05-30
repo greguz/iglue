@@ -45,7 +45,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
     const originalObserve = context.$observe;
 
     // entry value path regex
-    const entryRegExp = new RegExp('^' + binding.argument + '([\\.|\\[].*)?$');
+    const entryRegExp = new RegExp("^" + binding.argument + "([\\.|\\[].*)?$");
 
     // inject the wrapped observe function
     Object.defineProperty(context, "$observe", {

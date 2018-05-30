@@ -101,16 +101,16 @@ export function observePath(obj: object, path: string, callback?: IObserverCallb
   }
 
   // observe/unobserve registration utility
-  function register(action: "observe" | "unobserve", value: any, token: Token, callback: () => void): void {
+  function register(action: "observe" | "unobserve", value: any, token: Token, fn: () => void): void {
     if (token === undefined) {
       if (isArray(value)) {
-        (action === "observe" ? observeArray : unobserveArray)(value, callback);
+        (action === "observe" ? observeArray : unobserveArray)(value, fn);
       }
     } else if (typeof value === "object" && value !== null) {
       if (isArray(value) && (typeof token === "number" || token === "length")) {
-        (action === "observe" ? observeArray : unobserveArray)(value, callback);
+        (action === "observe" ? observeArray : unobserveArray)(value, fn);
       } else {
-        (action === "observe" ? observeProperty : unobserveProperty)(value, token.toString(), callback);
+        (action === "observe" ? observeProperty : unobserveProperty)(value, token.toString(), fn);
       }
     }
   }
