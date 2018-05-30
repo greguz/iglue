@@ -8,9 +8,6 @@ const VARIABLE: string = "_al_";
 function applyMiddleware(arr: any): void {
   // lock and hide the listeners container
   Object.defineProperty(arr, VARIABLE, {
-    enumerable: false,
-    writable: false,
-    configurable: false,
     value: []
   });
 
@@ -24,8 +21,8 @@ function applyMiddleware(arr: any): void {
 
   for (const method of METHODS) {
     Object.defineProperty(arr, method, {
-      enumerable: false,
       configurable: true,
+      writable: true,
       value: function middleware(...args: any[]) {
         const result = (Array as any).prototype[method].apply(this, args);
         notify();

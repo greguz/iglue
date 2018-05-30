@@ -29,9 +29,6 @@ function applyMiddleware(obj: any, property: string) {
   // lock and hide the listeners container
   if (!obj[VARIABLE]) {
     Object.defineProperty(obj, VARIABLE, {
-      enumerable: false,
-      writable: false,
-      configurable: false,
       value: {}
     });
   }
@@ -82,7 +79,7 @@ function applyMiddleware(obj: any, property: string) {
   // override property
   Object.defineProperty(obj, property, {
     enumerable: true,
-    configurable: false,
+    configurable: true,
     get,
     set
   });
