@@ -1,5 +1,5 @@
 import { IAttributeInfo } from "./IAttributeParser";
-import { ICollection } from "./ICollection";
+import { IContext } from "./IContext";
 
 export interface IBinding extends Readonly<IAttributeInfo> {
 
@@ -13,7 +13,7 @@ export interface IBinding extends Readonly<IAttributeInfo> {
    * Binding object context
    */
 
-  readonly context: ICollection<any>;
+  readonly context: IContext;
 
   /**
    * Get value from model
