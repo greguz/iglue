@@ -1,3 +1,9 @@
-export interface ICollection<T> {
+export interface ICollection<T = any> {
+
+  /**
+   * Any property
+   */
+
   [key: string]: T;
+
 }
