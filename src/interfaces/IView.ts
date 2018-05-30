@@ -4,7 +4,7 @@ import { IComponent } from "./IComponent";
 import { IContext } from "./IContext";
 import { Formatter, IFormatter } from "./IFormatter";
 
-export interface IView<A extends object = {}> {
+export interface IView {
 
   /**
    * Bound DOM element
@@ -16,7 +16,7 @@ export interface IView<A extends object = {}> {
    * Bound data model
    */
 
-  readonly context: IContext<A>;
+  readonly context: IContext;
 
   /**
    * Start data binding
@@ -40,8 +40,7 @@ export interface IView<A extends object = {}> {
    * Clone the current view configuration and optinally the data context
    */
 
-  clone(el: HTMLElement): IView<A>;
-  clone<B extends object = {}>(el: HTMLElement, data: B): IView<B>;
+  clone(el: HTMLElement, data?: object): IView;
 
   /**
    * Returns true when the view is bound to the element

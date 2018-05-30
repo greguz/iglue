@@ -3,70 +3,66 @@ import { IObserver, IObserverCallback } from "../interfaces/IObserver";
 
 import { observePath } from "./path";
 
-function wrapObserverCallback(callback: IObserverCallback, isObserving: () => boolean): IObserverCallback {
-  return function wrapper(newValue: any, oldValue: any): void {
-    if (isObserving()) {
-      callback(newValue, oldValue);
+/**
+ * Clone a context object into another one
+ */
+
+function cloneContext(source: IContext): IContext {
+  const target: any = {};
+
+  // observe directly from the "parent" context
+  Object.defineProperty(target, "$observe", {
+    configurable: true,
+    value: function observe(path: string, callback?: IObserverCallback): IObserver {
+      return source.$observe(path, callback);
     }
-  };
+  });
+
+  // clone the current context
+  Object.defineProperty(target, "$clone", {
+    configurable: true,
+    value: function clone(): IContext {
+      return cloneContext(target);
+    }
+  });
+
+  // expose all enumerable properties
+  for (const key in source) {
+    Object.defineProperty(target, key, {
+      enumerable: true,
+      configurable: true,
+      get(): any {
+        return source[key];
+      },
+      set(value: any): void {
+        source[key] = value;
+      }
+    });
+  }
+
+  return target;
 }
 
-function wrapObserver(observer: IObserver, isObserving: () => boolean): IObserver {
-  return {
-    get: observer.get,
-    set: observer.set,
-    notify(callback: IObserverCallback): void {
-      observer.notify(
-        callback ? wrapObserverCallback(callback, isObserving) : null
-      );
-    }
-  };
-}
+/**
+ * Build a context
+ */
 
-export function buildContext<T extends object = any>(obj: T): IContext<T> {
+export function buildContext(obj: object): IContext {
   if (typeof obj !== "object") {
     throw new Error("The context is not an object");
   }
 
-  let observing: boolean = false;
-
-  function isObserving(): boolean {
-    return observing;
-  }
-
-  Object.defineProperty(obj, "$start", {
-    enumerable: false,
-    writable: false,
-    configurable: true,
-    value: function start(): void {
-      observing = true;
-    }
-  });
-
-  Object.defineProperty(obj, "$stop", {
-    enumerable: false,
-    writable: false,
-    configurable: true,
-    value: function stop(): void {
-      observing = false;
-    }
-  });
-
   Object.defineProperty(obj, "$observe", {
-    enumerable: false,
-    writable: false,
-    configurable: true,
     value: function observe(path: string, callback?: IObserverCallback): IObserver {
-      return wrapObserver(
-        observePath(
-          obj,
-          path,
-          callback ? wrapObserverCallback(callback, isObserving) : null
-        ),
-        isObserving
-      );
+      return observePath(obj, path, callback);
     }
   });
 
-  return obj as any;
+  Object.defineProperty(obj, "$clone", {
+    value: function clone(): IContext {
+      return cloneContext(obj as IContext);
+    }
+  });
+
+  return obj as IContext
 }

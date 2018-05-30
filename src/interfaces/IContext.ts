@@ -1,17 +1,12 @@
+import { ICollection } from "./ICollection";
 import { IContext } from "./IContext";
 import { IObserver, IObserverCallback } from "./IObserver";
 
 /**
- * The observed object, aka the context of our application
+ * The observed data object
  */
 
-export type IContext<T extends object = {}> = T & IContextPrototype;
-
-/**
- * Injected context methods and utilities
- */
-
-export interface IContextPrototype {
+export interface IContext extends ICollection<any> {
 
   /**
    * Observe a context path value
@@ -20,15 +15,9 @@ export interface IContextPrototype {
   $observe(path: string, callback?: IObserverCallback): IObserver;
 
   /**
-   * Enable all generated observers
+   * Clone the context into another object
    */
 
-  $start(): void;
-
-  /**
-   * Disable all generated observers
-   */
-
-  $stop(): void;
+  $clone(): IContext;
 
 }

@@ -37,9 +37,9 @@ function buildDefaultBinder(attrName: string): IBinderRoutine {
   };
 }
 
-function wrapTarget(target: ITarget, context: IContext, callback?: IObserverCallback): IObserver {
+function wrapTarget(target: ITarget, observe: (path: string, callback?: IObserverCallback) => IObserver, callback?: IObserverCallback): IObserver {
   if (target.type === "path") {
-    return context.$observe(target.value, callback);
+    return observe(target.value, callback);
   } else {
     return {
       get(): any {
@@ -57,7 +57,7 @@ function wrapTarget(target: ITarget, context: IContext, callback?: IObserverCall
 
 function buildFormatters(
   infos: IFormatterInfo[],
-  context: IContext,
+  observe: (path: string, callback?: IObserverCallback) => IObserver,
   resolveFormatter: (name: string) => IFormatter,
   callback: IObserverCallback
 ): IFormatter[] {
@@ -65,7 +65,7 @@ function buildFormatters(
     const formatter: IFormatter = resolveFormatter(info.name);
 
     const observers: IObserver[] = info.arguments.map(
-      (target: ITarget): IObserver => wrapTarget(target, context, callback)
+      (target: ITarget): IObserver => wrapTarget(target, observe, callback)
     );
 
     function args() {
@@ -85,7 +85,7 @@ function buildFormatters(
   });
 }
 
-export class View<A extends object = {}> implements IView<A> {
+export class View implements IView {
 
   /**
    * Bound DOM element
@@ -97,7 +97,7 @@ export class View<A extends object = {}> implements IView<A> {
    * View model instance
    */
 
-  public readonly context: IContext<A>;
+  public readonly context: IContext;
 
   /**
    * Binders collection
@@ -145,11 +145,11 @@ export class View<A extends object = {}> implements IView<A> {
    * @constructor
    */
 
-  constructor(el: HTMLElement, obj: A, options: IViewOptions = {}) {
+  constructor(el: HTMLElement, obj: object, options: IViewOptions = {}) {
     this.el = el;
 
     if (obj.hasOwnProperty("$observe")) {
-      this.context = obj as IContext<A>;
+      this.context = obj as IContext;
     } else {
       this.context = buildContext(obj);
     }
@@ -172,6 +172,8 @@ export class View<A extends object = {}> implements IView<A> {
    */
 
   public bind() {
+    // update status
+    this.bound = true;
     // initialize directives
     for (const directive of this.directives) {
       directive.bind();
@@ -180,10 +182,6 @@ export class View<A extends object = {}> implements IView<A> {
     for (const directive of this.directives) {
       directive.refresh();
     }
-    // start data watching
-    this.context.$start();
-    // update status
-    this.bound = true;
   }
 
   /**
@@ -202,23 +200,19 @@ export class View<A extends object = {}> implements IView<A> {
    */
 
   public unbind() {
-    // stop data watching
-    this.context.$stop();
+    // update status
+    this.bound = false;
     // de-init all directives
     for (const directive of this.directives) {
       directive.unbind();
     }
-    // update status
-    this.bound = false;
   }
 
   /**
    * Clone the current view configuration and optinally the model
    */
 
-  public clone(el: HTMLElement): View<A>
-  public clone<B extends object = {}>(el: HTMLElement, obj: B): View<B>
-  public clone<B extends object = {}>(el: HTMLElement, obj?: B): View<A | B> {
+  public clone(el: HTMLElement, obj?: object): View {
     return new View(
       el,
       obj || this.context,
@@ -237,6 +231,41 @@ export class View<A extends object = {}> implements IView<A> {
 
   public isBound(): boolean {
     return this.bound;
+  }
+
+  /**
+   * Wrap the observer callback
+   */
+
+  private wrapObserverCallback(callback?: IObserverCallback): IObserverCallback {
+    if (!callback) {
+      return null;
+    }
+    return (newValue: any, oldValue: any): void => {
+      if (this.bound === true) {
+        callback(newValue, oldValue);
+      }
+    };
+  }
+
+  /**
+   * Observe a target value
+   */
+
+  private observe(path: string, callback?: IObserverCallback): IObserver {
+    const observer: IObserver = this.context.$observe(
+      path,
+      this.wrapObserverCallback(callback)
+    );
+    return {
+      get: observer.get,
+      set: observer.set,
+      notify: (callback: IObserverCallback): void => {
+        observer.notify(
+          this.wrapObserverCallback(callback)
+        );
+      }
+    }
   }
 
   /**
@@ -281,7 +310,7 @@ export class View<A extends object = {}> implements IView<A> {
     const info: IAttributeValueInfo = this.parser.parseValue(expression);
 
     // root value observer
-    const observer: IObserver = wrapTarget(info.value, this.context);
+    const observer: IObserver = wrapTarget(info.value, this.observe.bind(this));
 
     // registered callback for the resulting observer
     let superCallback: IObserverCallback;
@@ -299,14 +328,14 @@ export class View<A extends object = {}> implements IView<A> {
     // build the formatters
     const formatters: IFormatter[] = buildFormatters(
       info.formatters,
-      this.context,
+      this.observe.bind(this),
       this.resolveFormatter.bind(this),
       callback
     );
 
     // register watched paths
     for (const watchedPath of info.watch) {
-      this.context.$observe(watchedPath).notify(callback);
+      this.observe(watchedPath, callback);
     }
 
     // get the current value
@@ -531,9 +560,6 @@ export class View<A extends object = {}> implements IView<A> {
     });
 
     observer.notify(directive.refresh);
-    for (const key in this.context) {
-      this.context.$observe(key).notify(directive.refresh);
-    }
 
     this.directives.push(directive);
   }
