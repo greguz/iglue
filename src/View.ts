@@ -1,11 +1,9 @@
 import {
-  IAttributeInfo,
   IAttributeParser,
   IAttributeValueInfo,
   IFormatterInfo,
   ITarget
 } from "./interfaces/IAttributeParser";
-
 import { IBinder, IBinderRoutine } from "./interfaces/IBinder";
 import { IBinding } from "./interfaces/IBinding";
 import { ICollection } from "./interfaces/ICollection";
@@ -435,26 +433,19 @@ export class View implements IView {
    */
 
   private buildBinding(el: HTMLElement, attrName: string, observer: IObserver): IBinding {
-    const info: IAttributeInfo = this.parser.parse(el, attrName);
-    return {
-      el,
-      context: this.context,
-      get(): any {
-        return observer.get();
+    return Object.assign(
+      {
+        el,
+        context: this.context,
+        get(): any {
+          return observer.get();
+        },
+        set(value: any): void {
+          observer.set(value);
+        },
       },
-      set(value: any): void {
-        observer.set(value);
-      },
-      argument: info.argument,
-      attrName: info.attrName,
-      attrValue: info.attrValue,
-      directive: info.directive,
-      formatters: info.formatters,
-      modifiers: info.modifiers,
-      prefix: info.prefix,
-      value: info.value,
-      watch: info.watch
-    };
+      this.parser.parse(el, attrName)
+    );
   }
 
   /**
