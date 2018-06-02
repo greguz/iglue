@@ -9,7 +9,7 @@ describe("IContext", function () {
   const obj: ICollection = {};
   const context: IContext = buildContext(obj);
 
-  it("should keep the same object", function () {
-    expect(obj === context).to.be.true;
+  it("should not be the same object", function () {
+    expect(obj === context).to.be.false;
   });
 });

@@ -4,67 +4,79 @@ import { IObserver, IObserverCallback } from "../interfaces/IObserver";
 import { observePath } from "./path";
 
 /**
- * Clone a context object into another one
+ * Get the root property name of a object value path
  */
 
-function cloneContext(source: IContext): IContext {
-  const target: any = {};
-
-  // observe directly from the "parent" context
-  Object.defineProperty(target, "$observe", {
-    configurable: true,
-    value: function observe(path: string, callback?: IObserverCallback): IObserver {
-      return source.$observe(path, callback);
-    }
-  });
-
-  // clone the current context
-  Object.defineProperty(target, "$clone", {
-    configurable: true,
-    value: function clone(): IContext {
-      return cloneContext(target);
-    }
-  });
-
-  // expose all enumerable properties
-  for (const key in source) {
-    Object.defineProperty(target, key, {
-      enumerable: true,
-      configurable: true,
-      get(): any {
-        return source[key];
-      },
-      set(value: any): void {
-        source[key] = value;
-      }
-    });
+function getRootProperty(path: string): string {
+  const regex = /^[^\.\[]+/;
+  if (regex.test(path)) {
+    return path.match(regex)[0];
+  } else {
+    throw new Error("This path does not have a root property");
   }
+}
 
-  return target;
+/**
+ * Expose an object property from another object
+ */
+
+function exposeProperty(source: any, property: string, target: any): void {
+  Object.defineProperty(target, property, {
+    configurable: true,
+    enumerable: true,
+    get(): any {
+      return source[property];
+    },
+    set(value: any): void {
+      source[property] = value;
+    }
+  });
 }
 
 /**
  * Build a context
  */
 
-export function buildContext(obj: object): IContext {
+export function buildContext(obj: any): IContext {
   if (typeof obj !== "object") {
     throw new Error("The context is not an object");
   }
 
-  Object.defineProperty(obj, "$observe", {
+  // resulting context object
+  const context: any = {};
+
+  // clone all currently enumerable properties
+  for (const prop in obj) {
+    exposeProperty(obj, prop, context);
+  }
+
+  // define the clone utility
+  Object.defineProperty(context, "$clone", {
     configurable: true,
-    value: function observe(path: string, callback?: IObserverCallback): IObserver {
+    // not enumerable, prevent cloning
+    value: function $clone(): IContext {
+      return buildContext(obj);
+    }
+  });
+
+  // define the observe utility
+  Object.defineProperty(context, "$observe", {
+    configurable: true,
+    // not enumerable, prevent cloning
+    value: function $observe(path: string, callback?: IObserverCallback): IObserver {
+      // get target root property to observe
+      const prop = getRootProperty(path);
+
+      // ensure bridged property
+      if (prop[0] !== "$" && !context.hasOwnProperty(prop)) {
+        exposeProperty(obj, prop, context);
+      }
+
+      // start data observing
       return observePath(obj, path, callback);
     }
   });
 
-  Object.defineProperty(obj, "$clone", {
-    configurable: true,
-    value: function clone(): IContext {
-      return cloneContext(obj as IContext);
-    }
-  });
-
-  return obj as IContext;
+  // return the build context
+  return context;
 }
