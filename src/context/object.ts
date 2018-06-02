@@ -1,6 +1,13 @@
 // variable where to inject the property listeners
 const VARIABLE = "_ol_";
 
+// observed object interface
+interface ObservedObject extends Object {
+  [VARIABLE]: {
+    [prop: string]: VoidFunction[];
+  };
+}
+
 // get property descriptor from object or prototype chain
 function getPropertyDescriptor(obj: object, property: string): PropertyDescriptor {
   let descriptor: PropertyDescriptor;
@@ -26,22 +33,21 @@ function getPropertyDescriptor(obj: object, property: string): PropertyDescripto
 
 // apply watch middleware for a property
 function applyMiddleware(obj: any, property: string) {
-  // lock and hide the listeners container
+  // ensure main listeners container object
   if (!obj[VARIABLE]) {
     Object.defineProperty(obj, VARIABLE, {
+      // not configurable, prevent double definition
+      // not enumerable, prevent Object.assign cloning
+      // not writable, prevent value assignation/override
       value: {}
     });
   }
 
-  const listeners: VoidFunction[] = obj[VARIABLE][property] = [];
-  const descriptor = getPropertyDescriptor(obj, property);
+  // setup the single property listeners container
+  obj[VARIABLE][property] = [];
 
-  // notification callback
-  function notify(): void {
-    for (const listener of listeners) {
-      listener();
-    }
-  }
+  // get the original property descriptor
+  const descriptor = getPropertyDescriptor(obj, property);
 
   // create the custom wrapped getter and setter
   let get: () => any;
@@ -53,9 +59,13 @@ function applyMiddleware(obj: any, property: string) {
 
     // wrap the setter
     if (descriptor.set) {
-      set = function getter(update: any): void {
+      set = function setter(this: ObservedObject, update: any): void {
+        // call the original setter to update the value
         descriptor.set.call(this, update);
-        notify();
+        // trigger all property listeners
+        for (const listener of this[VARIABLE][property]) {
+          listener();
+        }
       };
     }
   } else {
@@ -63,15 +73,19 @@ function applyMiddleware(obj: any, property: string) {
     let value: any = descriptor.value;
 
     // create getter
-    get = function getter(): any {
+    get = function getter(this: ObservedObject): any {
       return value;
     };
 
     // create setter with middleware
-    set = function setter(update: any): void {
+    set = function setter(this: ObservedObject, update: any): void {
       if (update !== value) {
+        // update the current value
         value = update;
-        notify();
+        // trigger all property listeners
+        for (const listener of this[VARIABLE][property]) {
+          listener();
+        }
       }
     };
   }
@@ -123,11 +137,11 @@ export function observeProperty(obj: any, property: string, listener: VoidFuncti
 export function unobserveProperty(obj: any, property: string, listener: VoidFunction): void {
   if (isObservedObject(obj, property)) {
     const listeners: VoidFunction[] = obj[VARIABLE][property];
-    for (let i = 0; i < listeners.length; i++) {
-      if (listeners[i] === listener) {
-        listeners.splice(i, 1);
-        break;
-      }
+    const index: number = listeners.findIndex(
+      (fn: VoidFunction): boolean => fn === listener
+    );
+    if (index >= 0) {
+      listeners.splice(index, 1);
     }
   }
 }

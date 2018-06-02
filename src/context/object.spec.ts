@@ -3,35 +3,45 @@ import "mocha";
 
 import { isObservedObject, observeProperty, unobserveProperty } from "./object";
 
-function noop() { }
+function noop(): void { }
 
 describe("Object observing", function () {
+  it("should detect observing status", function () {
+    const obj: any = { value: 42 };
 
-  it("status", function () {
-    const obj = { value: 5 };
-
-    // test clean status
     expect(isObservedObject(obj)).to.be.false;
     expect(isObservedObject(obj, "value")).to.be.false;
 
-    // start observing
     observeProperty(obj, "value", noop);
 
-    // ensure no value mutation
-    expect(obj.value).to.be.equal(5);
-
-    // test active observer
     expect(isObservedObject(obj)).to.be.true;
     expect(isObservedObject(obj, "value")).to.be.true;
     expect(isObservedObject(obj, "other")).to.be.false;
-
-    // test value update
-    obj.value = 15;
-    expect(obj.value).to.be.equal(15);
   });
 
-  it("assign", function () {
-    const obj = { value: 3 };
+  it("should fail to override listeners container", function () {
+    const obj: any = { value: 42 };
+    observeProperty(obj, "value", noop);
+
+    function overrideOL(): void {
+      obj._ol_ = [];
+    }
+    expect(overrideOL).to.throw();
+  });
+
+  it("should not clone listeners", function () {
+    const obj: any = { value: 42 };
+    observeProperty(obj, "value", noop);
+
+    const bro: any = Object.assign({}, obj);
+
+    expect(isObservedObject(obj)).to.be.true;
+    expect(isObservedObject(bro)).to.be.false;
+    expect(bro._ol_).to.be.undefined;
+  });
+
+  it("should detect value changes", function () {
+    const obj: any = { value: 42 };
 
     let expected: any;
     let count: number = 0;
@@ -42,26 +52,37 @@ describe("Object observing", function () {
 
     observeProperty(obj, "value", callback);
 
-    obj.value = 3;
-    obj.value = 3;
-
     expected = 4;
     obj.value = 4;
     obj.value = 4;
 
-    expected = null;
-    obj.value = null;
+    expected = 2;
+    obj.value = 2;
+    obj.value = 2;
 
-    expected = undefined;
-    obj.value = undefined;
+    expect(count).to.be.equal(2);
+  });
 
-    expect(count).to.be.equal(3);
+  it("should stop value observing", function () {
+    const obj: any = { value: 42 };
+
+    let count: number = 0;
+    function callback() {
+      count++;
+    }
+
+    observeProperty(obj, "value", callback);
+
+    obj.value = 1;
 
     unobserveProperty(obj, "value", callback);
 
-    obj.value = 42;
+    obj.value = 2;
+    obj.value = 3;
+    obj.value = 4;
+    obj.value = 5;
+    obj.value = 6;
 
-    expect(count).to.be.equal(3);
+    expect(count).to.be.equal(1);
   });
-
 });
