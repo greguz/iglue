@@ -63,7 +63,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
   }
 
   function sync(target: any, index: number, model: any): object {
-    target["$index"] = index;
+    target.$index = index;
     target[binding.argument] = model;
     return target;
   }

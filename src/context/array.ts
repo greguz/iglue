@@ -5,7 +5,7 @@ const METHODS: string[] = ["push", "pop", "shift", "unshift", "sort", "reverse",
 const VARIABLE = "_al_";
 
 // observed array interface
-interface ObservedArray extends Array<any> {
+interface IObservedArray extends Array<any> {
   [VARIABLE]: VoidFunction[];
 }
 
@@ -26,7 +26,7 @@ function applyMiddleware(arr: any): void {
       configurable: true,
       // not enumerable, prevent Object.assign cloning
       writable: true,
-      value: function middleware(this: ObservedArray, ...args: any[]): any {
+      value: function middleware(this: IObservedArray, ...args: any[]): any {
         // call the original method and get the result
         const result: any = (Array as any).prototype[method].apply(this, args);
         // trigger all listeners

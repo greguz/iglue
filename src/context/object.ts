@@ -2,7 +2,7 @@
 const VARIABLE = "_ol_";
 
 // observed object interface
-interface ObservedObject extends Object {
+interface IObservedObject extends Object {
   [VARIABLE]: {
     [prop: string]: VoidFunction[];
   };
@@ -59,7 +59,7 @@ function applyMiddleware(obj: any, property: string) {
 
     // wrap the setter
     if (descriptor.set) {
-      set = function setter(this: ObservedObject, update: any): void {
+      set = function setter(this: IObservedObject, update: any): void {
         // call the original setter to update the value
         descriptor.set.call(this, update);
         // trigger all property listeners
@@ -73,12 +73,12 @@ function applyMiddleware(obj: any, property: string) {
     let value: any = descriptor.value;
 
     // create getter
-    get = function getter(this: ObservedObject): any {
+    get = function getter(this: IObservedObject): any {
       return value;
     };
 
     // create setter with middleware
-    set = function setter(this: ObservedObject, update: any): void {
+    set = function setter(this: IObservedObject, update: any): void {
       if (update !== value) {
         // update the current value
         value = update;
