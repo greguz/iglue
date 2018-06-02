@@ -1,12 +1,7 @@
 {
   "compilerOptions": {
-    "allowJs": false,
-    "allowSyntheticDefaultImports": true,
     "alwaysStrict": true,
     "charset": "utf8",
-    "checkJs": false,
-    "emitBOM": false,
-    "experimentalDecorators": false,
     "module": "commonjs",
     "moduleResolution": "node",
     "noImplicitAny": true,
@@ -16,9 +11,7 @@
     "outDir": "dist",
     "removeComments": true,
     "rootDir": "src",
-    "strictNullChecks": false,
-    "sourceMap": false,
-    "target": "es5",
+    "target": "es6",
     "types": [],
     "typeRoots": [
       "node_modules/@types"
