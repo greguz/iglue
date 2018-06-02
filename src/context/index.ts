@@ -64,5 +64,5 @@ export function buildContext(obj: object): IContext {
     }
   });
 
-  return obj as IContext
+  return obj as IContext;
 }

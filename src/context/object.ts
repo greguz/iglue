@@ -70,7 +70,7 @@ function applyMiddleware(obj: any, property: string) {
     // create setter with middleware
     set = function setter(update: any): void {
       if (update !== value) {
-        value = update
+        value = update;
         notify();
       }
     };
