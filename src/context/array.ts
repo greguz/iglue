@@ -1,31 +1,39 @@
-// array mathods that change the array
+// array methods that change the array
 const METHODS: string[] = ["push", "pop", "shift", "unshift", "sort", "reverse", "splice"];
 
-// variable name to inject into tha array
-const VARIABLE: string = "_al_";
+// array property where the callback listeners are saved
+const VARIABLE = "_al_";
+
+// observed array interface
+interface ObservedArray extends Array<any> {
+  [VARIABLE]: VoidFunction[];
+}
 
 // inject the watch middleware and set the listeners variable
 function applyMiddleware(arr: any): void {
-  // lock and hide the listeners container
+  // create the listeners array
   Object.defineProperty(arr, VARIABLE, {
+    // not configurable, prevent double definition
+    // not enumerable, prevent Object.assign cloning
+    // not writable, prevent value assignation/override
     value: []
   });
 
-  const listeners: VoidFunction[] = arr[VARIABLE];
-
-  function notify() {
-    for (const listener of listeners) {
-      listener();
-    }
-  }
-
+  // wrap all array methods that changes the array structure
   for (const method of METHODS) {
+    // override the default method
     Object.defineProperty(arr, method, {
       configurable: true,
+      // not enumerable, prevent Object.assign cloning
       writable: true,
-      value: function middleware(...args: any[]) {
-        const result = (Array as any).prototype[method].apply(this, args);
-        notify();
+      value: function middleware(this: ObservedArray, ...args: any[]): any {
+        // call the original method and get the result
+        const result: any = (Array as any).prototype[method].apply(this, args);
+        // trigger all listeners
+        for (const listener of this[VARIABLE]) {
+          listener();
+        }
+        // return the result
         return result;
       }
     });
@@ -73,11 +81,11 @@ export function observeArray(arr: any, listener: VoidFunction): void {
 export function unobserveArray(arr: any, listener: VoidFunction): void {
   if (isObservedArray(arr)) {
     const listeners: VoidFunction[] = arr[VARIABLE];
-    for (let i = 0; i < listeners.length; i++) {
-      if (listeners[i] === listener) {
-        listeners.splice(i, 1);
-        break;
-      }
+    const index: number = listeners.findIndex(
+      (fn: VoidFunction): boolean => fn === listener
+    );
+    if (index >= 0) {
+      listeners.splice(index, 1);
     }
   }
 }
