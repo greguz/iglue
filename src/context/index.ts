@@ -38,8 +38,14 @@ function exposeProperty(source: any, property: string, target: any): void {
  */
 
 export function buildContext(obj: any): IContext {
-  if (typeof obj !== "object") {
+  // ensure object type as input
+  if (typeof obj !== "object" || obj === null) {
     throw new Error("The context is not an object");
+  }
+
+  // use $clone API is already a context
+  if (obj.hasOwnProperty("$clone")) {
+    return obj.$clone();
   }
 
   // resulting context object

@@ -145,21 +145,13 @@ export class View implements IView {
 
   constructor(el: HTMLElement, obj: object, options: IViewOptions = {}) {
     this.el = el;
-
-    if (obj.hasOwnProperty("$observe")) {
-      this.context = obj as IContext;
-    } else {
-      this.context = buildContext(obj);
-    }
-
+    this.context = buildContext(obj);
     this.prefix = options.prefix || "i-";
     this.directives = [];
     this.bound = false;
-
     this.binders = options.binders || {};
     this.components = options.components || {};
     this.formatters = options.formatters || {};
-
     this.parser = buildAttributeParser(this.prefix);
 
     this.traverse(el);
