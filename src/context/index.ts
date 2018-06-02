@@ -53,12 +53,14 @@ export function buildContext(obj: object): IContext {
   }
 
   Object.defineProperty(obj, "$observe", {
+    configurable: true,
     value: function observe(path: string, callback?: IObserverCallback): IObserver {
       return observePath(obj, path, callback);
     }
   });
 
   Object.defineProperty(obj, "$clone", {
+    configurable: true,
     value: function clone(): IContext {
       return cloneContext(obj as IContext);
     }
