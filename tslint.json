@@ -6,7 +6,8 @@
   "jsRules": {},
   "rules": {
     "trailing-comma": [ true, { "multiline": "never", "singleline": "never" } ],
-    "object-literal-sort-keys": false
+    "object-literal-sort-keys": false,
+    "space-before-function-paren": ["error", "always"]
   },
   "rulesDirectory": []
 }
