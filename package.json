@@ -7,7 +7,7 @@
   "types": "types/index.d.ts",
   "scripts": {
     "check": "tsc --noEmit",
-    "lint": "tslint -c tslint.json src/**/*.ts",
+    "lint": "tslint -c tslint.json -e **/*.spec.ts src/**/*.ts",
     "test": "mocha -r ts-node/register src/**/*.spec.ts",
     "types": "rimraf types && tsc --emitDeclarationOnly --declaration --declarationDir types",
     "build": "rimraf dist && npm run build:umd && npm run build:cjs && npm run build:es",
