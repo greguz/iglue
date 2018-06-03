@@ -43,7 +43,7 @@ export function buildContext(obj: any): IContext {
     throw new Error("The context is not an object");
   }
 
-  // use $clone API is already a context
+  // use $clone API if is already a context
   if (obj.hasOwnProperty("$clone")) {
     return obj.$clone();
   }
@@ -74,7 +74,7 @@ export function buildContext(obj: any): IContext {
       const prop = getRootProperty(path);
 
       // ensure bridged property
-      if (prop[0] !== "$" && !context.hasOwnProperty(prop)) {
+      if (!context.hasOwnProperty(prop)) {
         exposeProperty(obj, prop, context);
       }
 
