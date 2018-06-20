@@ -1,3 +1,5 @@
+import { findIndex } from "../utils";
+
 // variable where to inject the property listeners
 const VARIABLE = "_ol_";
 
@@ -137,7 +139,8 @@ export function observeProperty(obj: any, property: string, listener: VoidFuncti
 export function unobserveProperty(obj: any, property: string, listener: VoidFunction): void {
   if (isObservedObject(obj, property)) {
     const listeners: VoidFunction[] = obj[VARIABLE][property];
-    const index: number = listeners.findIndex(
+    const index: number = findIndex(
+      listeners,
       (fn: VoidFunction): boolean => fn === listener
     );
     if (index >= 0) {

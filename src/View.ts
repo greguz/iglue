@@ -1,3 +1,5 @@
+import { assign } from "./utils";
+
 import {
   IAttributeParser,
   IAttributeValueInfo,
@@ -425,7 +427,7 @@ export class View implements IView {
    */
 
   private buildBinding(el: HTMLElement, attrName: string, observer: IObserver): IBinding {
-    return Object.assign(
+    return assign(
       {
         el,
         context: this.context,
@@ -434,7 +436,7 @@ export class View implements IView {
         },
         set(value: any): void {
           observer.set(value);
-        },
+        }
       },
       this.parser.parse(el, attrName)
     );

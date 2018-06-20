@@ -1,3 +1,5 @@
+import { findIndex } from "../utils";
+
 // array methods that change the array
 const METHODS: string[] = ["push", "pop", "shift", "unshift", "sort", "reverse", "splice"];
 
@@ -81,7 +83,8 @@ export function observeArray(arr: any, listener: VoidFunction): void {
 export function unobserveArray(arr: any, listener: VoidFunction): void {
   if (isObservedArray(arr)) {
     const listeners: VoidFunction[] = arr[VARIABLE];
-    const index: number = listeners.findIndex(
+    const index: number = findIndex(
+      listeners,
       (fn: VoidFunction): boolean => fn === listener
     );
     if (index >= 0) {

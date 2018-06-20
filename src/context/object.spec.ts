@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 
+import { assign } from "../utils";
 import { isObservedObject, observeProperty, unobserveProperty } from "./object";
 
 function noop(): void { }
@@ -33,7 +34,7 @@ describe("Object observing", function () {
     const obj: any = { value: 42 };
     observeProperty(obj, "value", noop);
 
-    const bro: any = Object.assign({}, obj);
+    const bro: any = assign({}, obj);
 
     expect(isObservedObject(obj)).to.be.true;
     expect(isObservedObject(bro)).to.be.false;

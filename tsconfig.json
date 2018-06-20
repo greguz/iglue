@@ -11,7 +11,7 @@
     "outDir": "dist",
     "removeComments": true,
     "rootDir": "src",
-    "target": "es6",
+    "target": "es5",
     "types": [],
     "typeRoots": [
       "node_modules/@types"
