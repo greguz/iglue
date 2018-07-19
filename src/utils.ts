@@ -1,3 +1,5 @@
+import { ICollection } from './interfaces/ICollection';
+
 /**
  * Like Array.prototype.findIndex
  */
@@ -38,4 +40,22 @@ export function assign(target: any, ...sources: any[]): any {
   }
 
   return to;
+}
+
+/**
+ * Map a collection object
+ */
+
+export function mapCollection<A, B>(collection: ICollection<A>, mapper: (entry: A, prop: string) => B): (prop: string) => B {
+  return function extract(prop: string): B {
+    return mapper(collection[prop], prop);
+  };
+}
+
+/**
+ * Simple passthrough function
+ */
+
+export function passthrough<T = any>(value: T): T {
+  return value;
 }
