@@ -7,6 +7,8 @@ import { IView, IViewOptions } from "./interfaces/IView";
 
 import { View } from "./View";
 
+import { assign } from './utils';
+
 /**
  * Public interfaces
  */
@@ -52,6 +54,7 @@ export const binders: ICollection<IBinder | IBinderRoutine> = {
   },
 
   on: {
+    argumentRequired: true,
     bind(el: HTMLElement, binding: IBinding): void {
       const self = this;
       this.listener = function (...args: any[]): void {
@@ -169,35 +172,9 @@ export const formatters: ICollection<Formatter | IFormatter> = {
 
 export function bind(el: HTMLElement, data: object, options?: IViewOptions): IView {
   options = options || {};
-
-  // inject global binders
-  if (options.binders) {
-    for (const key in binders) {
-      options.binders[key] = options.binders[key] || binders[key];
-    }
-  } else {
-    options.binders = binders;
-  }
-
-  // inject global components
-  if (options.components) {
-    for (const key in components) {
-      options.components[key] = options.components[key] || components[key];
-    }
-  } else {
-    options.components = components;
-  }
-
-  // inject global formatters
-  if (options.formatters) {
-    for (const key in formatters) {
-      options.formatters[key] = options.formatters[key] || formatters[key];
-    }
-  } else {
-    options.formatters = formatters;
-  }
-
-  // create the view and return
+  options.binders = assign({}, binders, options.binders);
+  options.components = assign({}, components, options.components);
+  options.formatters = assign({}, formatters, options.formatters);
   const view = new View(el, data, options);
   view.bind();
   return view;
