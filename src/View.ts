@@ -1,4 +1,4 @@
-import { assign } from "./utils";
+import { assign, mapCollection, passthrough } from "./utils";
 
 import {
   IAttributeParser,
@@ -8,7 +8,6 @@ import {
 } from "./interfaces/IAttributeParser";
 import { IBinder, IBinderRoutine } from "./interfaces/IBinder";
 import { IBinding } from "./interfaces/IBinding";
-import { ICollection } from "./interfaces/ICollection";
 import { IComponent } from "./interfaces/IComponent";
 import { IContext } from "./interfaces/IContext";
 import { IDirective } from "./interfaces/IDirective";
@@ -26,16 +25,6 @@ import { buildComponentDirective } from "./directives/component";
 import { buildConditionalDirective } from "./directives/conditional";
 import { buildListDirective } from "./directives/list";
 import { buildTextDirective } from "./directives/text";
-
-function buildDefaultBinder(attrName: string): IBinderRoutine {
-  return function bindAttributeValue(el: HTMLElement, value: any): void {
-    if (value == null) {
-      el.removeAttribute(attrName);
-    } else {
-      el.setAttribute(attrName, value.toString());
-    }
-  };
-}
 
 function wrapTarget(target: ITarget, observe: (path: string, callback?: IObserverCallback) => IObserver, callback?: IObserverCallback): IObserver {
   if (target.type === "path") {
@@ -85,6 +74,52 @@ function buildFormatters(
   });
 }
 
+function mapBinder(definition: IBinder | IBinderRoutine, name: string): IBinder {
+  if (typeof definition === "object" && definition !== null) {
+    // full configured binder
+    return definition;
+  } else if (typeof definition === "function") {
+    // simple binder, just the routine function
+    return { routine: definition };
+  } else {
+    // fallback to default binder, bind the element attribute
+    return {
+      routine(el: HTMLElement, value: any): void {
+        if (value == null) {
+          el.removeAttribute(name);
+        } else {
+          el.setAttribute(name, value.toString());
+        }
+      }
+    };
+  }
+}
+
+function mapComponent(definition: IComponent, name: string): IComponent {
+  // just ensure the component object
+  if (typeof definition === "object" && definition !== null) {
+    return definition;
+  } else {
+    throw new Error(`Unable to find component "${name}"`);
+  }
+}
+
+function mapFormatter(definition: IFormatter | Formatter, name: string): IFormatter {
+  if (typeof definition === "object" && definition !== null) {
+    // full configured formatter
+    return definition;
+  } else if (typeof definition === "function") {
+    // simple formatter, just the pull function
+    return {
+      pull: definition,
+      push: passthrough
+    };
+  } else {
+    // error
+    throw new Error(`Unable to find formatter "${name}"`);
+  }
+}
+
 export class View implements IView {
 
   /**
@@ -100,22 +135,28 @@ export class View implements IView {
   public readonly context: IContext;
 
   /**
-   * Binders collection
+   * Used options
    */
 
-  private binders: ICollection<IBinder | IBinderRoutine>;
+  public readonly options: Readonly<IViewOptions>;
 
   /**
-   * Binders collection
+   * Get binder by name
    */
 
-  private components: ICollection<IComponent>;
+  private resolveBinder: (name: string) => IBinder;
 
   /**
-   * Formatters collection
+   * Get component by name
    */
 
-  private formatters: ICollection<Formatter | IFormatter>;
+  private resolveComponent: (name: string) => IComponent;
+
+  /**
+   * Get formatter by name
+   */
+
+  private resolveFormatter: (name: string) => IFormatter;
 
   /**
    * Parsed DOM-data links
@@ -136,12 +177,6 @@ export class View implements IView {
   private parser: IAttributeParser;
 
   /**
-   * Configured directive prefix
-   */
-
-  private prefix: string;
-
-  /**
    * @constructor
    */
 
@@ -152,14 +187,13 @@ export class View implements IView {
     } else {
       this.context = buildContext(obj);
     }
-    this.prefix = options.prefix || "i-";
+    this.options = options;
     this.directives = [];
     this.bound = false;
-    this.binders = options.binders || {};
-    this.components = options.components || {};
-    this.formatters = options.formatters || {};
-    this.parser = buildAttributeParser(this.prefix);
-
+    this.resolveBinder = mapCollection(options.binders, mapBinder);
+    this.resolveComponent = mapCollection(options.components, mapComponent);
+    this.resolveFormatter = mapCollection(options.formatters, mapFormatter);
+    this.parser = buildAttributeParser(options.prefix || "i-");
     this.traverse(el);
   }
 
@@ -212,12 +246,7 @@ export class View implements IView {
     return new View(
       el,
       obj || this.context,
-      {
-        prefix: this.prefix,
-        binders: this.binders,
-        components: this.components,
-        formatters: this.formatters
-      }
+      this.options
     );
   }
 
@@ -265,39 +294,6 @@ export class View implements IView {
   }
 
   /**
-   * Get a normalized formatter
-   */
-
-  private resolveFormatter(name: string): IFormatter {
-    const formatter: Formatter | IFormatter = this.formatters[name];
-
-    if (typeof formatter === "function") {
-      return {
-        pull: formatter,
-        push: (value: any) => value
-      };
-    } else if (formatter) {
-      return formatter;
-    } else {
-      throw new Error(`Formatter "${name}" not found`);
-    }
-  }
-
-  /**
-   * Get a normalized formatter
-   */
-
-  private resolveComponent(name: string): IComponent {
-    const component: IComponent = this.components[name];
-
-    if (component) {
-      return component;
-    } else {
-      throw new Error(`Unable to find component "${name}"`);
-    }
-  }
-
-  /**
    * Parse expression string
    */
 
@@ -325,7 +321,7 @@ export class View implements IView {
     const formatters: IFormatter[] = buildFormatters(
       info.formatters,
       this.observe.bind(this),
-      this.resolveFormatter.bind(this),
+      this.resolveFormatter,
       callback
     );
 
@@ -382,7 +378,7 @@ export class View implements IView {
         this.loadListDirective(el, eachAttr);
       } else if (ifAttr) {
         this.loadConditionalDirective(el, ifAttr);
-      } else if (cName === "component" || this.components[cName]) {
+      } else if (cName === "component" || this.options.components.hasOwnProperty(cName)) {
         this.loadComponent(el);
       } else {
         this.loadBinders(el);
@@ -413,7 +409,7 @@ export class View implements IView {
       const binding: IBinding = this.buildBinding(el, attr.name, observer);
 
       // resolve the binder name
-      const binder: IBinder | IBinderRoutine = this.binders[binding.directive] || buildDefaultBinder(binding.directive);
+      const binder: IBinder = this.resolveBinder(binding.directive);
 
       // create the directive
       const directive: IDirective = buildBinderDirective(binding, binder);
@@ -488,7 +484,7 @@ export class View implements IView {
     const directive: IDirective = buildComponentDirective({
       node,
       context,
-      components: this.resolveComponent.bind(this),
+      components: this.resolveComponent,
       view: this.clone.bind(this)
     });
 

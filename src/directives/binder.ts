@@ -1,11 +1,9 @@
-import { IBinder, IBinderRoutine } from "../interfaces/IBinder";
+import { IBinder } from "../interfaces/IBinder";
 import { IBinding } from "../interfaces/IBinding";
 import { IDirective } from "../interfaces/IDirective";
 import { IValueSpecification } from "../interfaces/IValueSpecification";
 
-export function buildBinderDirective(binding: IBinding, definition: IBinder | IBinderRoutine): IDirective {
-  const binder: IBinder = typeof definition === "function" ? { routine: definition } : definition;
-
+export function buildBinderDirective(binding: IBinding, binder: IBinder): IDirective {
   const el: HTMLElement = binding.el;
   let context: any;
 
