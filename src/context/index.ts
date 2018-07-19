@@ -43,11 +43,6 @@ export function buildContext(obj: any): IContext {
     throw new Error("The context is not an object");
   }
 
-  // use $clone API if is already a context
-  if (obj.hasOwnProperty("$clone")) {
-    return obj.$clone();
-  }
-
   // resulting context object
   const context: any = {};
 

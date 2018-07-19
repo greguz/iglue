@@ -145,9 +145,13 @@ export class View implements IView {
    * @constructor
    */
 
-  constructor(el: HTMLElement, obj: object, options: IViewOptions = {}) {
+  constructor(el: HTMLElement, obj: any, options: IViewOptions = {}) {
     this.el = el;
-    this.context = buildContext(obj);
+    if (typeof obj.$clone === "function" && obj.hasOwnProperty("$clone")) {
+      this.context = obj.$clone();
+    } else {
+      this.context = buildContext(obj);
+    }
     this.prefix = options.prefix || "i-";
     this.directives = [];
     this.bound = false;

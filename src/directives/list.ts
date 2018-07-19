@@ -4,6 +4,7 @@ import { IDirective } from "../interfaces/IDirective";
 import { IObserver, IObserverCallback } from "../interfaces/IObserver";
 import { IView } from "../interfaces/IView";
 
+import { buildContext } from "../context/index";
 import { observePath } from "../context/path";
 
 export interface IListDirectiveOptions {
@@ -22,7 +23,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
     return binding.el.cloneNode(true) as HTMLElement;
   }
 
-  function buildContext(index: number, entry: any): IContext {
+  function buildListContext(index: number, entry: any): IContext {
     const context: IContext = binding.context.$clone();
 
     // define local property for entry index
@@ -56,6 +57,14 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
         } else {
           return originalObserve(path, callback);
         }
+      }
+    });
+
+    // override the clone API
+    Object.defineProperty(context, "$clone", {
+      configurable: true,
+      value: function clone(): IContext {
+        return buildContext(context);
       }
     });
 
@@ -95,7 +104,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
         sync(view.context, index, model);
       } else {
         const el: HTMLElement = clone();
-        const data: IContext = buildContext(index, model);
+        const data: IContext = buildListContext(index, model);
 
         container.insertBefore(el, previous.nextSibling);
 
