@@ -6,6 +6,12 @@ export type IBinderRoutine<T = any, V = any> = (this: T, el: HTMLElement, value:
 export interface IBinder<T = any, V = any> {
 
   /**
+   * Enforce binding argument
+   */
+
+  argumentRequired?: boolean;
+
+  /**
    * Bound value configuration
    */
 

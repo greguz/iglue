@@ -24,7 +24,6 @@ export function buildBinderDirective(binding: IBinding, definition: IBinder | IB
       if (typeof spec.type === "function" && !(value instanceof spec.type)) {
         throw new Error(`The bound value "${binding.attrValue}" is not an instance of ${spec.type}`);
       }
-
       if (spec.validator) {
         const valid: boolean = spec.validator.call(context, value);
         if (!valid) {
@@ -37,28 +36,50 @@ export function buildBinderDirective(binding: IBinding, definition: IBinder | IB
   }
 
   function bind(): void {
+    // argument required check
+    if (binder.argumentRequired === true) {
+      if (!binding.argument) {
+        throw new Error(`The binder ${binding.directive} requires an argument`);
+      }
+    }
+
+    // remove the binding argument
     binding.el.removeAttribute(binding.attrName);
+
+    // create an empty context
     context = {};
+
+    // trigger bind hook
     if (binder.bind) {
       binder.bind.call(context, el, binding);
     }
   }
 
   function refresh(): void {
+    // get the current value
     let value: any = binding.get();
+
+    // apply value validation
     if (binder.value) {
       value = applyValueSpecification(value, binder.value);
     }
+
+    // execute binder routine
     if (binder.routine) {
       binder.routine.call(context, el, value, binding);
     }
   }
 
   function unbind(): void {
+    // trigger unbind hook
     if (binder.unbind) {
       binder.unbind.call(context, el, binding);
     }
+
+    // reset context
     context = undefined;
+
+    // restore original DOM attribute
     binding.el.setAttribute(binding.attrName, binding.attrValue);
   }
 
