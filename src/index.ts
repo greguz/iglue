@@ -5,7 +5,7 @@ import { IComponent } from "./interfaces/IComponent";
 import { Formatter, IFormatter } from "./interfaces/IFormatter";
 import { IView, IViewOptions } from "./interfaces/IView";
 
-import { View } from "./View";
+import { buildView } from "./buildView";
 
 import { assign } from './utils';
 
@@ -175,7 +175,7 @@ export function bind(el: HTMLElement, data: object, options?: IViewOptions): IVi
   options.binders = assign({}, binders, options.binders);
   options.components = assign({}, components, options.components);
   options.formatters = assign({}, formatters, options.formatters);
-  const view = new View(el, data, options);
+  const view = buildView(el, data, options);
   view.bind();
   return view;
 }
