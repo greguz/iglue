@@ -1,7 +1,7 @@
-import { IBinder } from '../interfaces/IBinder';
-import { IBinding } from '../interfaces/IBinding';
+import { IBinder } from "../interfaces/IBinder";
+import { IBinding } from "../interfaces/IBinding";
 
-import { includes, isArray } from '../utils';
+import { includes, isArray } from "../utils";
 
 interface IBinderContext {
   classes: string[];
@@ -28,7 +28,7 @@ const binder: IBinder<IBinderContext> = {
 
       // get the new class list
       let newClasses: string[];
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         newClasses = value.match(/\S+/g);
       } else if (isArray(value)) {
         newClasses = value;

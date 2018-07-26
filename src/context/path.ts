@@ -1,6 +1,6 @@
 import { IObserver, IObserverCallback } from "../interfaces/IObserver";
 
-import { isArray } from '../utils';
+import { isArray } from "../utils";
 
 import { observeArray, unobserveArray } from "./array";
 import { observeProperty, unobserveProperty } from "./object";

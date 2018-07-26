@@ -51,7 +51,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
     // inject the wrapped observe function
     Object.defineProperty(context, "$observe", {
       configurable: true,
-      value: function observe(path: string, callback?: IObserverCallback): IObserver {
+      value: function $observe(path: string, callback?: IObserverCallback): IObserver {
         if (path === "$index" || entryRegExp.test(path)) {
           return observePath(context, path, callback);
         } else {
@@ -63,7 +63,7 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
     // override the clone API
     Object.defineProperty(context, "$clone", {
       configurable: true,
-      value: function clone(): IContext {
+      value: function $clone(): IContext {
         return buildContext(context);
       }
     });

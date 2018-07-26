@@ -2,7 +2,7 @@ import { IBinder, IBinderRoutine } from "../interfaces/IBinder";
 import { IBinding } from "../interfaces/IBinding";
 import { ICollection } from "../interfaces/ICollection";
 
-import $class from './class';
+import $class from "./class";
 
 const binders: ICollection<IBinder | IBinderRoutine> = {
 

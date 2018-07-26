@@ -1,4 +1,4 @@
-import { ICollection } from './interfaces/ICollection';
+import { ICollection } from "./interfaces/ICollection";
 
 /**
  * Like Array.prototype.findIndex

@@ -5,9 +5,9 @@ import { IView, IViewOptions } from "./interfaces/IView";
 
 import { buildView } from "./buildView";
 
-import { assign } from './utils';
+import { assign } from "./utils";
 
-import binders from './binders';
+import binders from "./binders";
 
 /**
  * Public interfaces
