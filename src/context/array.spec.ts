@@ -1,14 +1,9 @@
 import { expect } from "chai";
 import "mocha";
 
-import { isArray, isObservedArray, observeArray, unobserveArray } from "./array";
+import { isObservedArray, observeArray, unobserveArray } from "./array";
 
 describe("Array observing", function () {
-  it("should detect array instances", function () {
-    expect(isArray({})).to.be.false;
-    expect(isArray([])).to.be.true;
-  });
-
   it("should detect observing status", function () {
     const arr: any[] = [];
     expect(isObservedArray([])).to.be.false;

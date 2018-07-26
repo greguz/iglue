@@ -1,6 +1,8 @@
 import { IObserver, IObserverCallback } from "../interfaces/IObserver";
 
-import { isArray, observeArray, unobserveArray } from "./array";
+import { isArray } from '../utils';
+
+import { observeArray, unobserveArray } from "./array";
 import { observeProperty, unobserveProperty } from "./object";
 
 type Token = string | number;

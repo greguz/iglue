@@ -56,6 +56,27 @@ export function mapCollection<A, B>(collection: ICollection<A>, mapper: (entry: 
  * Simple passthrough function
  */
 
-export function passthrough<T = any>(value: T): T {
+export function passthrough<T>(value: T): T {
   return value;
+}
+
+/**
+ * Returns true if the argument is an array
+ */
+
+export function isArray(arr: any): boolean {
+  return arr instanceof Array;
+}
+
+/**
+ * Like Array.prototype.includes
+ */
+
+export function includes<T>(arr: T[], target: T): boolean {
+  for (const entry of arr) {
+    if (entry === target) {
+      return true;
+    }
+  }
+  return false;
 }

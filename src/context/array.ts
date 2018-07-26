@@ -1,4 +1,4 @@
-import { findIndex } from "../utils";
+import { findIndex, isArray } from "../utils";
 
 // array methods that change the array
 const METHODS: string[] = ["push", "pop", "shift", "unshift", "sort", "reverse", "splice"];
@@ -40,14 +40,6 @@ function applyMiddleware(arr: any): void {
       }
     });
   }
-}
-
-/**
- * Returns true if the argument is an array
- */
-
-export function isArray(arr: any): boolean {
-  return arr instanceof Array;
 }
 
 /**
