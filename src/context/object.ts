@@ -4,7 +4,7 @@ import { findIndex } from "../utils";
  * This is the variable the all data about observing is placed
  */
 
-const STORE = "_ol_";
+const STORE = "_op_"; // "op" stands for "observed properties"
 
 /**
  * Represents an observed object
@@ -165,7 +165,7 @@ function removeMiddleware(obj: IObservedObject, property: string): void {
 
 export function isObservedObject(obj: any, property?: string): boolean {
   if (typeof obj === "object" && obj !== null) {
-    if (obj[STORE]) {
+    if (obj.hasOwnProperty(STORE)) {
       if (property == null) {
         return true;
       } else {
@@ -202,7 +202,7 @@ export function unobserveProperty(obj: any, property: string, notifier: Property
     // get the index of the argument notifier
     const index: number = findIndex(
       notifiers,
-      (fn: PropertyNotifier): boolean => fn === notifier
+      (entry: PropertyNotifier): boolean => entry === notifier
     );
 
     // remove if necessary

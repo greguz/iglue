@@ -25,7 +25,7 @@ describe("Object observing", function () {
     observeProperty(obj, "value", noop);
 
     function overrideOL(): void {
-      obj._ol_ = [];
+      obj._op_ = [];
     }
     expect(overrideOL).to.throw();
   });
