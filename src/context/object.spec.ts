@@ -72,9 +72,23 @@ describe("Object observing", function () {
       count++;
     }
 
+    expect(isObservedObject(obj)).to.be.false;
+    expect(isObservedObject(obj, "value")).to.be.false;
+
     observeProperty(obj, "value", callback);
 
+    expect(isObservedObject(obj)).to.be.true;
+    expect(isObservedObject(obj, "value")).to.be.true;
+
     obj.value = 1;
+
+    expect(
+      unobserveProperty(obj, "value", () => null)
+    ).to.be.false;
+
+    expect(
+      unobserveProperty(obj, "value", callback)
+    ).to.be.true;
 
     unobserveProperty(obj, "value", callback);
 
@@ -85,5 +99,8 @@ describe("Object observing", function () {
     obj.value = 6;
 
     expect(count).to.be.equal(1);
+
+    expect(isObservedObject(obj)).to.be.true;
+    expect(isObservedObject(obj, "value")).to.be.false;
   });
 });
