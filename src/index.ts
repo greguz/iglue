@@ -1,3 +1,4 @@
+import { IBinder, IBinderRoutine } from "./interfaces/IBinder";
 import { ICollection } from "./interfaces/ICollection";
 import { IComponent } from "./interfaces/IComponent";
 import { Formatter, IFormatter } from "./interfaces/IFormatter";
@@ -7,7 +8,7 @@ import { buildView } from "./buildView";
 
 import { assign } from "./utils";
 
-import binders from "./binders";
+import $binders from "./binders";
 
 /**
  * Public interfaces
@@ -18,6 +19,12 @@ export * from "./interfaces/IBinding";
 export * from "./interfaces/ICollection";
 export * from "./interfaces/IComponent";
 export * from "./interfaces/IView";
+
+/**
+ * Global binders
+ */
+
+export const binders: ICollection<IBinder | IBinderRoutine> = $binders;
 
 /**
  * Global components
