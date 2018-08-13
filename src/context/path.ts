@@ -1,22 +1,53 @@
-import { IObserver, IObserverCallback } from "../interfaces/IObserver";
-
-import { isArray } from "../utils";
+import { isArray, isObject, parsePath, remove } from "../utils";
 
 import { observeArray, unobserveArray } from "./array";
-import { observeProperty, unobserveProperty } from "./object";
-
-type Token = string | number;
+import { observeProperty, unobserveProperty } from "./property";
 
 /**
- * Fetch current values chain
+ * Observe data store property
  */
 
-function realize(obj: any, tokens: Token[]): any[] {
+const STORE = "_ov_";
+
+/**
+ * Represents an observed object
+ */
+
+interface ObservedObject {
+  [STORE]: {
+    [path: string]: PathInfo;
+  };
+}
+
+/**
+ * Observe info
+ */
+
+interface PathInfo {
+  // parsed path tokens
+  t: string[];
+  // update function used to observe
+  u: VoidFunction;
+  // registered notifiers
+  n: PathNotifier[];
+}
+
+/**
+ * Observe callback
+ */
+
+export type PathNotifier = (newValue: any, oldValue: any) => void;
+
+/**
+ * Fetch path values from object
+ */
+
+function realize(obj: any, tokens: string[]): any[] {
   const values: any[] = [];
 
   for (const token of tokens) {
     values.push(obj);
-    if (typeof obj === "object" && obj !== null) {
+    if (isObject(obj)) {
       obj = obj[token];
     } else {
       obj = undefined;
@@ -31,13 +62,13 @@ function realize(obj: any, tokens: Token[]): any[] {
  * observe/unobserve registration utility
  */
 
-function register(action: "observe" | "unobserve", value: any, token: Token, fn: () => void): void {
+function register(action: "observe" | "unobserve", value: any, token: string, fn: () => void): void {
   if (token === undefined) {
     if (isArray(value)) {
       (action === "observe" ? observeArray : unobserveArray)(value, fn);
     }
   } else if (typeof value === "object" && value !== null) {
-    if (isArray(value) && (typeof token === "number" || token === "length")) {
+    if (isArray(value) && (/^\d+$/.test(token) || token === "length")) {
       (action === "observe" ? observeArray : unobserveArray)(value, fn);
     } else {
       (action === "observe" ? observeProperty : unobserveProperty)(value, token.toString(), fn);
@@ -46,86 +77,35 @@ function register(action: "observe" | "unobserve", value: any, token: Token, fn:
 }
 
 /**
- * Parse value to into tokens
+ * Apply the observe middleware to the object
  */
 
-function parsePath(path: string): Token[] { // TODO you can do better than this...
-  const tokens: Token[] = [];
-
-  while (path.length > 0) {
-    if (path[0] === "[") {
-      const end: number = path.indexOf("]");
-      if (end === -1) {
-        throw new Error(`"${path}" is not a valid path`);
-      }
-      const index: number = parseInt(path.substring(1, end), 10);
-      if (isNaN(index)) {
-        throw new Error(`"${path}" is not a valid path`);
-      }
-      tokens.push(index);
-      path = path.substr(end + 1);
-    } else {
-      const match = path.match(/^[^\.|\[]+/);
-      const token: string = match[0];
-      tokens.push(token);
-      path = path.substr(token.length);
-    }
-    if (path[0] === ".") {
-      path = path.substr(1);
-    }
+function applyMiddleware(obj: ObservedObject, path: string, notifier: PathNotifier): void {
+  // ensure object data store
+  if (!obj.hasOwnProperty(STORE)) {
+    Object.defineProperty(obj, STORE, {
+      // not configurable, prevent double definition
+      // not enumerable, prevent Object.assign cloning
+      // not writable, prevent value assignation/override
+      value: {}
+    });
   }
 
-  return tokens;
-}
+  // registered notifiers
+  const notifiers: PathNotifier[] = [notifier];
 
-/**
- * Create an observer
- */
+  // parsed path
+  const tokens: string[] = parsePath(path);
 
-export function observePath(obj: object, path: string, callback?: IObserverCallback): IObserver {
-  // path tokens
-  const tokens: Token[] = parsePath(path);
+  // load current values
+  let oldValues: any[] = realize(obj, tokens);
 
-  // last chain values
-  let oldValues: any[];
-
-  // get the current value
-  function get(): any {
-    let o: any = obj;
-
-    for (const token of tokens) {
-      if (typeof o === "object" && o !== null) {
-        o = o[token];
-      } else {
-        return undefined;
-      }
-    }
-
-    return o;
-  }
-
-  // set the value to target
-  function set(value: any): void {
-    let o: any = obj;
-    let i: number;
-
-    for (i = 0; i < tokens.length - 1; i++) {
-      const token: Token = tokens[i];
-      if (typeof o[token] !== "object") {
-        throw new Error("Unable to set the target object");
-      }
-      o = o[token];
-    }
-
-    o[tokens[i]] = value;
-  }
-
-  // private function triggered on every change
+  // function triggered on path change
   function update(): void {
     const newValues: any[] = realize(obj, tokens);
 
     for (let i = 0; i <= tokens.length; i++) {
-      const token: Token = tokens[i];
+      const token: string = tokens[i];
       const oldValue: any = oldValues[i];
       const newValue: any = newValues[i];
 
@@ -135,58 +115,100 @@ export function observePath(obj: object, path: string, callback?: IObserverCallb
       }
     }
 
-    callback(newValues[tokens.length], oldValues[tokens.length]);
+    for (const n of notifiers) {
+      n(newValues[tokens.length], oldValues[tokens.length]);
+    }
 
     oldValues = newValues;
   }
 
   // start data observing
-  function observe(): void {
-    oldValues = realize(obj, tokens);
-
-    for (let i = 0; i <= tokens.length; i++) {
-      register(
-        "observe",
-        oldValues[i],
-        tokens[i],
-        update
-      );
-    }
+  for (let i = 0; i <= tokens.length; i++) {
+    register(
+      "observe",
+      oldValues[i],
+      tokens[i],
+      update
+    );
   }
 
-  // stop data observing
-  function unobserve(): void {
-    for (let i = 0; i <= tokens.length; i++) {
-      register(
-        "unobserve",
-        oldValues[i],
-        tokens[i],
-        update
-      );
-    }
-
-    oldValues = undefined;
-  }
-
-  // register notification callback
-  function notify(fn: IObserverCallback): void {
-    if (fn && callback == null) {
-      observe();
-    } else if (fn == null && callback) {
-      unobserve();
-    }
-    callback = fn;
-  }
-
-  // register the constructor callback
-  if (callback) {
-    observe();
-  }
-
-  // return the observer instance
-  return {
-    get,
-    set,
-    notify
+  // update the store
+  obj[STORE][path] = {
+    t: tokens,
+    u: update,
+    n: notifiers
   };
+}
+
+/**
+ * Remove the observe middleware
+ */
+
+function removeMiddleware(obj: ObservedObject, path: string): void {
+  // get path info
+  const info: PathInfo = obj[STORE][path];
+
+  // load current values
+  const values: any[] = realize(obj, info.t);
+
+  // stop data watch
+  for (let i = 0; i <= info.t.length; i++) {
+    register(
+      "unobserve",
+      values[i],
+      info.t[i],
+      info.u
+    );
+  }
+
+  // clean store
+  obj[STORE][path] = undefined;
+}
+
+/**
+ * Returns true when a particular path is observed
+ */
+
+export function isObservedPath(obj: any, path: string): boolean {
+  if (isObject(obj) && obj.hasOwnProperty(STORE)) {
+    return !!obj[STORE][path];
+  }
+  return false;
+}
+
+/**
+ * Observe a path value
+ */
+
+export function observePath(obj: any, path: string, notifier: PathNotifier): void {
+  // input validation
+  if (!isObject(obj)) {
+    throw new Error("Unexpected object to observe");
+  }
+
+  // register the notifier
+  if (isObservedPath(obj, path)) {
+    obj[STORE][path].n.push(notifier);
+  } else {
+    applyMiddleware(obj, path, notifier);
+  }
+}
+
+/**
+ * Remove the observe notifier, returns true when the notifier is removed
+ */
+
+export function unobservePath(obj: any, path: string, notifier: PathNotifier): boolean {
+  if (isObservedPath(obj, path)) {
+    const info: PathInfo = obj[STORE][path];
+
+    const removed: boolean = remove(info.n, notifier);
+
+    if (info.n.length === 0) {
+      removeMiddleware(obj, path);
+    }
+
+    return removed;
+  }
+  return false;
 }

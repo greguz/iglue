@@ -1,4 +1,4 @@
-import { findIndex, isArray } from "../utils";
+import { isArray, remove } from "../utils";
 
 /**
  * Array methods to patch
@@ -18,13 +18,13 @@ const METHODS: string[] = [
  * Property where the notifiers are stored into the array
  */
 
-const STORE = "_an_"; // "an" stands for "array notifiers"
+const STORE = "_oa_";
 
 /**
  * Represents an observed array
  */
 
-interface IObservedArray<T = any> extends Array<T> {
+interface ObservedArray extends Array<any> {
   [STORE]: ArrayNotifier[];
 }
 
@@ -38,7 +38,7 @@ export type ArrayNotifier = () => void;
  * Apply observe middleware to the array instance
  */
 
-function applyMiddleware(arr: IObservedArray): void {
+function applyMiddleware(arr: ObservedArray): void {
   // ensure array data store
   if (!arr.hasOwnProperty(STORE)) {
     Object.defineProperty(arr, STORE, {
@@ -56,7 +56,7 @@ function applyMiddleware(arr: IObservedArray): void {
       configurable: true,
       // not enumerable, prevent Object.assign cloning
       writable: true,
-      value: function middleware(this: IObservedArray, ...args: any[]): any {
+      value: function middleware(this: ObservedArray, ...args: any[]): any {
         // call the original method and get the result
         const result: any = (Array as any).prototype[method].apply(this, args);
         // trigger all notifiers
@@ -74,7 +74,7 @@ function applyMiddleware(arr: IObservedArray): void {
  * Remove the observe middleware
  */
 
-function removeMiddleware(arr: IObservedArray): void {
+function removeMiddleware(arr: ObservedArray): void {
   for (const method of METHODS) {
     // restore the original method
     Object.defineProperty(arr, method, {
@@ -91,10 +91,8 @@ function removeMiddleware(arr: IObservedArray): void {
  */
 
 export function isObservedArray(arr: any): boolean {
-  if (isArray(arr)) {
-    if (arr.hasOwnProperty(STORE)) {
-      return arr[STORE].length > 0;
-    }
+  if (isArray(arr) && arr.hasOwnProperty(STORE)) {
+    return arr[STORE].length > 0;
   }
   return false;
 }
@@ -122,16 +120,8 @@ export function unobserveArray(arr: any, notifier: ArrayNotifier): boolean {
     // get the notifiers array
     const notifiers: ArrayNotifier[] = arr[STORE];
 
-    // get the notifier index
-    const index: number = findIndex(
-      notifiers,
-      (entry: ArrayNotifier): boolean => entry === notifier
-    );
-
-    // remove notifier argument
-    if (index >= 0) {
-      notifiers.splice(index, 1);
-    }
+    // remove the targeted notifier
+    const removed: boolean = remove(notifiers, notifier);
 
     // remove middleware if necessary
     if (notifiers.length === 0) {
@@ -139,7 +129,7 @@ export function unobserveArray(arr: any, notifier: ArrayNotifier): boolean {
     }
 
     // all done
-    return index >= 0;
+    return removed;
   }
   return false;
 }

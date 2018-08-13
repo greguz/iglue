@@ -1,4 +1,8 @@
-export interface IValueSpecification<T = any> {
+/**
+ * Represents a single value requirements
+ */
+
+export interface Specification<T = any> {
 
   /**
    * Defaul value
@@ -16,7 +20,6 @@ export interface IValueSpecification<T = any> {
    * Required "typeof" return value
    */
 
-  // tslint:disable-next-line
   type?: string | Function;
 
   /**

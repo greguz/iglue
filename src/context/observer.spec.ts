@@ -4,7 +4,7 @@ import "mocha";
 // import { IObserver } from "../interfaces/IObserver";
 // import { observePath } from "./path";
 
-describe("Path observing", function () {
+describe("Observer", function () {
   //   describe("#get", function () {
   //     it("should get a value", function () {
   //       const obj: any = { value: 42 };

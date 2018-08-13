@@ -2,11 +2,11 @@ import { expect } from "chai";
 import "mocha";
 
 import { assign } from "../utils";
-import { isObservedObject, observeProperty, unobserveProperty } from "./object";
+import { isObservedObject, observeProperty, unobserveProperty } from "./property";
 
 function noop(): void { }
 
-describe("Object observing", function () {
+describe("Property observing", function () {
   it("should detect observing status", function () {
     const obj: any = { value: 42 };
 

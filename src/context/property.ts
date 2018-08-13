@@ -1,18 +1,18 @@
-import { findIndex } from "../utils";
+import { isObject, remove } from "../utils";
 
 /**
  * This is the variable the all data about observing is placed
  */
 
-const STORE = "_op_"; // "op" stands for "observed properties"
+const STORE = "_op_";
 
 /**
  * Represents an observed object
  */
 
-interface IObservedObject {
+interface ObservedObject {
   [STORE]: {
-    [property: string]: IPropertyInfo;
+    [property: string]: PropertyInfo;
   };
 }
 
@@ -20,7 +20,7 @@ interface IObservedObject {
  * Single observed property information
  */
 
-interface IPropertyInfo {
+interface PropertyInfo {
   // original property descriptor
   d: PropertyDescriptor;
   // registered property notifiers
@@ -63,7 +63,7 @@ function getPropertyDescriptor(obj: object, property: string): PropertyDescripto
  * Apply observe middleware to the object
  */
 
-function applyMiddleware(obj: IObservedObject, property: string): void {
+function applyMiddleware(obj: ObservedObject, property: string, notifier: PropertyNotifier): void {
   // ensure object data store
   if (!obj.hasOwnProperty(STORE)) {
     Object.defineProperty(obj, STORE, {
@@ -78,13 +78,7 @@ function applyMiddleware(obj: IObservedObject, property: string): void {
   const descriptor = getPropertyDescriptor(obj, property);
 
   // registered notifiers
-  const notifiers: PropertyNotifier[] = [];
-
-  // save the property descriptor and setup notifiers array
-  obj[STORE][property] = {
-    d: descriptor,
-    n: notifiers
-  };
+  const notifiers: PropertyNotifier[] = [notifier];
 
   // custom wrapped getter and setter
   let get: () => any;
@@ -96,7 +90,7 @@ function applyMiddleware(obj: IObservedObject, property: string): void {
 
     // wrap the setter
     if (descriptor.set) {
-      set = function setter(this: IObservedObject, update: any): void {
+      set = function setter(this: ObservedObject, update: any): void {
         // call the original setter to update the value
         descriptor.set.call(this, update);
 
@@ -104,29 +98,26 @@ function applyMiddleware(obj: IObservedObject, property: string): void {
         const value: any = descriptor.get.call(this);
 
         // trigger all property notifiers
-        for (const notifier of notifiers) {
-          notifier(value);
+        for (const n of notifiers) {
+          n(value);
         }
       };
     }
   } else {
-    // init with the current value
-    let value: any = descriptor.value;
-
     // create getter
-    get = function getter(this: IObservedObject): any {
-      return value;
+    get = function getter(this: ObservedObject): any {
+      return descriptor.value;
     };
 
     // create setter with middleware
-    set = function setter(this: IObservedObject, update: any): void {
-      if (update !== value) {
+    set = function setter(this: ObservedObject, value: any): void {
+      if (descriptor.value !== value) {
         // update the current value
-        value = update;
+        descriptor.value = value;
 
         // trigger all property notifiers
-        for (const notifier of notifiers) {
-          notifier(value);
+        for (const n of notifiers) {
+          n(value);
         }
       }
     };
@@ -139,21 +130,21 @@ function applyMiddleware(obj: IObservedObject, property: string): void {
     get,
     set
   });
+
+  // save the property descriptor and setup notifiers array
+  obj[STORE][property] = {
+    d: descriptor,
+    n: notifiers
+  };
 }
 
 /**
  * Remove observe middleware and restore the origianl property status
  */
 
-function removeMiddleware(obj: IObservedObject, property: string): void {
-  // get the property info
-  const info: IPropertyInfo = obj[STORE][property];
-
-  // get the original property descriptor
-  const descriptor: PropertyDescriptor = info.d;
-
+function removeMiddleware(obj: ObservedObject, property: string): void {
   // restore the original property descriptor
-  Object.defineProperty(obj, property, descriptor);
+  Object.defineProperty(obj, property, obj[STORE][property].d);
 
   // remove property info from the store
   obj[STORE][property] = undefined;
@@ -164,13 +155,11 @@ function removeMiddleware(obj: IObservedObject, property: string): void {
  */
 
 export function isObservedObject(obj: any, property?: string): boolean {
-  if (typeof obj === "object" && obj !== null) {
-    if (obj.hasOwnProperty(STORE)) {
-      if (property == null) {
-        return true;
-      } else {
-        return !!obj[STORE][property];
-      }
+  if (isObject(obj) && obj.hasOwnProperty(STORE)) {
+    if (property === undefined || property === null) {
+      return true;
+    } else {
+      return !!obj[STORE][property];
     }
   }
   return false;
@@ -181,13 +170,17 @@ export function isObservedObject(obj: any, property?: string): boolean {
  */
 
 export function observeProperty(obj: any, property: string, notifier: PropertyNotifier): void {
-  if (typeof obj !== "object" || obj === null) {
+  // input validation
+  if (!isObject(obj)) {
     throw new Error("Unexpected object to observe");
   }
-  if (!isObservedObject(obj, property)) {
-    applyMiddleware(obj, property);
+
+  // register the new notifier
+  if (isObservedObject(obj, property)) {
+    obj[STORE][property].n.push(notifier);
+  } else {
+    applyMiddleware(obj, property, notifier);
   }
-  obj[STORE][property].n.push(notifier);
 }
 
 /**
@@ -196,27 +189,12 @@ export function observeProperty(obj: any, property: string, notifier: PropertyNo
 
 export function unobserveProperty(obj: any, property: string, notifier: PropertyNotifier): boolean {
   if (isObservedObject(obj, property)) {
-    // get the registered notifier functions
     const notifiers: PropertyNotifier[] = obj[STORE][property].n;
-
-    // get the index of the argument notifier
-    const index: number = findIndex(
-      notifiers,
-      (entry: PropertyNotifier): boolean => entry === notifier
-    );
-
-    // remove if necessary
-    if (index >= 0) {
-      notifiers.splice(index, 1);
-    }
-
-    // remove middleware is no notifiers registered
+    const removed: boolean = remove(notifiers, notifier);
     if (notifiers.length === 0) {
       removeMiddleware(obj, property);
     }
-
-    // return true if we removed the notifier
-    return index >= 0;
+    return removed;
   }
   return false;
 }

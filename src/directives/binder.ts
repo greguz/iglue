@@ -1,65 +1,70 @@
-import { IBinder } from "../interfaces/IBinder";
-import { IBinding } from "../interfaces/IBinding";
-import { IDirective } from "../interfaces/IDirective";
-import { IValueSpecification } from "../interfaces/IValueSpecification";
+import { Binder } from "../interfaces/Binder";
+import { Binding } from "../interfaces/Binding";
+import { Directive } from "../interfaces/Directive";
+import { Specification } from "../interfaces/Specification";
 
-export function buildBinderDirective(binding: IBinding, binder: IBinder): IDirective {
+/**
+ * Apply value specification utility
+ */
+
+function applySpecification(value: any, source: string, spec: Specification): any {
+  if (value === null || value === undefined) {
+    if (spec.required === true) {
+      throw new Error(`The required bound value "${source}" is not defined`);
+    }
+    if (spec.hasOwnProperty("default")) {
+      value = spec.default;
+    }
+  } else {
+    if (typeof spec.type === "string" && typeof value !== spec.type) {
+      throw new Error(`The bound value "${source}" is not a "${spec.type}"`);
+    }
+    if (typeof spec.type === "function" && !(value instanceof spec.type)) {
+      throw new Error(`The bound value "${source}" is not an instance of ${spec.type}`);
+    }
+    if (spec.validator) {
+      const valid: boolean = spec.validator.call(context, value);
+      if (!valid) {
+        throw new Error(`The bound value "${value}" from "${source}" is not valid`);
+      }
+    }
+  }
+
+  return value;
+}
+
+/**
+ * Build a binder directive
+ */
+
+export function buildBinderDirective(binder: Binder, binding: Binding): Directive {
+  // argument required check
+  if (binder.argumentRequired === true && !binding.argument) {
+    throw new Error(`The binder ${binding.directive} requires an argument`);
+  }
+
+  // shortcut
   const el: HTMLElement = binding.el;
-  let context: any;
 
-  function applyValueSpecification(value: any, spec: IValueSpecification): any {
-    if (value === null || value === undefined) {
-      if (spec.required === true) {
-        throw new Error(`The required bound value "${binding.attrValue}" is not defined`);
-      }
-      if (spec.hasOwnProperty("default")) {
-        value = spec.default;
-      }
-    } else {
-      if (typeof spec.type === "string" && typeof value !== spec.type) {
-        throw new Error(`The bound value "${binding.attrValue}" is not a "${spec.type}"`);
-      }
-      if (typeof spec.type === "function" && !(value instanceof spec.type)) {
-        throw new Error(`The bound value "${binding.attrValue}" is not an instance of ${spec.type}`);
-      }
-      if (spec.validator) {
-        const valid: boolean = spec.validator.call(context, value);
-        if (!valid) {
-          throw new Error(`The bound value "${value}" from "${binding.attrValue}" is not valid`);
-        }
-      }
-    }
+  // context object
+  const context: any = {};
 
-    return value;
+  // remove the binding argument
+  el.removeAttribute(binding.attrName);
+
+  // trigger bind hook
+  if (binder.bind) {
+    binder.bind.call(context, el, binding);
   }
 
-  function bind(): void {
-    // argument required check
-    if (binder.argumentRequired === true) {
-      if (!binding.argument) {
-        throw new Error(`The binder ${binding.directive} requires an argument`);
-      }
-    }
+  /**
+   * Directive#refresh
+   */
 
-    // remove the binding argument
-    binding.el.removeAttribute(binding.attrName);
-
-    // create an empty context
-    context = {};
-
-    // trigger bind hook
-    if (binder.bind) {
-      binder.bind.call(context, el, binding);
-    }
-  }
-
-  function refresh(): void {
-    // get the current value
-    let value: any = binding.get();
-
+  function refresh(value: any): void {
     // apply value validation
     if (binder.value) {
-      value = applyValueSpecification(value, binder.value);
+      value = applySpecification(value, binding.attrValue, binder.value);
     }
 
     // execute binder routine
@@ -68,21 +73,22 @@ export function buildBinderDirective(binding: IBinding, binder: IBinder): IDirec
     }
   }
 
+  /**
+   * Directive#unbind
+   */
+
   function unbind(): void {
     // trigger unbind hook
     if (binder.unbind) {
       binder.unbind.call(context, el, binding);
     }
 
-    // reset context
-    context = undefined;
-
     // restore original DOM attribute
-    binding.el.setAttribute(binding.attrName, binding.attrValue);
+    el.setAttribute(binding.attrName, binding.attrValue);
   }
 
+  // return the configured directive
   return {
-    bind,
     refresh,
     unbind
   };

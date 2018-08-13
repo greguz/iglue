@@ -1,31 +1,26 @@
-export interface IParsedTextNode {
-  type: "text" | "expression";
-  from: number;
-  to: number;
-  content: string;
-}
+import { Chunk } from "../interfaces/Chunk";
 
-export function parseText(text: string, regex: RegExp): IParsedTextNode[] {
+export function parseText(text: string, regex: RegExp): Chunk[] {
   // ensure global flag
   if (!regex.global) {
     throw new Error("The interpolation regular expression must be global");
   }
 
   // resulting array
-  const matches: IParsedTextNode[] = [];
+  const chunks: Chunk[] = [];
 
   // current match
   let match: RegExpExecArray;
 
   // current text index
-  let index = 0;
+  let index: number = 0;
 
   // each all regexp matches
   while (match = regex.exec(text)) {
     // extract previous text
     if (index !== match.index) {
-      matches.push({
-        type: "text",
+      chunks.push({
+        type: "static",
         from: index,
         to: match.index - 1,
         content: text.substring(index, match.index)
@@ -33,7 +28,7 @@ export function parseText(text: string, regex: RegExp): IParsedTextNode[] {
     }
 
     // extract matched path
-    matches.push({
+    chunks.push({
       type: "expression",
       from: match.index,
       to: match.index + match[0].length - 1,
@@ -46,13 +41,13 @@ export function parseText(text: string, regex: RegExp): IParsedTextNode[] {
 
   // extract text after last match
   if (index !== text.length) {
-    matches.push({
-      type: "text",
+    chunks.push({
+      type: "static",
       from: index,
       to: text.length - 1,
       content: text.substring(index, text.length)
     });
   }
 
-  return matches;
+  return chunks;
 }

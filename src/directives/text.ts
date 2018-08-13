@@ -1,23 +1,14 @@
-import { IDirective } from "../interfaces/IDirective";
-import { IObserver } from "../interfaces/IObserver";
+import { Directive } from "../interfaces/Directive";
 
-export function buildTextDirective(node: Text, observer: IObserver): IDirective {
-  function bind(): void {
-    // nothing to do
-  }
-
-  function refresh(): void {
-    const value: any = observer.get();
-    node.data = value == null ? "" : value.toString();
-  }
-
-  function unbind(): void {
-    // nothing to do
-  }
-
+export function buildTextDirective(node: Text): Directive {
   return {
-    bind,
-    refresh,
-    unbind
+    refresh(value: any): void {
+      node.data = value === undefined || value === null
+        ? ""
+        : value.toString();
+    },
+    unbind(): void {
+      // keep the last value
+    }
   };
 }

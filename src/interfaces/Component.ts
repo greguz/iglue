@@ -1,6 +1,8 @@
-import { IView } from "./IView";
+/**
+ * Component definition interface
+ */
 
-export interface IComponent<T = any> {
+export interface Component<T = any> {
 
   /**
    * HTML template
@@ -24,25 +26,25 @@ export interface IComponent<T = any> {
    * DOM initialized, data-binding is not running
    */
 
-  attach?: (this: T, el: HTMLElement) => void;
+  attach?: (this: T) => void;
 
   /**
    * Both DOM and data-binding are initialized
    */
 
-  bind?: (this: T, view: IView) => void;
+  bind?: (this: T) => void;
 
   /**
    * The data-binding and the DOM are still running
    */
 
-  unbind?: (this: T, view: IView) => void;
+  unbind?: (this: T) => void;
 
   /**
    * The data-binding is stopped, the DOM is still untached
    */
 
-  detach?: (this: T, el: HTMLElement) => void;
+  detach?: (this: T) => void;
 
   /**
    * Both data-biding and DOM are dead

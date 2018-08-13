@@ -1,4 +1,16 @@
-import { ICollection } from "./interfaces/ICollection";
+/**
+ * Generic collection object
+ */
+
+export interface Collection<T = any> {
+  [key: string]: T;
+}
+
+/**
+ * Generic map function
+ */
+
+export type Mapper<A, B> = (arg: A) => B;
 
 /**
  * Like Array.prototype.findIndex
@@ -11,6 +23,19 @@ export function findIndex<T>(obj: T[], predicate: (value: T, index: number, obj:
     }
   }
   return -1;
+}
+
+/**
+ * Like Array.prototype.find
+ */
+
+export function find<T>(obj: T[], predicate: (value: T, index: number, obj: T[]) => boolean): T {
+  for (let i = 0; i < obj.length; i++) {
+    if (predicate(obj[i], i, obj) === true) {
+      return obj[i];
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -46,18 +71,10 @@ export function assign(target: any, ...sources: any[]): any {
  * Map a collection object
  */
 
-export function mapCollection<A, B>(collection: ICollection<A>, mapper: (entry: A, prop: string) => B): (prop: string) => B {
+export function mapCollection<A, B>(collection: Collection<A>, mapper: (entry: A, prop: string) => B): Mapper<string, B> {
   return function extract(prop: string): B {
     return mapper(collection[prop], prop);
   };
-}
-
-/**
- * Simple passthrough function
- */
-
-export function passthrough<T>(value: T): T {
-  return value;
 }
 
 /**
@@ -66,6 +83,22 @@ export function passthrough<T>(value: T): T {
 
 export function isArray(arr: any): boolean {
   return arr instanceof Array;
+}
+
+/**
+ * Returns true if the argument is an object
+ */
+
+export function isObject(obj: any): boolean {
+  return Object(obj) === obj;
+}
+
+/**
+ * Returns true if the argument is a function
+ */
+
+export function isFunction(fn: any): boolean {
+  return typeof fn === "function";
 }
 
 /**
@@ -79,4 +112,106 @@ export function includes<T>(arr: T[], target: T): boolean {
     }
   }
   return false;
+}
+
+/**
+ * Remove the targeted element, returns true if the element is removed
+ */
+
+export function remove<T>(arr: T[], target: T): boolean {
+  const index: number = findIndex(
+    arr,
+    (entry: T): boolean => entry === target
+  );
+  if (index >= 0) {
+    arr.splice(index, 1);
+  }
+  return index >= 0;
+}
+
+/**
+ * Parse object path into tokens array
+ */
+
+export function parsePath(path: string): string[] {
+  // TODO you can do better than this...
+  const tokens: string[] = [];
+  while (path.length > 0) {
+    if (path[0] === "[") {
+      const end: number = path.indexOf("]");
+      if (end === -1) {
+        throw new Error(`"${path}" is not a valid path`);
+      }
+      tokens.push(path.substring(1, end));
+      path = path.substr(end + 1);
+    } else {
+      const match = path.match(/^[^\.|\[]+/);
+      const token: string = match[0];
+      tokens.push(token);
+      path = path.substr(token.length);
+    }
+    if (path[0] === ".") {
+      path = path.substr(1);
+    }
+  }
+  return tokens;
+}
+
+/**
+ * TODO docs
+ */
+
+export function buildValueGetter(obj: any, path: string): () => any {
+  // input validation
+  if (!isObject(obj)) {
+    throw new Error("Not a object");
+  }
+
+  // parse path into tokens
+  const tokens: string[] = parsePath(path);
+
+  // return the getter utility function
+  return function get(): any {
+    let o: any = obj;
+
+    for (const token of tokens) {
+      if (isObject(o)) {
+        o = o[token];
+      } else {
+        return undefined;
+      }
+    }
+
+    return o;
+  };
+}
+
+/**
+ * TODO docs
+ */
+
+export function buildValueSetter(obj: any, path: string): (value: any) => void {
+  // input validation
+  if (!isObject(obj)) {
+    throw new Error("Not a object");
+  }
+
+  // parse path into tokens
+  const tokens: string[] = parsePath(path);
+
+  // return the setter utility function
+  return function set(value: any): void {
+    let o: any = obj;
+    let i: number;
+
+    for (i = 0; i < tokens.length - 1; i++) {
+      const token: string = tokens[i];
+      if (!isObject(o[token])) {
+        throw new Error("Unable to set the target object");
+      }
+      o = o[token];
+    }
+
+    o[tokens[i]] = value;
+  };
 }

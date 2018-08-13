@@ -1,48 +1,55 @@
-import { IBinder, IBinderRoutine } from "./interfaces/IBinder";
-import { ICollection } from "./interfaces/ICollection";
-import { IComponent } from "./interfaces/IComponent";
-import { Formatter, IFormatter } from "./interfaces/IFormatter";
-import { IView, IViewOptions } from "./interfaces/IView";
-
-import { buildView } from "./buildView";
-
-import { assign } from "./utils";
+import { Binder, BinderRoutine } from "./interfaces/Binder";
+import { Component } from "./interfaces/Component";
+import { Formatter } from "./interfaces/Formatter";
+import { View, ViewOptions } from "./interfaces/View";
 
 import $binders from "./binders";
+import { buildView } from "./view";
+import { assign, Collection } from "./utils";
 
 /**
  * Public interfaces
  */
 
-export * from "./interfaces/IBinder";
-export * from "./interfaces/IBinding";
-export * from "./interfaces/ICollection";
-export * from "./interfaces/IComponent";
-export * from "./interfaces/IView";
+export * from "./interfaces/AttributeInfo";
+export * from "./interfaces/Binder";
+export * from "./interfaces/Binding";
+export * from "./interfaces/Component";
+export * from "./interfaces/Context";
+export * from "./interfaces/Formatter";
+export * from "./interfaces/Observer";
+export * from "./interfaces/Specification";
+export * from "./interfaces/View";
 
 /**
- * Global binders
+ * Public APIs
  */
 
-export const binders: ICollection<IBinder | IBinderRoutine> = $binders;
+export * from "./context";
 
 /**
  * Global components
  */
 
-export const components: ICollection<IComponent> = {};
+export const components: Collection<Component> = {};
+
+/**
+ * Global binders
+ */
+
+export const binders: Collection<Binder | BinderRoutine> = $binders;
 
 /**
  * Global formatters
  */
 
-export const formatters: ICollection<Formatter | IFormatter> = {
+export const formatters: Collection<Formatter> = {
 
   args(method: any, ...boundArgs: any[]): (...args: any[]) => any {
     if (typeof method !== "function") {
       throw new Error("The target bound value is not a function");
     }
-    return function boundMethod(...args: any[]): any {
+    return function (...args: any[]): any {
       return method.apply(this, boundArgs.concat(args));
     };
   },
@@ -80,15 +87,13 @@ export const formatters: ICollection<Formatter | IFormatter> = {
 };
 
 /**
- * Bind a new view
+ * Bind a new view API
  */
 
-export function bind(el: HTMLElement, data: object, options?: IViewOptions): IView {
+export function bind(el: HTMLElement, data: object, options?: ViewOptions): View {
   options = options || {};
   options.binders = assign({}, binders, options.binders);
   options.components = assign({}, components, options.components);
   options.formatters = assign({}, formatters, options.formatters);
-  const view = buildView(el, data, options);
-  view.bind();
-  return view;
+  return buildView(el, data, options);
 }

@@ -1,10 +1,10 @@
-import { IComponent } from "../interfaces/IComponent";
-import { IDirective } from "../interfaces/IDirective";
-import { IView } from "../interfaces/IView";
+import { Component } from "../interfaces/Component";
+import { Directive } from "../interfaces/Directive";
+import { View } from "../interfaces/View";
 
 import { buildHTML } from "../parse/html";
 
-function parseTemplate(component: IComponent, context: object): HTMLElement {
+function parseTemplate(component: Component, context: object): HTMLElement {
   if (component.render) {
     return component.render.call(context);
   } else if (component.template) {
@@ -14,31 +14,31 @@ function parseTemplate(component: IComponent, context: object): HTMLElement {
   }
 }
 
-export interface IComponentDirectiveOptions {
-  node: HTMLElement;
+export interface ComponentDirectiveOptions {
+  el: HTMLElement;
   context: object;
-  components: (name: string) => IComponent;
-  view: (el: HTMLElement, data: object) => IView;
+  components: (name: string) => Component;
+  view: (el: HTMLElement, data: object) => View;
 }
 
-export function buildComponentDirective(options: IComponentDirectiveOptions): IDirective {
+export function buildComponentDirective(options: ComponentDirectiveOptions): Directive {
+  // get the parent element
+  const parent: HTMLElement = options.el.parentElement;
+
   // node present inside the DOM
-  let currentNode: HTMLElement = options.node;
+  let currentElement: HTMLElement = options.el;
 
   // current component name
   let currentName: string;
 
   // bound component view
-  let currentView: IView;
+  let currentView: View;
 
   // current component definition object
-  let currentComponent: IComponent;
+  let currentComponent: Component;
 
   // component context
   const context: any = options.context;
-
-  // true if the component is not static
-  const dynamic: boolean = options.node.tagName === "COMPONENT";
 
   /**
    * Unmount and stop current component data binding
@@ -47,7 +47,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
   function unmount(): void {
     // DOM and data-binding still ok
     if (currentComponent.unbind) {
-      currentComponent.unbind.call(context, currentView);
+      currentComponent.unbind.call(context);
     }
 
     // unbind the view
@@ -55,7 +55,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
 
     // data-binding is dead
     if (currentComponent.detach) {
-      currentComponent.detach.call(context, currentNode);
+      currentComponent.detach.call(context);
     }
 
     // DOM restored and data-binding not running
@@ -75,7 +75,7 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
 
   function mount(name: string): void {
     // resolve component name
-    const component: IComponent = options.components(name);
+    const component: Component = options.components(name);
 
     // call creation hook
     if (component.create) {
@@ -86,74 +86,55 @@ export function buildComponentDirective(options: IComponentDirectiveOptions): ID
     const componentNode: HTMLElement = parseTemplate(component, context);
 
     // remove current node from DOM
-    currentNode.parentElement.replaceChild(componentNode, currentNode);
+    parent.replaceChild(componentNode, currentElement);
 
     // call DOM attach hook
     if (component.attach) {
-      component.attach.call(context, componentNode);
+      component.attach.call(context);
     }
 
     // create a new view for this component
-    const view: IView = options.view(componentNode, context);
-
-    // bound the view
-    view.bind();
+    const view: View = options.view(componentNode, context);
 
     // call last life hook
     if (component.bind) {
-      component.bind.call(context, view);
+      component.bind.call(context);
     }
 
     // update status
     currentName = name;
     currentComponent = component;
-    currentNode = componentNode;
+    currentElement = componentNode;
     currentView = view;
   }
 
   /**
-   * Triggered on directive creation
+   * Directive#refresh
    */
 
-  function bind(): void {
-    // nothing to do
-  }
-
-  /**
-   * Triggered when the model has changed
-   */
-
-  function refresh(): void {
-    if (dynamic) {
-      const cName: string = context.is;
-      if (currentName !== cName) {
-        if (currentComponent) {
-          unmount();
-        }
-        mount(cName);
-      } else if (!currentComponent) {
-        throw new Error(`Unable to load dynamic component`);
+  function refresh(name: string): void {
+    if (name !== currentName) {
+      if (currentComponent) {
+        unmount();
       }
-    } else if (currentView) {
-      currentView.refresh();
+      mount(name);
     } else {
-      mount(options.node.tagName.toLowerCase());
+      currentView.refresh();
     }
   }
 
   /**
-   * Triggered when the directive is dying
+   * Directive#unbind
    */
 
   function unbind(): void {
     unmount();
-    currentNode.parentElement.replaceChild(options.node, currentNode);
-    currentNode = options.node;
+    parent.replaceChild(options.el, currentElement);
+    currentElement = options.el;
   }
 
   // return the directive
   return {
-    bind,
     refresh,
     unbind
   };

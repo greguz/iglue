@@ -1,26 +1,26 @@
-import { IBinder } from "../interfaces/IBinder";
-import { IBinding } from "../interfaces/IBinding";
-
 import { includes, isArray } from "../utils";
 
-interface IBinderContext {
+import { Binder } from "../interfaces/Binder";
+import { Binding } from "../interfaces/Binding";
+
+interface BinderContext {
   classes: string[];
 }
 
-const binder: IBinder<IBinderContext> = {
+const binder: Binder<BinderContext> = {
 
   bind(): void {
     // initialize the class array
     this.classes = [];
   },
 
-  routine(el: HTMLElement, value: any, binding: IBinding): void {
+  routine(el: HTMLElement, value: any, binding: Binding): void {
     if (binding.argument) {
       // toggle class by value
-      if (!value) {
-        el.classList.remove(binding.argument);
-      } else {
+      if (value) {
         el.classList.add(binding.argument);
+      } else {
+        el.classList.remove(binding.argument);
       }
     } else {
       // get the previously saved classes
@@ -55,7 +55,17 @@ const binder: IBinder<IBinderContext> = {
     }
   },
 
-  unbind(): void {
+  unbind(el: HTMLElement, binding: Binding): void {
+    // remove explicit class
+    if (binding.argument) {
+      el.classList.remove(binding.argument);
+    }
+
+    // remove dynamic classes
+    for (const cName of this.classes) {
+      el.classList.remove(cName);
+    }
+
     // free resources
     this.classes = undefined;
   }
