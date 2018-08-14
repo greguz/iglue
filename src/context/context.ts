@@ -20,15 +20,15 @@ function getRootProperty(path: string): string {
  * Expose an object property from another object
  */
 
-function exposeProperty(source: any, property: string, target: any): void {
-  Object.defineProperty(target, property, {
+function exposeProperty(context: Context, property: string): void {
+  Object.defineProperty(context, property, {
     configurable: true,
     enumerable: true,
-    get(): any {
-      return source[property];
+    get(this: Context): any {
+      return this.$source[property];
     },
-    set(value: any): void {
-      source[property] = value;
+    set(this: Context, value: any): void {
+      this.$source[property] = value;
     }
   });
 }
@@ -45,19 +45,16 @@ function $observe(this: Context, path: string, callback: ObserverCallback): Obse
     // handle own property
     return buildObserver(this, path, callback);
   } else {
-    // get the source object
-    const source: any = this.$source;
-
     // lazy props exposing
-    if (!context.hasOwnProperty(property)) {
-      exposeProperty(source, property, context);
+    if (!this.hasOwnProperty(property)) {
+      exposeProperty(this, property);
     }
 
     // observe property
-    if (source.hasOwnProperty("$observe")) {
-      return source.$observe(path, callback);
+    if (this.$source.hasOwnProperty("$observe")) {
+      return this.$source.$observe(path, callback);
     } else {
-      return buildObserver(source, path, callback);
+      return buildObserver(this.$source, path, callback);
     }
   }
 }
@@ -76,8 +73,8 @@ export function buildContext(obj: any, ownProperties?: string[]): Context {
   const context: any = {};
 
   // clone all currently enumerable properties
-  for (const prop in obj) {
-    exposeProperty(obj, prop, context);
+  for (const property in obj) {
+    exposeProperty(context, property);
   }
 
   // build and return the context

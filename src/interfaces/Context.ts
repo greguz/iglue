@@ -10,7 +10,7 @@ export interface Context {
    * Source object for this context
    */
 
-  $source: Context | object;
+  $source: Partial<Context>;
 
   /**
    * Context own properties
