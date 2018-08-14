@@ -109,17 +109,6 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
   }
 
   /**
-   * Build attribute binding
-   */
-
-  function buildBinding(el: HTMLElement, attrName: string): Binding {
-    return assign(
-      { el, context },
-      attributeParser.parse(el, attrName)
-    );
-  }
-
-  /**
    * Build and save a new subscription by directive and expression
    */
 
@@ -141,7 +130,10 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
    */
 
   function loadBinder(el: HTMLElement, attrName: string): void {
-    const binding: Binding = buildBinding(el, attrName);
+    const binding: Binding = assign(
+      { el, context },
+      attributeParser.parse(el, attrName)
+    );
     const binder: Binder = getBinder(binding.directive);
     const directive: Directive = buildBinderDirective(binder, binding);
     subscribe(directive, el.getAttribute(attrName));
@@ -166,8 +158,9 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
 
   function loadConditionalDirective(el: HTMLElement, attrName: string): void {
     const directive: Directive = buildConditionalDirective({
-      binding: buildBinding(el, attrName),
-      view: cloneView
+      el,
+      info: attributeParser.parse(el, attrName),
+      buildView: cloneView
     });
     subscribe(directive, el.getAttribute(attrName));
   }
@@ -209,8 +202,10 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
 
   function loadListDirective(el: HTMLElement, attrName: string): void {
     const directive: Directive = buildListDirective({
-      binding: buildBinding(el, attrName),
-      view: cloneView
+      el,
+      context,
+      info: attributeParser.parse(el, attrName),
+      buildView: cloneView
     });
     subscribe(directive, el.getAttribute(attrName));
   }

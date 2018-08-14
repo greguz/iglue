@@ -1,24 +1,25 @@
-import { Binding } from "../interfaces/Binding";
+import { AttributeInfo } from "../interfaces/AttributeInfo";
 import { Directive } from "../interfaces/Directive";
 import { View } from "../interfaces/View";
 
 export interface ConditionalDirectiveOptions {
-  binding: Binding;
-  view: (el: HTMLElement) => View;
+  el: HTMLElement;
+  info: AttributeInfo;
+  buildView: (el: HTMLElement) => View;
 }
 
 export function buildConditionalDirective(options: ConditionalDirectiveOptions): Directive {
   // shortcut
-  const binding: Binding = options.binding;
+  const info: AttributeInfo = options.info;
 
   // get the parent element
-  const container: HTMLElement = binding.el.parentElement;
+  const parent: HTMLElement = options.el.parentElement;
 
   // create a placeholder node
-  const comment: Comment = document.createComment(` IF : ${binding.attrValue} `);
+  const comment: Comment = document.createComment(` IF : ${info.attrValue} `);
 
   // current rendered node into DOM
-  let node: Comment | HTMLElement = binding.el;
+  let node: Comment | HTMLElement;
 
   // current condition status
   let status: boolean;
@@ -27,7 +28,7 @@ export function buildConditionalDirective(options: ConditionalDirectiveOptions):
   let view: View;
 
   // remove original binding attribute from DOM
-  binding.el.removeAttribute(binding.attrName);
+  options.el.removeAttribute(info.attrName);
 
   /**
    * Swap the current rendered DOM node with another
@@ -35,7 +36,7 @@ export function buildConditionalDirective(options: ConditionalDirectiveOptions):
 
   function swap(update: Comment | HTMLElement): void {
     if (update !== node) {
-      container.replaceChild(update, node);
+      parent.replaceChild(update, node);
       node = update;
     }
   }
@@ -54,8 +55,8 @@ export function buildConditionalDirective(options: ConditionalDirectiveOptions):
       }
 
       if (condition) {
-        swap(binding.el);
-        view = options.view(binding.el);
+        swap(options.el);
+        view = options.buildView(options.el);
       } else {
         swap(comment);
       }
@@ -73,8 +74,8 @@ export function buildConditionalDirective(options: ConditionalDirectiveOptions):
       view.unbind();
       view = undefined;
     }
-    binding.el.setAttribute(binding.attrName, binding.attrValue);
-    swap(binding.el);
+    options.el.setAttribute(info.attrName, info.attrValue);
+    swap(options.el);
   }
 
   // return the directive instance

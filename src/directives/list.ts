@@ -1,4 +1,4 @@
-import { Binding } from "../interfaces/Binding";
+import { AttributeInfo } from "../interfaces/AttributeInfo";
 import { Context } from "../interfaces/Context";
 import { Directive } from "../interfaces/Directive";
 import { View } from "../interfaces/View";
@@ -6,31 +6,32 @@ import { View } from "../interfaces/View";
 import { buildContext } from "../context/context";
 
 export interface ListDirectiveOptions {
-  binding: Binding;
-  view: (el: HTMLElement, data: object) => View;
+  el: HTMLElement;
+  info: AttributeInfo;
+  context: Context;
+  buildView: (el: HTMLElement, obj: object) => View;
 }
 
 export function buildListDirective(options: ListDirectiveOptions): Directive {
-  const binding: Binding = options.binding;
-  const container: HTMLElement = binding.el.parentElement;
-  const marker: Comment = document.createComment(` EACH ${binding.value.value} `);
+  const info: AttributeInfo = options.info;
+  const container: HTMLElement = options.el.parentElement;
+  const marker: Comment = document.createComment(` EACH ${info.value.value} `);
 
   let views: View[] = [];
 
-  binding.el.removeAttribute(binding.attrName);
+  options.el.removeAttribute(info.attrName);
 
-  container.insertBefore(marker, binding.el);
-  container.removeChild(binding.el);
+  container.insertBefore(marker, options.el);
+  container.removeChild(options.el);
 
   function clone(): HTMLElement {
-    return binding.el.cloneNode(true) as HTMLElement;
+    return options.el.cloneNode(true) as HTMLElement;
   }
 
   function buildListContext(index: number, entry: any): Context {
-    //
-    const context: Context = buildContext(binding.context, [
+    const context: Context = buildContext(options.context, [
       "$index",
-      binding.argument
+      info.argument
     ]);
 
     // define local property for entry index
@@ -42,7 +43,7 @@ export function buildListDirective(options: ListDirectiveOptions): Directive {
     });
 
     // define local property for entry data
-    Object.defineProperty(context, binding.argument, {
+    Object.defineProperty(context, info.argument, {
       enumerable: true,
       configurable: true,
       writable: true,
@@ -54,7 +55,7 @@ export function buildListDirective(options: ListDirectiveOptions): Directive {
 
   function sync(target: any, index: number, model: any): object {
     target.$index = index;
-    target[binding.argument] = model;
+    target[info.argument] = model;
     return target;
   }
 
@@ -82,7 +83,7 @@ export function buildListDirective(options: ListDirectiveOptions): Directive {
 
         container.insertBefore(el, previous.nextSibling);
 
-        view = options.view(el, data);
+        view = options.buildView(el, data);
       }
 
       previous = previous.nextSibling;
@@ -98,10 +99,10 @@ export function buildListDirective(options: ListDirectiveOptions): Directive {
       container.removeChild(view.el);
     }
 
-    container.insertBefore(binding.el, marker);
+    container.insertBefore(options.el, marker);
     container.removeChild(marker);
 
-    binding.el.setAttribute(binding.attrName, binding.attrValue);
+    options.el.setAttribute(info.attrName, info.attrValue);
   }
 
   return {
