@@ -3,6 +3,7 @@ import { Directive } from "../interfaces/Directive";
 import { View } from "../interfaces/View";
 
 import { buildHTML } from "../parse/html";
+import { Mapper } from "../utils";
 
 function parseTemplate(component: Component, context: object): HTMLElement {
   if (component.render) {
@@ -17,7 +18,7 @@ function parseTemplate(component: Component, context: object): HTMLElement {
 export interface ComponentDirectiveOptions {
   el: HTMLElement;
   context: object;
-  components: (name: string) => Component;
+  components: Mapper<string, Component>;
   view: (el: HTMLElement, data: object) => View;
 }
 

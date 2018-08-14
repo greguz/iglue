@@ -8,7 +8,7 @@ import { Directive } from "./interfaces/Directive";
 import { Observer } from "./interfaces/Observer";
 import { View, ViewOptions } from "./interfaces/View";
 
-import { Mapper, assign, mapCollection, isObject } from "./utils";
+import { Collection, Mapper, assign, mapCollection, isObject } from "./utils";
 
 import { buildAttributeParser } from "./parse/attribute";
 import { buildExpressionParser, ExpressionParser, wrapPrimitiveValue } from "./parse/expression";
@@ -31,6 +31,49 @@ import { mapBinder, mapComponent } from "./mappers";
 interface Subscription {
   refresh(): void;
   unbind(): void;
+}
+
+/**
+ * Create a reactive value link between the value of an expression and a property
+ */
+
+function link(parseExpression: ExpressionParser, obj: any, property: string, expression: string): Observer {
+  // value change callback
+  function callback(value: any): void {
+    obj[property] = value;
+  }
+
+  // create the observer
+  const observer: Observer = parseExpression(expression, callback);
+
+  // init the object value
+  callback(observer.get());
+
+  // return the created observer
+  return observer;
+}
+
+/**
+ * Build a map function event name to event listener
+ */
+
+function buildEventListenerMapper(parseExpression: ExpressionParser) {
+  // return the mapper function
+  return function mapEventListener(expression: string, event: string): Function {
+    // create a dead observer (no reactivity)
+    const observer: Observer = parseExpression(expression, null);
+
+    // get its value
+    const listener: Function = observer.get();
+
+    // ensure function type
+    if (typeof listener !== "function") {
+      throw new Error(`Found an invalid listener for event "${event}" bound with "${expression}"`);
+    }
+
+    // all done
+    return listener;
+  };
 }
 
 /**
@@ -173,26 +216,6 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
   }
 
   /**
-   * TODO docs
-   */
-
-  function linkProperty(target: any, property: string, expression: string): Observer {
-    // value change callback
-    function callback(value: any): void {
-      target[property] = value;
-    }
-
-    // create the observer
-    const observer: Observer = parseExpression(expression, callback);
-
-    // init the object value
-    callback(observer.get());
-
-    // return the created observer
-    return observer;
-  }
-
-  /**
    * Load a component
    */
 
@@ -203,12 +226,20 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
     // used observers
     const observers: Observer[] = [];
 
+    // event name to expression collection
+    const events: Collection<string> = {};
+
     // link property from parent to child
     for (let i = 0; i < el.attributes.length; i++) {
       const attr: Attr = el.attributes[i];
-      if (!attributeParser.match(attr.value)) {
+      if (attributeParser.match(attr.value)) {
+        const info = attributeParser.parse(el, attr.name);
+        if (info.directive === "on" && info.argument) {
+          events[info.argument.toLowerCase()] = attr.value;
+        }
+      } else {
         observers.push(
-          linkProperty(cc, attr.name, attr.value)
+          link(parseExpression, cc, attr.name, attr.value)
         );
       }
     }
@@ -219,6 +250,19 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
       context: cc,
       components: getComponent,
       view: cloneView
+    });
+
+    // map the event name to listener
+    const getEventListener: Mapper<string, Function> = mapCollection(
+      events,
+      buildEventListenerMapper(parseExpression)
+    );
+
+    // inject the $emit API into component context
+    Object.defineProperty(cc, "$emit", {
+      value: function $emit(event: string, ...args: any[]): void {
+        getEventListener(event).apply(context, args);
+      }
     });
 
     // set the first observer (the one that represents the component name)
