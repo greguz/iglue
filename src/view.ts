@@ -1,4 +1,3 @@
-import { AttributeValueInfo, FormatterInfo, PrimitiveValue, Value } from "./interfaces/AttributeInfo";
 import { AttributeParser } from "./interfaces/AttributeParser";
 import { Binder } from "./interfaces/Binder";
 import { Binding } from "./interfaces/Binding";
@@ -6,13 +5,13 @@ import { Chunk } from "./interfaces/Chunk";
 import { Component } from "./interfaces/Component";
 import { Context } from "./interfaces/Context";
 import { Directive } from "./interfaces/Directive";
-import { Formatter } from "./interfaces/Formatter";
-import { Observer, ObserverCallback } from "./interfaces/Observer";
+import { Observer } from "./interfaces/Observer";
 import { View, ViewOptions } from "./interfaces/View";
 
 import { Mapper, assign, mapCollection, isObject } from "./utils";
 
 import { buildAttributeParser } from "./parse/attribute";
+import { buildExpressionParser, ExpressionParser, wrapPrimitiveValue } from "./parse/expression";
 import { parseText } from "./parse/text";
 
 import { buildContext } from "./context";
@@ -23,7 +22,7 @@ import { buildConditionalDirective } from "./directives/conditional";
 import { buildListDirective } from "./directives/list";
 import { buildTextDirective } from "./directives/text";
 
-import { mapBinder, mapComponent, mapFormatter } from "./mappers";
+import { mapBinder, mapComponent } from "./mappers";
 
 /**
  * Represents a reactive DOM element
@@ -32,150 +31,6 @@ import { mapBinder, mapComponent, mapFormatter } from "./mappers";
 interface Subscription {
   refresh(): void;
   unbind(): void;
-}
-
-/**
- * Map a primitive value into an observer instance
- */
-
-function wrapPrimitiveValue(primitive: PrimitiveValue): Observer {
-  return {
-    get(): string | number | boolean {
-      return primitive.value;
-    },
-    set(): void {
-      throw new Error("It is not possible to update a primitive value");
-    },
-    unobserve(): void {
-      // nothing to do
-    }
-  };
-}
-
-/**
- * Map value into observer
- */
-
-function wrapValue(value: Value, context: Context, callback: ObserverCallback): Observer {
-  if (value.type === "path") {
-    return context.$observe(value.value, callback);
-  } else {
-    return wrapPrimitiveValue(value);
-  }
-}
-
-/**
- * Add paths watching to an existing observer
- */
-
-function watchPaths(
-  observer: Observer,
-  watch: string[],
-  context: Context,
-  callback: ObserverCallback
-): Observer {
-  // observe all configured paths
-  const observers: Observer[] = watch.map(
-    (path: string): Observer => context.$observe(path, callback)
-  );
-
-  // return the wrapper
-  return {
-    get(): any {
-      return observer.get();
-    },
-    set(value: any): void {
-      return observer.set(value);
-    },
-    unobserve(): void {
-      observer.unobserve();
-      for (const o of observers) {
-        o.unobserve();
-      }
-    }
-  };
-}
-
-/**
- * Apply a formatter to observer instance
- */
-
-function applyFormatter(
-  observer: Observer,
-  context: Context,
-  info: FormatterInfo,
-  getFormatter: Mapper<string, Formatter>,
-  callback: ObserverCallback
-): Observer {
-  // resolve the formatter
-  const formatter: Formatter = getFormatter(info.name);
-
-  // map formatter arguments into observers
-  const observers: Observer[] = info.arguments.map(
-    (arg: Value): Observer => wrapValue(arg, context, callback)
-  );
-
-  // get the formatter function argument values array
-  function getFormatterArguments(): any[] {
-    const result: any[] = observers.map(
-      (o: Observer): any => o.get()
-    );
-    result.unshift(observer.get());
-    return result;
-  }
-
-  // return the wrapper
-  return {
-    get(): any {
-      return formatter.apply(context, getFormatterArguments());
-    },
-    set(): void {
-      throw new Error("You cannot update the value of an expression");
-    },
-    unobserve(): void {
-      observer.unobserve();
-      for (const o of observers) {
-        o.unobserve();
-      }
-    }
-  };
-}
-
-/**
- * Parse template expression into observer
- */
-
-function parseExpression(
-  expression: string,
-  parser: AttributeParser,
-  context: Context,
-  getFormatter: Mapper<string, Formatter>,
-  callback: ObserverCallback
-): Observer {
-  // parse expression string
-  const info: AttributeValueInfo = parser.parseValue(expression);
-
-  // create the base value observer
-  let observer: Observer = wrapValue(info.value, context, callback);
-
-  // handle watched paths
-  if (info.watch.length > 0) {
-    observer = watchPaths(observer, info.watch, context, callback);
-  }
-
-  // add formattes
-  for (const i of info.formatters) {
-    observer = applyFormatter(
-      observer,
-      context,
-      i,
-      getFormatter,
-      callback
-    );
-  }
-
-  // return the observer
-  return observer;
 }
 
 /**
@@ -194,10 +49,10 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
   // resolvers
   const getBinder: Mapper<string, Binder> = mapCollection(options.binders, mapBinder);
   const getComponent: Mapper<string, Component> = mapCollection(options.components, mapComponent);
-  const getFormatter: Mapper<string, Formatter> = mapCollection(options.formatters, mapFormatter);
 
-  // DOM attribute parser
-  const parser: AttributeParser = buildAttributeParser(options.prefix || "i-");
+  // parsers
+  const attributeParser: AttributeParser = buildAttributeParser(options.prefix || "i-");
+  const parseExpression: ExpressionParser = buildExpressionParser(attributeParser, context, options.formatters);
 
   // active subscriptions
   const subscriptions: Subscription[] = [];
@@ -211,27 +66,13 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
   }
 
   /**
-   * Shortcut
-   */
-
-  function parseExpressionUtility(expression: string, callback: ObserverCallback): Observer {
-    return parseExpression(
-      expression,
-      parser,
-      context,
-      getFormatter,
-      callback
-    );
-  }
-
-  /**
    * Build attribute binding
    */
 
   function buildBinding(el: HTMLElement, attrName: string): Binding {
     return assign(
       { el, context },
-      parser.parse(el, attrName)
+      attributeParser.parse(el, attrName)
     );
   }
 
@@ -240,7 +81,7 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
    */
 
   function subscribe(directive: Directive, expression: string): void {
-    const observer: Observer = parseExpressionUtility(expression, directive.refresh);
+    const observer: Observer = parseExpression(expression, directive.refresh);
     subscriptions.push({
       refresh(): void {
         directive.refresh(observer.get());
@@ -270,7 +111,7 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
   function loadBinders(el: HTMLElement): void {
     for (let i = 0; i < el.attributes.length; i++) {
       const attr: Attr = el.attributes[i];
-      if (parser.match(attr.name)) {
+      if (attributeParser.match(attr.name)) {
         loadBinder(el, attr.name);
       }
     }
@@ -342,7 +183,7 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
     }
 
     // create the observer
-    const observer: Observer = parseExpressionUtility(expression, callback);
+    const observer: Observer = parseExpression(expression, callback);
 
     // init the object value
     callback(observer.get());
@@ -365,7 +206,7 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
     // link property from parent to child
     for (let i = 0; i < el.attributes.length; i++) {
       const attr: Attr = el.attributes[i];
-      if (!parser.match(attr.value)) {
+      if (!attributeParser.match(attr.value)) {
         observers.push(
           linkProperty(cc, attr.name, attr.value)
         );
@@ -383,17 +224,16 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
     // set the first observer (the one that represents the component name)
     if (el.hasAttribute("is")) {
       observers.unshift(
-        parseExpressionUtility(
+        parseExpression(
           el.getAttribute("is"),
           directive.refresh
         )
       );
     } else {
       observers.unshift(
-        wrapPrimitiveValue({
-          type: "primitive",
-          value: el.tagName.toLowerCase()
-        })
+        wrapPrimitiveValue(
+          el.tagName.toLowerCase()
+        )
       );
     }
 
@@ -421,8 +261,8 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
     } else if (node.nodeType === 1) {
       const el: HTMLElement = node as HTMLElement;
 
-      const eachAttr: string = parser.getAttributeByDirective(el, "each");
-      const ifAttr: string = parser.getAttributeByDirective(el, "if");
+      const eachAttr: string = attributeParser.getAttributeByDirective(el, "each");
+      const ifAttr: string = attributeParser.getAttributeByDirective(el, "if");
       const cName: string = node.nodeName.toLowerCase();
 
       if (eachAttr) {
