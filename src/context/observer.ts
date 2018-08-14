@@ -7,12 +7,19 @@ import { observePath, unobservePath } from "./path";
  */
 
 export function buildObserver(obj: any, path: string, callback: ObserverCallback): Observer {
-  observePath(obj, path, callback);
+  if (typeof callback !== "function" && callback !== null) {
+    throw new Error("The observer callback must be a function or null");
+  }
+  if (callback) {
+    observePath(obj, path, callback);
+  }
   return {
     get: buildValueGetter(obj, path),
     set: buildValueSetter(obj, path),
     unobserve(): void {
-      unobservePath(obj, path, callback);
+      if (callback) {
+        unobservePath(obj, path, callback);
+      }
     }
   };
 }
