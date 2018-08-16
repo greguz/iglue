@@ -1,158 +1,284 @@
 import { AttributeValueInfo, FormatterInfo, Value } from "../interfaces/AttributeInfo";
 import { AttributeParser } from "../interfaces/AttributeParser";
 import { Context } from "../interfaces/Context";
-import { Formatter } from "../interfaces/Formatter";
-import { Observer, ObserverCallback } from "../interfaces/Observer";
+import { Formatter, FormatterFunction } from "../interfaces/Formatter";
+import { Observer } from "../interfaces/Observer";
 
-import { mapFormatter } from "../mappers";
-import { Collection, Mapper, mapCollection } from "../utils";
-
-/**
- * Map a primitive value into an observer instance
- */
-
-export function wrapPrimitiveValue(value: string | number | boolean): Observer {
-  return {
-    get(): string | number | boolean {
-      return value;
-    },
-    set(): void {
-      throw new Error("It is not possible to update a primitive value");
-    },
-    unobserve(): void {
-      // nothing to do
-    }
-  };
-}
+import { isFunction, isObject, throwError, parsePath, Collection, Mapper, mapCollection, passthrough } from "../utils";
 
 /**
- * Map value into observer
+ * Simple generic mapper (just one argument)
  */
 
-export function wrapValue(value: Value, context: Context, callback: ObserverCallback): Observer {
-  if (value.type === "path") {
-    return context.$observe(value.value, callback);
+type Format = Mapper<any, any>;
+
+/**
+ * Getter function
+ */
+
+type Getter = () => any;
+
+/**
+ * Setter function
+ */
+
+type Setter = (value: any) => void;
+
+/**
+ * Map a formatter definition to a full formatter object
+ */
+
+export function mapFormatter(definition: Formatter | FormatterFunction, name: string): Formatter {
+  if (isFunction(definition)) {
+    return {
+      pull: definition as FormatterFunction,
+      push: throwError(`Formatter "${name}" does not have push function`)
+    };
+  } else if (isObject(definition)) {
+    return {
+      pull: (definition as Formatter).pull || throwError(`Formatter "${name}" does not have pull function`),
+      push: (definition as Formatter).push || throwError(`Formatter "${name}" does not have push function`)
+    };
   } else {
-    return wrapPrimitiveValue(value.value);
+    throw new Error(`Unable to resolve formatter "${name}"`);
   }
 }
 
 /**
- * Add paths watching to an existing observer
+ * Build a getter function by object and path
  */
 
-function watchPaths(
-  observer: Observer,
-  watch: string[],
-  context: Context,
-  callback: ObserverCallback
-): Observer {
-  // observe all configured paths
-  const observers: Observer[] = watch.map(
-    (path: string): Observer => context.$observe(path, callback)
-  );
+function buildGetter(obj: any, path: string): Getter {
+  const tokens: string[] = parsePath(path);
+  return function get(): any {
+    let o: any = obj;
 
-  // return the wrapper
-  return {
-    get(): any {
-      return observer.get();
-    },
-    set(value: any): void {
-      return observer.set(value);
-    },
-    unobserve(): void {
-      observer.unobserve();
-      for (const o of observers) {
-        o.unobserve();
+    for (const token of tokens) {
+      if (isObject(o)) {
+        o = o[token];
+      } else {
+        return undefined;
       }
     }
+
+    return o;
   };
 }
 
 /**
- * Apply a formatter to observer instance
+ * Build a setter function by object and path
  */
 
-function applyFormatter(
-  observer: Observer,
-  context: Context,
-  info: FormatterInfo,
-  getFormatter: Mapper<string, Formatter>,
-  callback: ObserverCallback
-): Observer {
-  // resolve the formatter
-  const formatter: Formatter = getFormatter(info.name);
+function buildSetter(obj: any, path: string): Setter {
+  const tokens: string[] = parsePath(path);
+  return function set(value: any): void {
+    let o: any = obj;
+    let i: number;
 
-  // map formatter arguments into observers
-  const observers: Observer[] = info.arguments.map(
-    (arg: Value): Observer => wrapValue(arg, context, callback)
+    for (i = 0; i < tokens.length - 1; i++) {
+      const token: string = tokens[i];
+      if (!isObject(o[token])) {
+        throw new Error("Unable to set the target object");
+      }
+      o = o[token];
+    }
+
+    o[tokens[i]] = value;
+  };
+}
+
+/**
+ * Map a value into a getter function
+ */
+
+function buildValueGetter(context: Context, value: Value): Getter {
+  if (value.type === "path") {
+    return buildGetter(context, value.value);
+  } else {
+    return function get(): any {
+      return value.value;
+    };
+  }
+}
+
+/**
+ * Map a value into a setter function
+ */
+
+function buildValueSetter(context: Context, value: Value): Setter {
+  if (value.type === "path") {
+    return buildSetter(context, value.value);
+  } else {
+    return function set(): void {
+      throw new Error("You cannot update a primitive value");
+    };
+  }
+}
+
+/**
+ * Get all used paths by the expression
+ */
+
+function getPaths(info: AttributeValueInfo): string[] {
+  const paths: string[] = [];
+
+  if (info.value.type === "path") {
+    paths.push(info.value.value);
+  }
+
+  for (const path of info.watch) {
+    paths.push(path);
+  }
+
+  for (const fi of info.formatters) {
+    for (const fa of fi.arguments) {
+      if (fa.type === "path") {
+        paths.push(fa.value);
+      }
+    }
+  }
+
+  return paths;
+}
+
+/**
+ * Bind formatter arguments to its functions
+ */
+
+function bindFormatterArguments(context: Context, formatter: Formatter, values: Value[]): Formatter {
+  const getters: Getter[] = values.map(
+    (value: Value): Getter => buildValueGetter(context, value)
   );
 
-  // get the formatter function argument values array
-  function getFormatterArguments(): any[] {
-    const result: any[] = observers.map(
-      (o: Observer): any => o.get()
+  function getArguments(value: any): any[] {
+    const args: any[] = getters.map(
+      (getter: Getter): any => getter()
     );
-    result.unshift(observer.get());
-    return result;
+    args.unshift(value);
+    return args;
   }
 
-  // return the wrapper
   return {
-    get(): any {
-      return formatter.apply(context, getFormatterArguments());
+    pull(value: any): any {
+      return formatter.pull.apply(this, getArguments(value));
     },
-    set(): void {
-      throw new Error("You cannot update the value of an expression");
-    },
-    unobserve(): void {
-      observer.unobserve();
-      for (const o of observers) {
-        o.unobserve();
-      }
+    push(value: any): any {
+      return formatter.push.apply(this, getArguments(value));
     }
   };
+}
+
+/**
+ * Compose functions
+ */
+
+function compose(formats: Format[]): Format {
+  return formats.reduce((previous: Format, next: Format): Format => {
+    return function map(value: any): any {
+      return next.call(this, previous.call(this, value));
+    };
+  }, passthrough);
+}
+
+/**
+ * Pipe functions
+ */
+
+function pipe(formats: Format[]): Format {
+  return formats.reduceRight((previous: Format, next: Format): Format => {
+    return function map(value: any): any {
+      return next.call(this, previous.call(this, value));
+    };
+  }, passthrough);
 }
 
 /**
  * Expression parser type
  */
 
-export type ExpressionParser = (expression: string, callback: ObserverCallback) => Observer;
+export type ExpressionParser = (expression: string, callback: (value: any) => void) => Observer;
 
 /**
  * Parse template expression into observer
  */
 
-export function buildExpressionParser(attributeParser: AttributeParser, context: Context, formatters: Collection<Formatter>): ExpressionParser {
+export function buildExpressionParser(
+  attributeParser: AttributeParser,
+  context: Context,
+  formatters: Collection<Formatter | FormatterFunction>
+): ExpressionParser {
   // map the formatter collection
   const getFormatter: Mapper<string, Formatter> = mapCollection(formatters, mapFormatter);
 
   // return the parse function
-  return function parseExpression(expression: string, callback: ObserverCallback): Observer {
+  return function parseExpression(expression: string, callback: (value: any) => void): Observer {
     // parse expression string
     const info: AttributeValueInfo = attributeParser.parseValue(expression);
 
-    // create the base value observer
-    let observer: Observer = wrapValue(info.value, context, callback);
-
-    // handle watched paths
-    if (info.watch.length > 0) {
-      observer = watchPaths(observer, info.watch, context, callback);
-    }
-
-    // add formattes
-    for (const i of info.formatters) {
-      observer = applyFormatter(
-        observer,
+    // bind formatter arguments
+    const formatters: Formatter[] = info.formatters.map(
+      (fi: FormatterInfo): Formatter => bindFormatterArguments(
         context,
-        i,
-        getFormatter,
-        callback
-      );
+        getFormatter(fi.name),
+        fi.arguments
+      )
+    );
+
+    // map formatters and compose the "pull value" function
+    const pull: Format = compose(
+      formatters.map(
+        (formatter: Formatter): Format => formatter.pull
+      )
+    );
+
+    // getter for the source value from the store
+    const getSourceValue: Getter = buildValueGetter(context, info.value);
+
+    // get current value
+    function get(): any {
+      return pull.call(context, getSourceValue());
     }
 
-    // return the observer
-    return observer;
+    // map formatters and compose the "push value" function
+    const push: Format = pipe(
+      formatters.map(
+        (formatter: Formatter): Format => formatter.push
+      )
+    );
+
+    // update store value
+    const setTargetValue: Setter = buildValueSetter(context, info.value);
+
+    // set current value
+    function set(value: any): void {
+      setTargetValue(push.call(context, value));
+    }
+
+    // get paths used by the expression
+    const paths: string[] = getPaths(info);
+
+    // notification callback to call
+    function notify(): void {
+      callback(get());
+    }
+
+    // start the reactivity
+    for (const path of paths) {
+      context.$observe(path, notify);
+    }
+
+    // stop the reactivity
+    function unobserve(): void {
+      for (const path of paths) {
+        context.$unobserve(path, notify);
+      }
+    }
+
+    // return the observer instance
+    return {
+      get,
+      set,
+      unobserve
+    };
   };
 }

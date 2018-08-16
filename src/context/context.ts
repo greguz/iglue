@@ -1,7 +1,6 @@
 import { Context } from "../interfaces/Context";
-import { Observer, ObserverCallback } from "../interfaces/Observer";
 import { includes, isObject } from "../utils";
-import { buildObserver } from "./observer";
+import { observePath, unobservePath, PathNotifier } from "./path";
 
 /**
  * Get the root property name of a object value path
@@ -37,13 +36,13 @@ function exposeProperty(context: Context, property: string): void {
  * $observe API
  */
 
-function $observe(this: Context, path: string, callback: ObserverCallback): Observer {
+function $observe(this: Context, path: string, callback: PathNotifier): void {
   // get the root property of this value path
   const property: string = getRootProperty(path);
 
   if (includes(this.$own, property)) {
     // handle own property
-    return buildObserver(this, path, callback);
+    observePath(this, path, callback);
   } else {
     // lazy props exposing
     if (!this.hasOwnProperty(property)) {
@@ -52,10 +51,26 @@ function $observe(this: Context, path: string, callback: ObserverCallback): Obse
 
     // observe property
     if (this.$source.hasOwnProperty("$observe")) {
-      return this.$source.$observe(path, callback);
+      this.$source.$observe(path, callback);
     } else {
-      return buildObserver(this.$source, path, callback);
+      observePath(this.$source, path, callback);
     }
+  }
+}
+
+/**
+ * $unobserve API
+ */
+
+function $unobserve(this: Context, path: string, callback: PathNotifier): void {
+  const property: string = getRootProperty(path);
+
+  if (includes(this.$own, property)) {
+    unobservePath(this, path, callback);
+  } else if (this.$source.hasOwnProperty("$unobserve")) {
+    this.$source.$unobserve(path, callback);
+  } else {
+    unobservePath(this.$source, path, callback);
   }
 }
 
@@ -87,6 +102,9 @@ export function buildContext(obj: any, ownProperties?: string[]): Context {
     },
     $observe: {
       value: $observe
+    },
+    $unobserve: {
+      value: $unobserve
     }
   });
 }

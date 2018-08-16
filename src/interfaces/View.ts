@@ -2,7 +2,7 @@ import { Collection } from "../utils";
 import { Binder, BinderRoutine } from "./Binder";
 import { Component } from "./Component";
 import { Context } from "./Context";
-import { Formatter } from "./Formatter";
+import { Formatter, FormatterFunction } from "./Formatter";
 
 /**
  * Represents a bound view
@@ -64,6 +64,6 @@ export interface ViewOptions {
    * Formatters collection
    */
 
-  formatters?: Collection<Formatter>;
+  formatters?: Collection<Formatter | FormatterFunction>;
 
 }

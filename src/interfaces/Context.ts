@@ -1,5 +1,3 @@
-import { Observer, ObserverCallback } from "./Observer";
-
 /**
  * The observed data object
  */
@@ -19,10 +17,16 @@ export interface Context {
   $own: string[];
 
   /**
-   * Observe a context path value
+   * Observe a specified path
    */
 
-  $observe(path: string, callback: ObserverCallback): Observer;
+  $observe(path: string, callback: (newValue: any, oldValue: any) => void): void;
+
+  /**
+   * Stop path observing
+   */
+
+  $unobserve(path: string, callback: (newValue: any, oldValue: any) => void): void;
 
   /**
    * Any other property

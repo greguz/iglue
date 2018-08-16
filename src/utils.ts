@@ -90,7 +90,7 @@ export function isArray(arr: any): boolean {
  */
 
 export function isObject(obj: any): boolean {
-  return Object(obj) === obj;
+  return typeof obj === "object" && obj !== null;
 }
 
 /**
@@ -155,4 +155,22 @@ export function parsePath(path: string): string[] {
     }
   }
   return tokens;
+}
+
+/**
+ * Simple passthrough function
+ */
+
+export function passthrough<T>(value: T): T {
+  return value;
+}
+
+/**
+ * Return a function that throw an error if called
+ */
+
+export function throwError(message: string): (...args: any[]) => any {
+  return function ko(): void {
+    throw new Error(message);
+  };
 }

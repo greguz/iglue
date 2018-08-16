@@ -1,6 +1,6 @@
 import { Binder, BinderRoutine } from "./interfaces/Binder";
 import { Component } from "./interfaces/Component";
-import { Formatter } from "./interfaces/Formatter";
+import { Formatter, FormatterFunction } from "./interfaces/Formatter";
 import { View, ViewOptions } from "./interfaces/View";
 
 import $binders from "./binders";
@@ -17,7 +17,6 @@ export * from "./interfaces/Binding";
 export * from "./interfaces/Component";
 export * from "./interfaces/Context";
 export * from "./interfaces/Formatter";
-export * from "./interfaces/Observer";
 export * from "./interfaces/Specification";
 export * from "./interfaces/View";
 
@@ -43,7 +42,7 @@ export const binders: Collection<Binder | BinderRoutine> = $binders;
  * Global formatters
  */
 
-export const formatters: Collection<Formatter> = {
+export const formatters: Collection<Formatter | FormatterFunction> = {
 
   args(method: any, ...boundArgs: any[]): (...args: any[]) => any {
     if (typeof method !== "function") {

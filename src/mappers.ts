@@ -1,6 +1,5 @@
 import { Binder, BinderRoutine } from "./interfaces/Binder";
 import { Component } from "./interfaces/Component";
-import { Formatter } from "./interfaces/Formatter";
 
 import { isObject, isFunction } from "./utils";
 
@@ -19,7 +18,7 @@ export function mapBinder(definition: Binder | BinderRoutine, name: string): Bin
     // fallback to default binder, bind the element attribute
     return {
       routine(el: HTMLElement, value: any): void {
-        if (value == null) {
+        if (value === undefined || value === null) {
           el.removeAttribute(name);
         } else {
           el.setAttribute(name, value.toString());
@@ -38,17 +37,5 @@ export function mapComponent(definition: Component, name: string): Component {
     return definition;
   } else {
     throw new Error(`Unable to find component "${name}"`);
-  }
-}
-
-/**
- * Formatter existence check
- */
-
-export function mapFormatter(definition: Formatter, name: string): Formatter {
-  if (isFunction(definition)) {
-    return definition;
-  } else {
-    throw new Error(`Unable to find formatter "${name}"`);
   }
 }

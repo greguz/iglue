@@ -23,9 +23,3 @@ export interface Observer {
   unobserve(): void;
 
 }
-
-/**
- * Value change callback
- */
-
-export type ObserverCallback = (newValue: any, oldValue: any) => void;

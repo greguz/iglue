@@ -1,3 +1,4 @@
+import { AttributeInfo } from "./interfaces/AttributeInfo";
 import { AttributeParser } from "./interfaces/AttributeParser";
 import { Binder } from "./interfaces/Binder";
 import { Binding } from "./interfaces/Binding";
@@ -11,7 +12,7 @@ import { View, ViewOptions } from "./interfaces/View";
 import { Collection, Mapper, assign, mapCollection, isObject } from "./utils";
 
 import { buildAttributeParser } from "./parse/attribute";
-import { buildExpressionParser, ExpressionParser, wrapPrimitiveValue } from "./parse/expression";
+import { buildExpressionParser, ExpressionParser } from "./parse/expression";
 import { parseText } from "./parse/text";
 
 import { buildContext } from "./context";
@@ -167,7 +168,7 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
     const binder: Binder = getBinder(binding.directive);
     const directive: Directive = buildBinderDirective(binder, binding);
     const observer: Observer = parseExpression(
-      el.getAttribute(attrName),
+      binding.attrValue,
       directive.refresh
     );
     binding.observer = observer;
@@ -187,11 +188,15 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
    */
 
   function loadBinders(el: HTMLElement): void {
+    const names: string[] = [];
     for (let i = 0; i < el.attributes.length; i++) {
       const attr: Attr = el.attributes[i];
       if (attributeParser.match(attr.name)) {
-        loadBinder(el, attr.name);
+        names.push(attr.name);
       }
+    }
+    for (const name of names) {
+      loadBinder(el, name);
     }
   }
 
@@ -200,12 +205,13 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
    */
 
   function loadConditionalDirective(el: HTMLElement, attrName: string): void {
+    const info: AttributeInfo = attributeParser.parse(el, attrName);
     const directive: Directive = buildConditionalDirective({
       el,
-      info: attributeParser.parse(el, attrName),
+      info,
       buildView: cloneView
     });
-    subscribe(directive, el.getAttribute(attrName));
+    subscribe(directive, info.attrValue);
   }
 
   /**
@@ -244,13 +250,14 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
    */
 
   function loadListDirective(el: HTMLElement, attrName: string): void {
+    const info: AttributeInfo = attributeParser.parse(el, attrName);
     const directive: Directive = buildListDirective({
       el,
       context,
-      info: attributeParser.parse(el, attrName),
+      info,
       buildView: cloneView
     });
-    subscribe(directive, el.getAttribute(attrName));
+    subscribe(directive, info.attrValue);
   }
 
   /**
@@ -312,11 +319,17 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
         )
       );
     } else {
-      observers.unshift(
-        wrapPrimitiveValue(
-          el.tagName.toLowerCase()
-        )
-      );
+      observers.unshift({
+        get(): string {
+          return el.tagName.toLowerCase();
+        },
+        set(): void {
+          throw new Error("You cannot update a primitive value");
+        },
+        unobserve(): void {
+          // nothing to do
+        }
+      });
     }
 
     // register the subscription
