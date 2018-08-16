@@ -174,3 +174,11 @@ export function throwError(message: string): (...args: any[]) => any {
     throw new Error(message);
   };
 }
+
+/**
+ * Empty function
+ */
+
+export function noop(): void {
+  // nothing to do
+}

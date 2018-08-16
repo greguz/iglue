@@ -9,7 +9,7 @@ import { Directive } from "./interfaces/Directive";
 import { Observer } from "./interfaces/Observer";
 import { View, ViewOptions } from "./interfaces/View";
 
-import { Collection, Mapper, assign, mapCollection, isObject } from "./utils";
+import { Collection, Mapper, assign, mapCollection, isObject, noop } from "./utils";
 
 import { buildAttributeParser } from "./parse/attribute";
 import { buildExpressionParser, ExpressionParser } from "./parse/expression";
@@ -94,8 +94,14 @@ function link(parseExpression: ExpressionParser, obj: any, property: string, exp
 function buildEventListenerMapper(parseExpression: ExpressionParser) {
   // return the mapper function
   return function mapEventListener(expression: string, event: string): Function {
+    // handle not configured listeners
+    if (!expression) {
+      return noop;
+    }
+
     // create a dead observer (no reactivity)
-    const observer: Observer = parseExpression(expression, null);
+    const observer: Observer = parseExpression(expression, noop);
+    observer.unobserve();
 
     // get its value
     const listener: Function = observer.get();
@@ -277,7 +283,7 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
     // link property from parent to child
     for (let i = 0; i < el.attributes.length; i++) {
       const attr: Attr = el.attributes[i];
-      if (attributeParser.match(attr.value)) {
+      if (attributeParser.match(attr.name)) {
         const info = attributeParser.parse(el, attr.name);
         if (info.directive === "on" && info.argument) {
           events[info.argument.toLowerCase()] = attr.value;
