@@ -9,7 +9,7 @@ import { Directive } from "./interfaces/Directive";
 import { Observer } from "./interfaces/Observer";
 import { View, ViewOptions } from "./interfaces/View";
 
-import { Collection, Mapper, assign, mapCollection, isObject, noop } from "./utils";
+import { Collection, Mapper, assign, mapCollection, isObject, noop, isFunction } from "./utils";
 
 import { buildAttributeParser } from "./parse/attribute";
 import { buildExpressionParser, ExpressionParser } from "./parse/expression";
@@ -93,22 +93,26 @@ function link(parseExpression: ExpressionParser, obj: any, property: string, exp
 
 function buildEventListenerMapper(parseExpression: ExpressionParser) {
   // return the mapper function
-  return function mapEventListener(expression: string, event: string): Function {
+  return function mapEventListener(value: string | Function, event: string): Function {
     // handle not configured listeners
-    if (!expression) {
+    if (!value) {
       return noop;
     }
 
+    // handle explicit listeners
+    if (isFunction(value)) {
+      return value as Function;
+    }
+
     // create a dead observer (no reactivity)
-    const observer: Observer = parseExpression(expression, noop);
-    observer.unobserve();
+    const observer: Observer = parseExpression(value as string);
 
     // get its value
     const listener: Function = observer.get();
 
     // ensure function type
-    if (typeof listener !== "function") {
-      throw new Error(`Found an invalid listener for event "${event}" bound with "${expression}"`);
+    if (!isFunction(listener)) {
+      throw new Error(`Found an invalid listener for event "${event}" bound with "${value}"`);
     }
 
     // all done
@@ -278,7 +282,7 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
     const observers: Observer[] = [];
 
     // event name to expression collection
-    const events: Collection<string> = {};
+    const events: Collection<string | Function> = {};
 
     // link property from parent to child
     for (let i = 0; i < el.attributes.length; i++) {
@@ -287,6 +291,11 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
         const info = attributeParser.parse(el, attr.name);
         if (info.directive === "on" && info.argument) {
           events[info.argument.toLowerCase()] = attr.value;
+        } else if (info.directive === "model") {
+          const model: Observer = parseExpression(info.attrValue)
+          events.value = function listener(value: any): void {
+            model.set(value);
+          };
         }
       } else {
         observers.push(

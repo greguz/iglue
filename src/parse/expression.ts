@@ -28,7 +28,7 @@ type Setter = (value: any) => void;
  * Map a formatter definition to a full formatter object
  */
 
-export function mapFormatter(definition: Formatter | FormatterFunction, name: string): Formatter {
+function mapFormatter(definition: Formatter | FormatterFunction, name: string): Formatter {
   if (isFunction(definition)) {
     return {
       pull: definition as FormatterFunction,
@@ -196,7 +196,7 @@ function pipe(formats: Format[]): Format {
  * Expression parser type
  */
 
-export type ExpressionParser = (expression: string, callback: (value: any) => void) => Observer;
+export type ExpressionParser = (expression: string, callback?: (value: any) => void) => Observer;
 
 /**
  * Parse template expression into observer
@@ -211,7 +211,7 @@ export function buildExpressionParser(
   const getFormatter: Mapper<string, Formatter> = mapCollection(formatters, mapFormatter);
 
   // return the parse function
-  return function parseExpression(expression: string, callback: (value: any) => void): Observer {
+  return function parseExpression(expression: string, callback?: (value: any) => void): Observer {
     // parse expression string
     const info: AttributeValueInfo = attributeParser.parseValue(expression);
 
@@ -254,8 +254,8 @@ export function buildExpressionParser(
       setTargetValue(push.call(context, value));
     }
 
-    // get paths used by the expression
-    const paths: string[] = getPaths(info);
+    // paths used by the expression
+    const paths: string[] = isFunction(callback) ? getPaths(info) : [];
 
     // notification callback to call
     function notify(): void {
