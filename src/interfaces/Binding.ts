@@ -19,4 +19,16 @@ export interface Binding extends Readonly<AttributeInfo> {
 
   readonly context: Context;
 
+  /**
+   * Get current value
+   */
+
+  get(): any;
+
+  /**
+   * Update the bound value
+   */
+
+  set(value: any): void;
+
 }

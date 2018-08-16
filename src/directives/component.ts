@@ -18,8 +18,8 @@ function parseTemplate(component: Component, context: object): HTMLElement {
 export interface ComponentDirectiveOptions {
   el: HTMLElement;
   context: object;
-  components: Mapper<string, Component>;
-  view: (el: HTMLElement, data: object) => View;
+  getComponent: Mapper<string, Component>;
+  buildView: (el: HTMLElement, obj: object) => View;
 }
 
 export function buildComponentDirective(options: ComponentDirectiveOptions): Directive {
@@ -76,7 +76,7 @@ export function buildComponentDirective(options: ComponentDirectiveOptions): Dir
 
   function mount(name: string): void {
     // resolve component name
-    const component: Component = options.components(name);
+    const component: Component = options.getComponent(name);
 
     // call creation hook
     if (component.create) {
@@ -95,7 +95,7 @@ export function buildComponentDirective(options: ComponentDirectiveOptions): Dir
     }
 
     // create a new view for this component
-    const view: View = options.view(componentNode, context);
+    const view: View = options.buildView(componentNode, context);
 
     // call last life hook
     if (component.bind) {

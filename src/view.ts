@@ -34,6 +34,39 @@ interface Subscription {
 }
 
 /**
+ * Binding interface plus "private" properties
+ */
+
+interface ExtendedBinding extends Binding {
+  observer: Observer;
+}
+
+/**
+ * Build a binding instance
+ */
+
+function buildBinding(el: HTMLElement, attrName: string, context: Context, parser: AttributeParser): ExtendedBinding {
+  function get(this: ExtendedBinding): any {
+    if (this.observer === null) {
+      throw new Error("The value is not bound yet");
+    }
+    return this.observer.get();
+  }
+
+  function set(this: ExtendedBinding, value: any): void {
+    if (this.observer === null) {
+      throw new Error("The value is not bound yet");
+    }
+    this.observer.set(value);
+  }
+
+  return assign(
+    { el, context, get, set, observer: null },
+    parser.parse(el, attrName)
+  );
+}
+
+/**
  * Create a reactive value link between the value of an expression and a property
  */
 
@@ -130,13 +163,23 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
    */
 
   function loadBinder(el: HTMLElement, attrName: string): void {
-    const binding: Binding = assign(
-      { el, context },
-      attributeParser.parse(el, attrName)
-    );
+    const binding: ExtendedBinding = buildBinding(el, attrName, context, attributeParser);
     const binder: Binder = getBinder(binding.directive);
     const directive: Directive = buildBinderDirective(binder, binding);
-    subscribe(directive, el.getAttribute(attrName));
+    const observer: Observer = parseExpression(
+      el.getAttribute(attrName),
+      directive.refresh
+    );
+    binding.observer = observer;
+    subscriptions.push({
+      refresh(): void {
+        directive.refresh(observer.get());
+      },
+      unbind(): void {
+        observer.unobserve();
+        directive.unbind();
+      }
+    });
   }
 
   /**
@@ -243,8 +286,8 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
     const directive: Directive = buildComponentDirective({
       el,
       context: cc,
-      components: getComponent,
-      view: cloneView
+      getComponent,
+      buildView: cloneView
     });
 
     // map the event name to listener

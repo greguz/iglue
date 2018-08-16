@@ -3,12 +3,13 @@ import { Collection } from "../utils";
 
 import $class from "./class";
 import $on from "./on";
+import $value from "./value";
 
 const binders: Collection<Binder | BinderRoutine> = {
 
   class: $class,
-
   on: $on,
+  value: $value,
 
   disabled(el: HTMLFormElement, value: any): void {
     el.disabled = !!value;
