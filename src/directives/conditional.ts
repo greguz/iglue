@@ -19,7 +19,7 @@ export function buildConditionalDirective(options: ConditionalDirectiveOptions):
   const comment: Comment = document.createComment(` IF : ${info.attrValue} `);
 
   // current rendered node into DOM
-  let node: Comment | HTMLElement;
+  let node: Comment | HTMLElement = options.el;
 
   // current condition status
   let status: boolean;
