@@ -89,6 +89,12 @@ export function buildComponentDirective(options: ComponentDirectiveOptions): Dir
     // remove current node from DOM
     parent.replaceChild(componentNode, currentElement);
 
+    // save the target DOM element into the context
+    Object.defineProperty(context, "$el", {
+      configurable: true,
+      value: currentElement
+    });
+
     // call DOM attach hook
     if (component.attach) {
       component.attach.call(context);
@@ -96,6 +102,12 @@ export function buildComponentDirective(options: ComponentDirectiveOptions): Dir
 
     // create a new view for this component
     const view: View = options.buildView(componentNode, context);
+
+    // save the target DOM element into the context
+    Object.defineProperty(context, "$el", {
+      configurable: true,
+      value: view.el
+    });
 
     // call last life hook
     if (component.bind) {
