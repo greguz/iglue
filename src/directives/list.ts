@@ -1,30 +1,38 @@
-import { IBinding } from "../interfaces/IBinding";
-import { IContext } from "../interfaces/IContext";
-import { IDirective } from "../interfaces/IDirective";
-import { IObserver, IObserverCallback } from "../interfaces/IObserver";
-import { IView } from "../interfaces/IView";
+import { AttributeInfo } from "../interfaces/AttributeInfo";
+import { Context } from "../interfaces/Context";
+import { Directive } from "../interfaces/Directive";
+import { View } from "../interfaces/View";
 
-import { buildContext } from "../context/index";
-import { observePath } from "../context/path";
+import { buildContext } from "../context/context";
 
-export interface IListDirectiveOptions {
-  binding: IBinding;
-  view: (el: HTMLElement, data: object) => IView;
+export interface ListDirectiveOptions {
+  el: HTMLElement;
+  info: AttributeInfo;
+  context: Context;
+  buildView: (el: HTMLElement, obj: object) => View;
 }
 
-export function buildListDirective(options: IListDirectiveOptions): IDirective {
-  const binding: IBinding = options.binding;
-  const container: HTMLElement = binding.el.parentElement;
-  const marker: Comment = document.createComment(` EACH ${binding.value.value} `);
+export function buildListDirective(options: ListDirectiveOptions): Directive {
+  const info: AttributeInfo = options.info;
+  const container: HTMLElement = options.el.parentElement;
+  const marker: Comment = document.createComment(` EACH ${info.value.value} `);
 
-  let views: IView[] = [];
+  let views: View[] = [];
+
+  options.el.removeAttribute(info.attrName);
+
+  container.insertBefore(marker, options.el);
+  container.removeChild(options.el);
 
   function clone(): HTMLElement {
-    return binding.el.cloneNode(true) as HTMLElement;
+    return options.el.cloneNode(true) as HTMLElement;
   }
 
-  function buildListContext(index: number, entry: any): IContext {
-    const context: IContext = binding.context.$clone();
+  function buildListContext(index: number, entry: any): Context {
+    const context: Context = buildContext(options.context, [
+      "$index",
+      info.argument
+    ]);
 
     // define local property for entry index
     Object.defineProperty(context, "$index", {
@@ -35,37 +43,11 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
     });
 
     // define local property for entry data
-    Object.defineProperty(context, binding.argument, {
+    Object.defineProperty(context, info.argument, {
       enumerable: true,
       configurable: true,
       writable: true,
       value: entry
-    });
-
-    // extract the root observe function
-    const originalObserve = context.$observe;
-
-    // entry value path regex
-    const entryRegExp = new RegExp("^" + binding.argument + "([\\.|\\[].*)?$");
-
-    // inject the wrapped observe function
-    Object.defineProperty(context, "$observe", {
-      configurable: true,
-      value: function $observe(path: string, callback?: IObserverCallback): IObserver {
-        if (path === "$index" || entryRegExp.test(path)) {
-          return observePath(context, path, callback);
-        } else {
-          return originalObserve(path, callback);
-        }
-      }
-    });
-
-    // override the clone API
-    Object.defineProperty(context, "$clone", {
-      configurable: true,
-      value: function $clone(): IContext {
-        return buildContext(context);
-      }
     });
 
     return context;
@@ -73,22 +55,15 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
 
   function sync(target: any, index: number, model: any): object {
     target.$index = index;
-    target[binding.argument] = model;
+    target[info.argument] = model;
     return target;
   }
 
-  function bind(): void {
-    binding.el.removeAttribute(binding.attrName);
-
-    container.insertBefore(marker, binding.el);
-    container.removeChild(binding.el);
-  }
-
-  function refresh(): void {
-    const models: any[] = binding.get() || [];
+  function refresh(models: any[]): void {
+    models = models || [];
 
     while (views.length > models.length) {
-      const view: IView = views.pop();
+      const view: View = views.pop();
 
       view.unbind();
 
@@ -97,19 +72,18 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
 
     let previous: Node = marker;
 
-    views = models.map((model: any, index: number): IView => {
-      let view: IView = views[index];
+    views = models.map((model: any, index: number): View => {
+      let view: View = views[index];
 
       if (view) {
         sync(view.context, index, model);
       } else {
         const el: HTMLElement = clone();
-        const data: IContext = buildListContext(index, model);
+        const data: Context = buildListContext(index, model);
 
         container.insertBefore(el, previous.nextSibling);
 
-        view = options.view(el, data);
-        view.bind();
+        view = options.buildView(el, data);
       }
 
       previous = previous.nextSibling;
@@ -120,19 +94,18 @@ export function buildListDirective(options: IListDirectiveOptions): IDirective {
 
   function unbind(): void {
     while (views.length > 0) {
-      const view: IView = views.pop();
+      const view: View = views.pop();
       view.unbind();
       container.removeChild(view.el);
     }
 
-    container.insertBefore(binding.el, marker);
+    container.insertBefore(options.el, marker);
     container.removeChild(marker);
 
-    binding.el.setAttribute(binding.attrName, binding.attrValue);
+    options.el.setAttribute(info.attrName, info.attrValue);
   }
 
   return {
-    bind,
     refresh,
     unbind
   };

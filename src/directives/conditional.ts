@@ -1,32 +1,52 @@
-import { IBinding } from "../interfaces/IBinding";
-import { IDirective } from "../interfaces/IDirective";
-import { IView } from "../interfaces/IView";
+import { AttributeInfo } from "../interfaces/AttributeInfo";
+import { Directive } from "../interfaces/Directive";
+import { View } from "../interfaces/View";
 
-export interface IConditionalDirectiveOptions {
-  binding: IBinding;
-  view: (el: HTMLElement) => IView;
+export interface ConditionalDirectiveOptions {
+  el: HTMLElement;
+  info: AttributeInfo;
+  buildView: (el: HTMLElement) => View;
 }
 
-export function buildConditionalDirective(options: IConditionalDirectiveOptions): IDirective {
-  const container: HTMLElement = options.binding.el.parentElement;
-  const comment: Comment = document.createComment(` IF : ${options.binding.attrValue} `);
-  let node: Comment | HTMLElement = options.binding.el;
+export function buildConditionalDirective(options: ConditionalDirectiveOptions): Directive {
+  // shortcut
+  const info: AttributeInfo = options.info;
+
+  // get the parent element
+  const parent: HTMLElement = options.el.parentElement;
+
+  // create a placeholder node
+  const comment: Comment = document.createComment(` IF : ${info.attrValue} `);
+
+  // current rendered node into DOM
+  let node: Comment | HTMLElement = options.el;
+
+  // current condition status
   let status: boolean;
-  let view: IView;
+
+  // current rendered view instance
+  let view: View;
+
+  // remove original binding attribute from DOM
+  options.el.removeAttribute(info.attrName);
+
+  /**
+   * Swap the current rendered DOM node with another
+   */
 
   function swap(update: Comment | HTMLElement): void {
     if (update !== node) {
-      container.replaceChild(update, node);
+      parent.replaceChild(update, node);
       node = update;
     }
   }
 
-  function bind(): void {
-    options.binding.el.removeAttribute(options.binding.attrName);
-  }
+  /**
+   * Directive#refresh
+   */
 
-  function refresh(): void {
-    const condition: boolean = !!options.binding.get();
+  function refresh(value: any): void {
+    const condition: boolean = !!value;
 
     if (condition !== status) {
       if (view) {
@@ -35,9 +55,8 @@ export function buildConditionalDirective(options: IConditionalDirectiveOptions)
       }
 
       if (condition) {
-        swap(options.binding.el);
-        view = options.view(options.binding.el);
-        view.bind();
+        swap(options.el);
+        view = options.buildView(options.el);
       } else {
         swap(comment);
       }
@@ -46,18 +65,21 @@ export function buildConditionalDirective(options: IConditionalDirectiveOptions)
     }
   }
 
+  /**
+   * Directive#unbind
+   */
+
   function unbind(): void {
     if (view) {
       view.unbind();
       view = undefined;
     }
-    swap(options.binding.el);
-    options.binding.el.setAttribute(options.binding.attrName, options.binding.attrValue);
-    status = undefined;
+    options.el.setAttribute(info.attrName, info.attrValue);
+    swap(options.el);
   }
 
+  // return the directive instance
   return {
-    bind,
     refresh,
     unbind
   };

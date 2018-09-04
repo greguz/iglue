@@ -1,13 +1,14 @@
 import {
-  IAttributeInfo,
-  IAttributeNameInfo,
-  IAttributeParser,
-  IAttributeValueInfo,
-  IFormatterInfo,
-  IPathTarget,
-  IPrimitiveTarget,
-  ITarget
-} from "../interfaces/IAttributeParser";
+  AttributeInfo,
+  AttributeNameInfo,
+  AttributeValueInfo,
+  FormatterInfo,
+  PathValue,
+  PrimitiveValue,
+  Value
+} from "../interfaces/AttributeInfo";
+
+import { AttributeParser } from "../interfaces/AttributeParser";
 
 function getRegExpGroup(str: string, regex: RegExp, group: number, err?: string): string | null {
   const match: RegExpMatchArray = str.match(regex);
@@ -39,34 +40,34 @@ function parseModifiers(attrName: string): string[] {
   }
 }
 
-function buildPathTarget(value: string): IPathTarget {
+function buildPathValue(value: string): PathValue {
   return { type: "path", value };
 }
 
-function buildPrimitiveTarget(value: string | number | boolean | null | undefined): IPrimitiveTarget {
+function buildPrimitiveValue(value: string | number | boolean | null | undefined): PrimitiveValue {
   return { type: "primitive", value };
 }
 
-function parseTarget(value: string): ITarget {
+function parseValue(value: string): Value {
   if (value === "undefined") {
-    return buildPrimitiveTarget(undefined);
+    return buildPrimitiveValue(undefined);
   } else if (value === "null") {
-    return buildPrimitiveTarget(null);
+    return buildPrimitiveValue(null);
   } else if (value === "true") {
-    return buildPrimitiveTarget(true);
+    return buildPrimitiveValue(true);
   } else if (value === "false") {
-    return buildPrimitiveTarget(false);
+    return buildPrimitiveValue(false);
   } else if (/^-?\d+\.?\d*$/.test(value)) {
-    return buildPrimitiveTarget(parseFloat(value));
+    return buildPrimitiveValue(parseFloat(value));
   } else if (/^".*"$/.test(value) || /^'.*'$/.test(value)) {
-    return buildPrimitiveTarget(value.substring(1, value.length - 1));
+    return buildPrimitiveValue(value.substring(1, value.length - 1));
   } else {
-    return buildPathTarget(value);
+    return buildPathValue(value);
   }
 }
 
-function parseValue(attrValue: string): ITarget {
-  return parseTarget(
+function parseRootValue(attrValue: string): Value {
+  return parseValue(
     getRegExpGroup(
       attrValue,
       /\s*([^\|\s<]+)/,
@@ -85,19 +86,19 @@ function parseFormatterName(chunk: string): string {
   );
 }
 
-function parseFormatterArguments(chunk: string): ITarget[] {
+function parseFormatterArguments(chunk: string): Value[] {
   return chunk
     .match(/(\S+)/g)
     .slice(1)
-    .map(parseTarget);
+    .map(parseValue);
 }
 
-function parseFormatters(attrValue: string): IFormatterInfo[] {
+function parseFormatters(attrValue: string): FormatterInfo[] {
   const definition: string = getRegExpGroup(attrValue, /\|([^<]+)/, 1);
   if (!definition) {
     return [];
   }
-  return definition.split("|").map((chunk: string): IFormatterInfo => {
+  return definition.split("|").map((chunk: string): FormatterInfo => {
     return {
       name: parseFormatterName(chunk),
       arguments: parseFormatterArguments(chunk)
@@ -114,7 +115,7 @@ function parseWatchedPaths(attrValue: string): string[] {
   }
 }
 
-export function buildAttributeParser(prefix: string): IAttributeParser {
+export function buildAttributeParser(prefix: string): AttributeParser {
   const regex = new RegExp("^" + prefix + "([^:\.]+)");
 
   function parseDirective(attrName: string, err?: string): string {
@@ -126,7 +127,7 @@ export function buildAttributeParser(prefix: string): IAttributeParser {
     );
   }
 
-  function parseAttributeName(attrName: string): IAttributeNameInfo {
+  function parseAttributeName(attrName: string): AttributeNameInfo {
     return {
       prefix,
       directive: parseDirective(attrName, `The attribute name "${attrName}" does not match with prefix "${prefix}"`),
@@ -135,15 +136,15 @@ export function buildAttributeParser(prefix: string): IAttributeParser {
     };
   }
 
-  function parseAttributeValue(attrValue: string): IAttributeValueInfo {
+  function parseAttributeValue(attrValue: string): AttributeValueInfo {
     return {
-      value: parseValue(attrValue),
+      value: parseRootValue(attrValue),
       formatters: parseFormatters(attrValue),
       watch: parseWatchedPaths(attrValue)
     };
   }
 
-  function parse(el: HTMLElement, attrName: string): IAttributeInfo {
+  function parse(el: HTMLElement, attrName: string): AttributeInfo {
     const attrValue: string = el.getAttribute(attrName);
 
     return {
@@ -153,13 +154,13 @@ export function buildAttributeParser(prefix: string): IAttributeParser {
       directive: parseDirective(attrName, `The attribute name "${attrName}" does not match with prefix "${prefix}"`),
       argument: parseArgument(attrName),
       modifiers: parseModifiers(attrName),
-      value: parseValue(attrValue),
+      value: parseRootValue(attrValue),
       formatters: parseFormatters(attrValue),
       watch: parseWatchedPaths(attrValue)
     };
   }
 
-  function getAttributeByDirective(el: HTMLElement, directive: string): string | null {
+  function getAttributeByDirective(el: HTMLElement, directive: string): string {
     for (let i = 0; i < el.attributes.length; i++) {
       if (directive === parseDirective(el.attributes[i].name)) {
         return el.attributes[i].name;
