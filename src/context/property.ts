@@ -56,6 +56,11 @@ function getPropertyDescriptor(obj: object, property: string): PropertyDescripto
     };
   }
 
+  // ensure always configurable descriptor
+  if (descriptor.configurable !== true) {
+    descriptor.configurable = true;
+  }
+
   return descriptor;
 }
 
