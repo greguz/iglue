@@ -53,38 +53,23 @@ export function buildListDirective(options: ListDirectiveOptions): Directive {
     return context;
   }
 
-  function sync(target: any, index: number, model: any): object {
-    target.$index = index;
-    target[info.argument] = model;
-    return target;
-  }
-
   function refresh(models: any[]): void {
     models = models || [];
 
-    while (views.length > models.length) {
-      const view: View = views.pop();
-
+    for (const view of views) {
       view.unbind();
-
       container.removeChild(view.el);
     }
 
     let previous: Node = marker;
 
     views = models.map((model: any, index: number): View => {
-      let view: View = views[index];
+      const el: HTMLElement = clone();
+      const data: Context = buildListContext(index, model);
 
-      if (view) {
-        sync(view.context, index, model);
-      } else {
-        const el: HTMLElement = clone();
-        const data: Context = buildListContext(index, model);
+      container.insertBefore(el, previous.nextSibling);
 
-        container.insertBefore(el, previous.nextSibling);
-
-        view = options.buildView(el, data);
-      }
+      const view: View = options.buildView(el, data);
 
       previous = previous.nextSibling;
 
