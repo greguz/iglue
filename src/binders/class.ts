@@ -39,14 +39,14 @@ const binder: Binder<BinderContext> = {
       // handle removed classes
       for (const cName of oldClasses) {
         if (!includes(newClasses, cName)) {
-          el.classList.remove(binding.argument);
+          el.classList.remove(cName);
         }
       }
 
       // handle added classes
       for (const cName of newClasses) {
         if (!includes(oldClasses, cName)) {
-          el.classList.add(binding.argument);
+          el.classList.add(cName);
         }
       }
 
