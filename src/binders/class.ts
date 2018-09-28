@@ -28,7 +28,7 @@ const binder: Binder<BinderContext> = {
 
       // get the new class list
       let newClasses: string[];
-      if (typeof value === "string") {
+      if (typeof value === "string" && value !== "") {
         newClasses = value.match(/\S+/g);
       } else if (isArray(value)) {
         newClasses = value;
