@@ -28,53 +28,50 @@ export function buildListDirective(options: ListDirectiveOptions): Directive {
     return options.el.cloneNode(true) as HTMLElement;
   }
 
-  function buildListContext(index: number, entry: any): Context {
+  function buildListContext(entry: any, keyOrIndex: string | number): Context {
     const context: Context = buildContext(options.context, [
-      "$index",
-      info.argument
+      info.argument,
+      "$key",
+      "$index"
     ]);
 
-    // define local property for entry index
-    Object.defineProperty(context, "$index", {
-      enumerable: true,
-      configurable: true,
-      writable: true,
-      value: index
-    });
-
-    // define local property for entry data
-    Object.defineProperty(context, info.argument, {
-      enumerable: true,
-      configurable: true,
-      writable: true,
-      value: entry
-    });
+    context.$key = typeof keyOrIndex === "string" ? keyOrIndex : null;
+    context.$index = typeof keyOrIndex === "number" ? keyOrIndex : null;
+    context[info.argument] = entry;
 
     return context;
   }
 
-  function refresh(models: any[]): void {
-    models = models || [];
-
-    for (const view of views) {
+  function refresh(data: any): void {
+    while (views.length > 0) {
+      const view: View = views.pop();
       view.unbind();
       container.removeChild(view.el);
     }
 
     let previous: Node = marker;
-
-    views = models.map((model: any, index: number): View => {
+    function next(entry: any, keyOrIndex: string | number): void {
       const el: HTMLElement = clone();
-      const data: Context = buildListContext(index, model);
+      const data: Context = buildListContext(entry, keyOrIndex);
 
       container.insertBefore(el, previous.nextSibling);
 
-      const view: View = options.buildView(el, data);
+      views.push(options.buildView(el, data));
 
       previous = previous.nextSibling;
+    }
 
-      return view;
-    });
+    if (data instanceof Array) {
+      for (let i = 0; i < data.length; i++) {
+        next(data[i], i);
+      }
+    } else if (typeof data === "object" && data !== null) {
+      for (const key in data) {
+        if (data.hasOwnProperty(key)) {
+          next(data[key], key);
+        }
+      }
+    }
   }
 
   function unbind(): void {
