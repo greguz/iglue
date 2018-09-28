@@ -1,6 +1,6 @@
 import { Context } from "../interfaces/Context";
 import { includes, isObject } from "../utils";
-import { observePath, unobservePath, PathNotifier } from "./path";
+import { observePath, PathNotifier, unobservePath } from "./path";
 
 /**
  * Get the root property name of a object value path
@@ -78,7 +78,7 @@ function $unobserve(this: Context, path: string, callback: PathNotifier): void {
  * Build a context object
  */
 
-export function buildContext(obj: any, ownProperties?: string[]): Context {
+export function buildContext(obj: object, ownProperties?: string[]): Context {
   // validate input
   if (!isObject(obj)) {
     throw new Error("Unable to observe this value");
@@ -89,7 +89,14 @@ export function buildContext(obj: any, ownProperties?: string[]): Context {
 
   // clone all currently enumerable properties
   for (const property in obj) {
-    exposeProperty(context, property);
+    if (obj.hasOwnProperty(property)) {
+      if (ownProperties) {
+        if (includes(ownProperties, property)) {
+          continue;
+        }
+      }
+      exposeProperty(context, property);
+    }
   }
 
   // build and return the context
