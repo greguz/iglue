@@ -1,6 +1,21 @@
 # iglue
 
-Intuitive Data Binding engine
+A simple and unobtrusive UI microframework.
+
+## Motivation
+
+I've worked with [Rivets.js](https://github.com/mikeric/rivets) for some time,
+then I fell in love with [Vue.js](https://github.com/vuejs/vue),
+but sometimes I just wanted something in between,
+something cool and well written like *Vue*,
+but simple and unobtrusive like *Rivets*...
+
+So I came out to write **iglue**.
+
+## Browser support
+
+**iglue** supports all browsers that are ES5-compliant,
+so IE8 and below are not supported.
 
 ## Usage
 
