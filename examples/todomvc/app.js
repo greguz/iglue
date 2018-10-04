@@ -3,7 +3,7 @@
 
   var STORAGE_ITEM = "todos-iglue";
 
-  function fetch() {
+  function read() {
     return JSON.parse(localStorage.getItem(STORAGE_ITEM) || "[]");
   }
 
@@ -17,7 +17,7 @@
 
     visibility: "all",
 
-    todos: fetch(),
+    todos: read(),
 
     onToggleAllChange: function (event, input) {
       this.todos = this.todos.map(function (todo) {
@@ -70,6 +70,22 @@
 
   };
 
+  Object.defineProperty(data, "allDone", {
+    configurable: true,
+    enumerable: true,
+    get: function () {
+      return this.todos.reduce(function (completed, todo) {
+        return completed && todo.completed;
+      }, true);
+    },
+    set: function (completed) {
+      this.todos.forEach(function (todo) {
+        todo.completed = completed;
+      });
+      this.todos.push(); // trigger changes
+    }
+  });
+
   var binders = {
 
     focus: function (el, editing) {
@@ -98,21 +114,6 @@
           return true;
         }
       });
-    },
-
-    allDone: {
-      pull: function (_, todos) {
-        return todos.reduce(function (result, todo) {
-          return result && todo.completed;
-        }, true);
-      },
-      push: function (completed, todos) {
-        todos.forEach(function (todo) {
-          todo.completed = completed;
-        });
-        todos.push(); // trigger changes
-        return completed;
-      }
     }
 
   };
