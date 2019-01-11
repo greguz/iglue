@@ -1,15 +1,11 @@
 {
   "defaultSeverity": "error",
-  "extends": [
-      "tslint:recommended"
-  ],
-  "jsRules": {},
+  "extends": ["tslint:recommended"],
   "rules": {
-    "trailing-comma": [ true, { "multiline": "never", "singleline": "never" } ],
+    "trailing-comma": [true, { "multiline": "never", "singleline": "never" }],
     "object-literal-sort-keys": false,
     "space-before-function-paren": ["error", "always"],
     "forin": false,
     "interface-name": [true, "never-prefix"]
-  },
-  "rulesDirectory": []
+  }
 }
