@@ -7,7 +7,11 @@ import { Specification } from "../interfaces/Specification";
  * Apply value specification utility
  */
 
-function applySpecification(value: any, source: string, spec: Specification): any {
+function applySpecification(
+  value: any,
+  source: string,
+  spec: Specification
+): any {
   if (value === null || value === undefined) {
     if (spec.required === true) {
       throw new Error(`The required bound value "${source}" is not defined`);
@@ -20,12 +24,16 @@ function applySpecification(value: any, source: string, spec: Specification): an
       throw new Error(`The bound value "${source}" is not a "${spec.type}"`);
     }
     if (typeof spec.type === "function" && !(value instanceof spec.type)) {
-      throw new Error(`The bound value "${source}" is not an instance of ${spec.type}`);
+      throw new Error(
+        `The bound value "${source}" is not an instance of ${spec.type}`
+      );
     }
     if (spec.validator) {
-      const valid: boolean = spec.validator.call(context, value);
+      const valid: boolean = spec.validator.call(null, value);
       if (!valid) {
-        throw new Error(`The bound value "${value}" from "${source}" is not valid`);
+        throw new Error(
+          `The bound value "${value}" from "${source}" is not valid`
+        );
       }
     }
   }
@@ -37,7 +45,10 @@ function applySpecification(value: any, source: string, spec: Specification): an
  * Build a binder directive
  */
 
-export function buildBinderDirective(binder: Binder, binding: Binding): Directive {
+export function buildBinderDirective(
+  binder: Binder,
+  binding: Binding
+): Directive {
   // argument required check
   if (binder.argumentRequired === true && !binding.argument) {
     throw new Error(`The binder ${binding.directive} requires an argument`);
