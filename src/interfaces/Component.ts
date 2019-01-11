@@ -3,7 +3,6 @@
  */
 
 export interface Component<T = any> {
-
   /**
    * HTML template
    */
@@ -51,5 +50,4 @@ export interface Component<T = any> {
    */
 
   destroy?: (this: T) => void;
-
 }

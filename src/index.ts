@@ -43,12 +43,11 @@ export const binders: Collection<Binder | BinderRoutine> = $binders;
  */
 
 export const formatters: Collection<Formatter | FormatterFunction> = {
-
   args(method: any, ...boundArgs: any[]): (...args: any[]) => any {
     if (typeof method !== "function") {
       throw new Error("The target bound value is not a function");
     }
-    return function (...args: any[]): any {
+    return function(...args: any[]): any {
       return method.apply(this, boundArgs.concat(args));
     };
   },
@@ -82,14 +81,17 @@ export const formatters: Collection<Formatter | FormatterFunction> = {
   lte(value: any, target: any): boolean {
     return value <= target;
   }
-
 };
 
 /**
  * Bind a new view API
  */
 
-export function bind(el: HTMLElement, data: object, options?: ViewOptions): View {
+export function bind(
+  el: HTMLElement,
+  data: object,
+  options?: ViewOptions
+): View {
   options = options || {};
   options.binders = assign({}, binders, options.binders);
   options.components = assign({}, components, options.components);

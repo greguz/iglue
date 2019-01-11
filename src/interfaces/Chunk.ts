@@ -3,7 +3,6 @@
  */
 
 export interface Chunk {
-
   /**
    * Chunk type, static or expression
    */
@@ -27,5 +26,4 @@ export interface Chunk {
    */
 
   content: string;
-
 }

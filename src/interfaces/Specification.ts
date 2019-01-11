@@ -3,7 +3,6 @@
  */
 
 export interface Specification<T = any> {
-
   /**
    * Defaul value
    */
@@ -27,5 +26,4 @@ export interface Specification<T = any> {
    */
 
   validator?: (value: any) => boolean;
-
 }

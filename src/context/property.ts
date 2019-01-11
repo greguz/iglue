@@ -37,7 +37,10 @@ export type PropertyNotifier = (value: any) => void;
  * Get the property descriptor (walk through prototype)
  */
 
-function getPropertyDescriptor(obj: object, property: string): PropertyDescriptor {
+function getPropertyDescriptor(
+  obj: object,
+  property: string
+): PropertyDescriptor {
   let descriptor: PropertyDescriptor;
 
   // each all prototype chain
@@ -68,7 +71,11 @@ function getPropertyDescriptor(obj: object, property: string): PropertyDescripto
  * Apply observe middleware to the object
  */
 
-function applyMiddleware(obj: ObservedObject, property: string, notifier: PropertyNotifier): void {
+function applyMiddleware(
+  obj: ObservedObject,
+  property: string,
+  notifier: PropertyNotifier
+): void {
   // ensure object data store
   if (!obj.hasOwnProperty(STORE)) {
     Object.defineProperty(obj, STORE, {
@@ -174,7 +181,11 @@ export function isObservedObject(obj: any, property?: string): boolean {
  * Start property observing
  */
 
-export function observeProperty(obj: any, property: string, notifier: PropertyNotifier): void {
+export function observeProperty(
+  obj: any,
+  property: string,
+  notifier: PropertyNotifier
+): void {
   // input validation
   if (!isObject(obj)) {
     throw new Error("Unexpected object to observe");
@@ -192,7 +203,11 @@ export function observeProperty(obj: any, property: string, notifier: PropertyNo
  * Stop property observing, returns true is the notifier is removed
  */
 
-export function unobserveProperty(obj: any, property: string, notifier: PropertyNotifier): boolean {
+export function unobserveProperty(
+  obj: any,
+  property: string,
+  notifier: PropertyNotifier
+): boolean {
   if (isObservedObject(obj, property)) {
     const notifiers: PropertyNotifier[] = obj[STORE][property].n;
     const removed: boolean = remove(notifiers, notifier);

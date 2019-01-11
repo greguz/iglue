@@ -6,7 +6,6 @@ import { Specification } from "./Specification";
  */
 
 export interface Binder<T = any, V = any> {
-
   /**
    * Enforce binding argument
    */
@@ -36,11 +35,15 @@ export interface Binder<T = any, V = any> {
    */
 
   unbind?: (this: T, el: HTMLElement, binding: Binding) => void;
-
 }
 
 /**
  * Binder routine function
  */
 
-export type BinderRoutine<T = any, V = any> = (this: T, el: HTMLElement, value: V, binding: Binding) => void;
+export type BinderRoutine<T = any, V = any> = (
+  this: T,
+  el: HTMLElement,
+  value: V,
+  binding: Binding
+) => void;

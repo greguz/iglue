@@ -10,7 +10,12 @@ import {
 
 import { AttributeParser } from "../interfaces/AttributeParser";
 
-function getRegExpGroup(str: string, regex: RegExp, group: number, err?: string): string | null {
+function getRegExpGroup(
+  str: string,
+  regex: RegExp,
+  group: number,
+  err?: string
+): string | null {
   const match: RegExpMatchArray = str.match(regex);
 
   if (match) {
@@ -44,7 +49,9 @@ function buildPathValue(value: string): PathValue {
   return { type: "path", value };
 }
 
-function buildPrimitiveValue(value: string | number | boolean | null | undefined): PrimitiveValue {
+function buildPrimitiveValue(
+  value: string | number | boolean | null | undefined
+): PrimitiveValue {
   return { type: "primitive", value };
 }
 
@@ -78,12 +85,7 @@ function parseRootValue(attrValue: string): Value {
 }
 
 function parseFormatterName(chunk: string): string {
-  return getRegExpGroup(
-    chunk,
-    /(\S+)/,
-    1,
-    "Empty formatter found"
-  );
+  return getRegExpGroup(chunk, /(\S+)/, 1, "Empty formatter found");
 }
 
 function parseFormatterArguments(chunk: string): Value[] {
@@ -98,12 +100,14 @@ function parseFormatters(attrValue: string): FormatterInfo[] {
   if (!definition) {
     return [];
   }
-  return definition.split("|").map((chunk: string): FormatterInfo => {
-    return {
-      name: parseFormatterName(chunk),
-      arguments: parseFormatterArguments(chunk)
-    };
-  });
+  return definition.split("|").map(
+    (chunk: string): FormatterInfo => {
+      return {
+        name: parseFormatterName(chunk),
+        arguments: parseFormatterArguments(chunk)
+      };
+    }
+  );
 }
 
 function parseWatchedPaths(attrValue: string): string[] {
@@ -116,21 +120,19 @@ function parseWatchedPaths(attrValue: string): string[] {
 }
 
 export function buildAttributeParser(prefix: string): AttributeParser {
-  const regex = new RegExp("^" + prefix + "([^:\.]+)");
+  const regex = new RegExp("^" + prefix + "([^:.]+)");
 
   function parseDirective(attrName: string, err?: string): string {
-    return getRegExpGroup(
-      attrName,
-      regex,
-      1,
-      err
-    );
+    return getRegExpGroup(attrName, regex, 1, err);
   }
 
   function parseAttributeName(attrName: string): AttributeNameInfo {
     return {
       prefix,
-      directive: parseDirective(attrName, `The attribute name "${attrName}" does not match with prefix "${prefix}"`),
+      directive: parseDirective(
+        attrName,
+        `The attribute name "${attrName}" does not match with prefix "${prefix}"`
+      ),
       argument: parseArgument(attrName),
       modifiers: parseModifiers(attrName)
     };
@@ -151,7 +153,10 @@ export function buildAttributeParser(prefix: string): AttributeParser {
       attrName,
       attrValue,
       prefix,
-      directive: parseDirective(attrName, `The attribute name "${attrName}" does not match with prefix "${prefix}"`),
+      directive: parseDirective(
+        attrName,
+        `The attribute name "${attrName}" does not match with prefix "${prefix}"`
+      ),
       argument: parseArgument(attrName),
       modifiers: parseModifiers(attrName),
       value: parseRootValue(attrValue),

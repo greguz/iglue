@@ -16,7 +16,7 @@ export function parseText(text: string, regex: RegExp): Chunk[] {
   let index: number = 0;
 
   // each all regexp matches
-  while (match = regex.exec(text)) {
+  while ((match = regex.exec(text))) {
     // extract previous text
     if (index !== match.index) {
       chunks.push({

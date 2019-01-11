@@ -7,7 +7,10 @@ import { isObject, isFunction } from "./utils";
  * Map a binder definition to a full binder object
  */
 
-export function mapBinder(definition: Binder | BinderRoutine, name: string): Binder {
+export function mapBinder(
+  definition: Binder | BinderRoutine,
+  name: string
+): Binder {
   if (isObject(definition)) {
     // full configured binder
     return definition as Binder;

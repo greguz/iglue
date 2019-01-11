@@ -22,7 +22,9 @@ export interface ComponentDirectiveOptions {
   buildView: (el: HTMLElement, obj: object) => View;
 }
 
-export function buildComponentDirective(options: ComponentDirectiveOptions): Directive {
+export function buildComponentDirective(
+  options: ComponentDirectiveOptions
+): Directive {
   // get the parent element
   const parent: HTMLElement = options.el.parentElement;
 

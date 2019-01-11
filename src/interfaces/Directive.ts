@@ -3,7 +3,6 @@
  */
 
 export interface Directive {
-
   /**
    * Re-render the UI
    */
@@ -15,5 +14,4 @@ export interface Directive {
    */
 
   unbind(): void;
-
 }

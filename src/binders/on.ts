@@ -7,7 +7,6 @@ interface BinderContext {
 }
 
 const binder: Binder<BinderContext> = {
-
   argumentRequired: true,
 
   bind(el: HTMLElement, binding: Binding): void {
@@ -16,7 +15,11 @@ const binder: Binder<BinderContext> = {
       if (typeof self.handler === "function") {
         self.handler.call(binding.context, event, this);
       } else {
-        throw new Error(`The target value bound with "${binding.attrValue}" is not a valid handler for event "${binding.argument}"`);
+        throw new Error(
+          `The target value bound with "${
+            binding.attrValue
+          }" is not a valid handler for event "${binding.argument}"`
+        );
       }
     };
     el.addEventListener(binding.argument, this.listener, false);
@@ -31,7 +34,6 @@ const binder: Binder<BinderContext> = {
     this.listener = undefined;
     this.handler = undefined;
   }
-
 };
 
 export default binder;

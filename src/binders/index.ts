@@ -6,7 +6,6 @@ import $on from "./on";
 import $value from "./value";
 
 const binders: Collection<Binder | BinderRoutine> = {
-
   class: $class,
   on: $on,
   value: $value,
@@ -38,7 +37,6 @@ const binders: Collection<Binder | BinderRoutine> = {
       el.innerText = value == null ? "" : value;
     }
   }
-
 };
 
 export default binders;

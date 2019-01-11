@@ -1,10 +1,23 @@
-import { AttributeValueInfo, FormatterInfo, Value } from "../interfaces/AttributeInfo";
+import {
+  AttributeValueInfo,
+  FormatterInfo,
+  Value
+} from "../interfaces/AttributeInfo";
 import { AttributeParser } from "../interfaces/AttributeParser";
 import { Context } from "../interfaces/Context";
 import { Formatter, FormatterFunction } from "../interfaces/Formatter";
 import { Observer } from "../interfaces/Observer";
 
-import { isFunction, isObject, throwError, parsePath, Collection, Mapper, mapCollection, passthrough } from "../utils";
+import {
+  isFunction,
+  isObject,
+  throwError,
+  parsePath,
+  Collection,
+  Mapper,
+  mapCollection,
+  passthrough
+} from "../utils";
 
 /**
  * Simple generic mapper (just one argument)
@@ -28,7 +41,10 @@ type Setter = (value: any) => void;
  * Map a formatter definition to a full formatter object
  */
 
-function mapFormatter(definition: Formatter | FormatterFunction, name: string): Formatter {
+function mapFormatter(
+  definition: Formatter | FormatterFunction,
+  name: string
+): Formatter {
   if (isFunction(definition)) {
     return {
       pull: definition as FormatterFunction,
@@ -36,8 +52,12 @@ function mapFormatter(definition: Formatter | FormatterFunction, name: string): 
     };
   } else if (isObject(definition)) {
     return {
-      pull: (definition as Formatter).pull || throwError(`Formatter "${name}" does not have pull function`),
-      push: (definition as Formatter).push || throwError(`Formatter "${name}" does not have push function`)
+      pull:
+        (definition as Formatter).pull ||
+        throwError(`Formatter "${name}" does not have pull function`),
+      push:
+        (definition as Formatter).push ||
+        throwError(`Formatter "${name}" does not have push function`)
     };
   } else {
     throw new Error(`Unable to resolve formatter "${name}"`);
@@ -145,15 +165,17 @@ function getPaths(info: AttributeValueInfo): string[] {
  * Bind formatter arguments to its functions
  */
 
-function bindFormatterArguments(context: Context, formatter: Formatter, values: Value[]): Formatter {
+function bindFormatterArguments(
+  context: Context,
+  formatter: Formatter,
+  values: Value[]
+): Formatter {
   const getters: Getter[] = values.map(
     (value: Value): Getter => buildValueGetter(context, value)
   );
 
   function getArguments(value: any): any[] {
-    const args: any[] = getters.map(
-      (getter: Getter): any => getter()
-    );
+    const args: any[] = getters.map((getter: Getter): any => getter());
     args.unshift(value);
     return args;
   }
@@ -196,7 +218,10 @@ function pipe(formats: Format[]): Format {
  * Expression parser type
  */
 
-export type ExpressionParser = (expression: string, callback?: (value: any) => void) => Observer;
+export type ExpressionParser = (
+  expression: string,
+  callback?: (value: any) => void
+) => Observer;
 
 /**
  * Parse template expression into observer
@@ -208,27 +233,28 @@ export function buildExpressionParser(
   formatters: Collection<Formatter | FormatterFunction>
 ): ExpressionParser {
   // map the formatter collection
-  const getFormatter: Mapper<string, Formatter> = mapCollection(formatters, mapFormatter);
+  const getFormatter: Mapper<string, Formatter> = mapCollection(
+    formatters,
+    mapFormatter
+  );
 
   // return the parse function
-  return function parseExpression(expression: string, callback?: (value: any) => void): Observer {
+  return function parseExpression(
+    expression: string,
+    callback?: (value: any) => void
+  ): Observer {
     // parse expression string
     const info: AttributeValueInfo = attributeParser.parseValue(expression);
 
     // bind formatter arguments
     const formatters: Formatter[] = info.formatters.map(
-      (fi: FormatterInfo): Formatter => bindFormatterArguments(
-        context,
-        getFormatter(fi.name),
-        fi.arguments
-      )
+      (fi: FormatterInfo): Formatter =>
+        bindFormatterArguments(context, getFormatter(fi.name), fi.arguments)
     );
 
     // map formatters and compose the "pull value" function
     const pull: Format = compose(
-      formatters.map(
-        (formatter: Formatter): Format => formatter.pull
-      )
+      formatters.map((formatter: Formatter): Format => formatter.pull)
     );
 
     // getter for the source value from the store
@@ -241,9 +267,7 @@ export function buildExpressionParser(
 
     // map formatters and compose the "push value" function
     const push: Format = pipe(
-      formatters.map(
-        (formatter: Formatter): Format => formatter.push
-      )
+      formatters.map((formatter: Formatter): Format => formatter.push)
     );
 
     // update store value

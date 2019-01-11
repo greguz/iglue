@@ -1,11 +1,14 @@
-import { AttributeInfo, AttributeNameInfo, AttributeValueInfo } from "../interfaces/AttributeInfo";
+import {
+  AttributeInfo,
+  AttributeNameInfo,
+  AttributeValueInfo
+} from "../interfaces/AttributeInfo";
 
 /**
  * DOM attribute parser interface
  */
 
 export interface AttributeParser {
-
   /**
    * Returns true when the attribute match with the configured prefix
    */
@@ -35,5 +38,4 @@ export interface AttributeParser {
    */
 
   getAttributeByDirective(el: HTMLElement, directive: string): string;
-
 }

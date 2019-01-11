@@ -3,7 +3,6 @@
  */
 
 export interface Formatter {
-
   /**
    * Map the value when it is extracted from the store
    */
@@ -15,7 +14,6 @@ export interface Formatter {
    */
 
   push?: FormatterFunction;
-
 }
 
 /**

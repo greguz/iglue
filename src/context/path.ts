@@ -62,7 +62,12 @@ function realize(obj: any, tokens: string[]): any[] {
  * observe/unobserve registration utility
  */
 
-function register(action: "observe" | "unobserve", value: any, token: string, fn: () => void): void {
+function register(
+  action: "observe" | "unobserve",
+  value: any,
+  token: string,
+  fn: () => void
+): void {
   if (token === undefined) {
     if (isArray(value)) {
       (action === "observe" ? observeArray : unobserveArray)(value, fn);
@@ -71,7 +76,11 @@ function register(action: "observe" | "unobserve", value: any, token: string, fn
     if (isArray(value) && (/^\d+$/.test(token) || token === "length")) {
       (action === "observe" ? observeArray : unobserveArray)(value, fn);
     } else {
-      (action === "observe" ? observeProperty : unobserveProperty)(value, token.toString(), fn);
+      (action === "observe" ? observeProperty : unobserveProperty)(
+        value,
+        token.toString(),
+        fn
+      );
     }
   }
 }
@@ -80,7 +89,11 @@ function register(action: "observe" | "unobserve", value: any, token: string, fn
  * Apply the observe middleware to the object
  */
 
-function applyMiddleware(obj: ObservedObject, path: string, notifier: PathNotifier): void {
+function applyMiddleware(
+  obj: ObservedObject,
+  path: string,
+  notifier: PathNotifier
+): void {
   // ensure object data store
   if (!obj.hasOwnProperty(STORE)) {
     Object.defineProperty(obj, STORE, {
@@ -124,12 +137,7 @@ function applyMiddleware(obj: ObservedObject, path: string, notifier: PathNotifi
 
   // start data observing
   for (let i = 0; i <= tokens.length; i++) {
-    register(
-      "observe",
-      oldValues[i],
-      tokens[i],
-      update
-    );
+    register("observe", oldValues[i], tokens[i], update);
   }
 
   // update the store
@@ -153,12 +161,7 @@ function removeMiddleware(obj: ObservedObject, path: string): void {
 
   // stop data watch
   for (let i = 0; i <= info.t.length; i++) {
-    register(
-      "unobserve",
-      values[i],
-      info.t[i],
-      info.u
-    );
+    register("unobserve", values[i], info.t[i], info.u);
   }
 
   // clean store
@@ -180,7 +183,11 @@ export function isObservedPath(obj: any, path: string): boolean {
  * Observe a path value
  */
 
-export function observePath(obj: any, path: string, notifier: PathNotifier): void {
+export function observePath(
+  obj: any,
+  path: string,
+  notifier: PathNotifier
+): void {
   // input validation
   if (!isObject(obj)) {
     throw new Error("Unexpected object to observe");
@@ -198,7 +205,11 @@ export function observePath(obj: any, path: string, notifier: PathNotifier): voi
  * Remove the observe notifier, returns true when the notifier is removed
  */
 
-export function unobservePath(obj: any, path: string, notifier: PathNotifier): boolean {
+export function unobservePath(
+  obj: any,
+  path: string,
+  notifier: PathNotifier
+): boolean {
   if (isObservedPath(obj, path)) {
     const info: PathInfo = obj[STORE][path];
 

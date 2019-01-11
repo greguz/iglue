@@ -6,7 +6,6 @@ import { Context } from "./Context";
  */
 
 export interface Binding extends Readonly<AttributeInfo> {
-
   /**
    * Bound DOM element
    */
@@ -30,5 +29,4 @@ export interface Binding extends Readonly<AttributeInfo> {
    */
 
   set(value: any): void;
-
 }

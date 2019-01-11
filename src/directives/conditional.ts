@@ -8,7 +8,9 @@ export interface ConditionalDirectiveOptions {
   buildView: (el: HTMLElement) => View;
 }
 
-export function buildConditionalDirective(options: ConditionalDirectiveOptions): Directive {
+export function buildConditionalDirective(
+  options: ConditionalDirectiveOptions
+): Directive {
   // shortcut
   const info: AttributeInfo = options.info;
 

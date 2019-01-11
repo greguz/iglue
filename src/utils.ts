@@ -16,7 +16,10 @@ export type Mapper<A, B> = (arg: A) => B;
  * Like Array.prototype.findIndex
  */
 
-export function findIndex<T>(obj: T[], predicate: (value: T, index: number, obj: T[]) => boolean): number {
+export function findIndex<T>(
+  obj: T[],
+  predicate: (value: T, index: number, obj: T[]) => boolean
+): number {
   for (let i = 0; i < obj.length; i++) {
     if (predicate(obj[i], i, obj) === true) {
       return i;
@@ -29,7 +32,10 @@ export function findIndex<T>(obj: T[], predicate: (value: T, index: number, obj:
  * Like Array.prototype.find
  */
 
-export function find<T>(obj: T[], predicate: (value: T, index: number, obj: T[]) => boolean): T {
+export function find<T>(
+  obj: T[],
+  predicate: (value: T, index: number, obj: T[]) => boolean
+): T {
   for (let i = 0; i < obj.length; i++) {
     if (predicate(obj[i], i, obj) === true) {
       return obj[i];
@@ -45,11 +51,24 @@ export function find<T>(obj: T[], predicate: (value: T, index: number, obj: T[])
 export function assign<T>(target: T): T;
 export function assign<T, S>(target: T, source: S): T & S;
 export function assign<T, S0, S1>(target: T, s0: S0, s1: S1): T & S0 & S1;
-export function assign<T, S0, S1, S2>(target: T, s0: S0, s1: S1, s2: S2): T & S0 & S1 & S2;
-export function assign<T, S0, S1, S2, S3>(target: T, s0: S0, s1: S1, s2: S2, s3: S3): T & S0 & S1 & S2 & S3;
+export function assign<T, S0, S1, S2>(
+  target: T,
+  s0: S0,
+  s1: S1,
+  s2: S2
+): T & S0 & S1 & S2;
+export function assign<T, S0, S1, S2, S3>(
+  target: T,
+  s0: S0,
+  s1: S1,
+  s2: S2,
+  s3: S3
+): T & S0 & S1 & S2 & S3;
 export function assign(target: any, ...sources: any[]): any {
   if (target === null || target === undefined) {
-    throw new TypeError("Object.assign cannot be called with null or undefined");
+    throw new TypeError(
+      "Object.assign cannot be called with null or undefined"
+    );
   }
 
   const to: any = Object(target);
@@ -71,7 +90,10 @@ export function assign(target: any, ...sources: any[]): any {
  * Map a collection object
  */
 
-export function mapCollection<A, B>(collection: Collection<A>, mapper: (entry: A, prop: string) => B): Mapper<string, B> {
+export function mapCollection<A, B>(
+  collection: Collection<A>,
+  mapper: (entry: A, prop: string) => B
+): Mapper<string, B> {
   return function extract(prop: string): B {
     return mapper(collection[prop], prop);
   };
@@ -119,10 +141,7 @@ export function includes<T>(arr: T[], target: T): boolean {
  */
 
 export function remove<T>(arr: T[], target: T): boolean {
-  const index: number = findIndex(
-    arr,
-    (entry: T): boolean => entry === target
-  );
+  const index: number = findIndex(arr, (entry: T): boolean => entry === target);
   if (index >= 0) {
     arr.splice(index, 1);
   }

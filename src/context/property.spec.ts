@@ -2,12 +2,16 @@ import { expect } from "chai";
 import "mocha";
 
 import { assign } from "../utils";
-import { isObservedObject, observeProperty, unobserveProperty } from "./property";
+import {
+  isObservedObject,
+  observeProperty,
+  unobserveProperty
+} from "./property";
 
-function noop(): void { }
+function noop(): void {}
 
-describe("Property observing", function () {
-  it("should detect observing status", function () {
+describe("Property observing", function() {
+  it("should detect observing status", function() {
     const obj: any = { value: 42 };
 
     expect(isObservedObject(obj)).to.be.false;
@@ -20,7 +24,7 @@ describe("Property observing", function () {
     expect(isObservedObject(obj, "other")).to.be.false;
   });
 
-  it("should fail to override listeners container", function () {
+  it("should fail to override listeners container", function() {
     const obj: any = { value: 42 };
     observeProperty(obj, "value", noop);
 
@@ -30,7 +34,7 @@ describe("Property observing", function () {
     expect(overrideOL).to.throw();
   });
 
-  it("should not clone listeners", function () {
+  it("should not clone listeners", function() {
     const obj: any = { value: 42 };
     observeProperty(obj, "value", noop);
 
@@ -41,7 +45,7 @@ describe("Property observing", function () {
     expect(bro._ol_).to.be.undefined;
   });
 
-  it("should detect value changes", function () {
+  it("should detect value changes", function() {
     const obj: any = { value: 42 };
 
     let expected: any;
@@ -64,7 +68,7 @@ describe("Property observing", function () {
     expect(count).to.be.equal(2);
   });
 
-  it("should stop value observing", function () {
+  it("should stop value observing", function() {
     const obj: any = { value: 42 };
 
     let count: number = 0;
@@ -82,13 +86,9 @@ describe("Property observing", function () {
 
     obj.value = 1;
 
-    expect(
-      unobserveProperty(obj, "value", () => null)
-    ).to.be.false;
+    expect(unobserveProperty(obj, "value", () => null)).to.be.false;
 
-    expect(
-      unobserveProperty(obj, "value", callback)
-    ).to.be.true;
+    expect(unobserveProperty(obj, "value", callback)).to.be.true;
 
     unobserveProperty(obj, "value", callback);
 

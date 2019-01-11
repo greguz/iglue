@@ -9,7 +9,6 @@ import { Formatter, FormatterFunction } from "./Formatter";
  */
 
 export interface View {
-
   /**
    * Bound DOM element
    */
@@ -33,7 +32,6 @@ export interface View {
    */
 
   unbind(): void;
-
 }
 
 /**
@@ -41,7 +39,6 @@ export interface View {
  */
 
 export interface ViewOptions {
-
   /**
    * Global binders prefix
    */
@@ -65,5 +62,4 @@ export interface ViewOptions {
    */
 
   formatters?: Collection<Formatter | FormatterFunction>;
-
 }

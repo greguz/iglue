@@ -3,7 +3,6 @@
  */
 
 export interface Observer {
-
   /**
    * Get the current value
    */
@@ -21,5 +20,4 @@ export interface Observer {
    */
 
   unobserve(): void;
-
 }

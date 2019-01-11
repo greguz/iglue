@@ -9,7 +9,15 @@ import { Directive } from "./interfaces/Directive";
 import { Observer } from "./interfaces/Observer";
 import { View, ViewOptions } from "./interfaces/View";
 
-import { Collection, Mapper, assign, mapCollection, isObject, noop, isFunction } from "./utils";
+import {
+  Collection,
+  Mapper,
+  assign,
+  mapCollection,
+  isObject,
+  noop,
+  isFunction
+} from "./utils";
 
 import { buildAttributeParser } from "./parse/attribute";
 import { buildExpressionParser, ExpressionParser } from "./parse/expression";
@@ -46,7 +54,12 @@ interface ExtendedBinding extends Binding {
  * Build a binding instance
  */
 
-function buildBinding(el: HTMLElement, attrName: string, context: Context, parser: AttributeParser): ExtendedBinding {
+function buildBinding(
+  el: HTMLElement,
+  attrName: string,
+  context: Context,
+  parser: AttributeParser
+): ExtendedBinding {
   function get(this: ExtendedBinding): any {
     if (this.observer === null) {
       throw new Error("The value is not bound yet");
@@ -71,7 +84,12 @@ function buildBinding(el: HTMLElement, attrName: string, context: Context, parse
  * Create a reactive value link between the value of an expression and a property
  */
 
-function link(parseExpression: ExpressionParser, obj: any, property: string, expression: string): Observer {
+function link(
+  parseExpression: ExpressionParser,
+  obj: any,
+  property: string,
+  expression: string
+): Observer {
   // value change callback
   function callback(value: any): void {
     obj[property] = value;
@@ -93,7 +111,10 @@ function link(parseExpression: ExpressionParser, obj: any, property: string, exp
 
 function buildEventListenerMapper(parseExpression: ExpressionParser) {
   // return the mapper function
-  return function mapEventListener(value: string | Function, event: string): Function {
+  return function mapEventListener(
+    value: string | Function,
+    event: string
+  ): Function {
     // handle not configured listeners
     if (!value) {
       return noop;
@@ -112,7 +133,9 @@ function buildEventListenerMapper(parseExpression: ExpressionParser) {
 
     // ensure function type
     if (!isFunction(listener)) {
-      throw new Error(`Found an invalid listener for event "${event}" bound with "${value}"`);
+      throw new Error(
+        `Found an invalid listener for event "${event}" bound with "${value}"`
+      );
     }
 
     // all done
@@ -124,7 +147,11 @@ function buildEventListenerMapper(parseExpression: ExpressionParser) {
  * Create a new view
  */
 
-export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): View {
+export function buildView(
+  el: HTMLElement,
+  obj: any,
+  options?: ViewOptions
+): View {
   // input validation
   if (!isObject(obj)) {
     throw new Error("Invalid context");
@@ -134,12 +161,24 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
   const context: Context = buildContext(obj);
 
   // resolvers
-  const getBinder: Mapper<string, Binder> = mapCollection(options.binders, mapBinder);
-  const getComponent: Mapper<string, Component> = mapCollection(options.components, mapComponent);
+  const getBinder: Mapper<string, Binder> = mapCollection(
+    options.binders,
+    mapBinder
+  );
+  const getComponent: Mapper<string, Component> = mapCollection(
+    options.components,
+    mapComponent
+  );
 
   // parsers
-  const attributeParser: AttributeParser = buildAttributeParser(options.prefix || "i-");
-  const parseExpression: ExpressionParser = buildExpressionParser(attributeParser, context, options.formatters);
+  const attributeParser: AttributeParser = buildAttributeParser(
+    options.prefix || "i-"
+  );
+  const parseExpression: ExpressionParser = buildExpressionParser(
+    attributeParser,
+    context,
+    options.formatters
+  );
 
   // active subscriptions
   const subscriptions: Subscription[] = [];
@@ -174,7 +213,12 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
    */
 
   function loadBinder(el: HTMLElement, attrName: string): void {
-    const binding: ExtendedBinding = buildBinding(el, attrName, context, attributeParser);
+    const binding: ExtendedBinding = buildBinding(
+      el,
+      attrName,
+      context,
+      attributeParser
+    );
     const binder: Binder = getBinder(binding.directive);
     const directive: Directive = buildBinderDirective(binder, binding);
     const observer: Observer = parseExpression(
@@ -236,10 +280,7 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
 
     for (const chunk of chunks) {
       if (chunk.type === "static") {
-        parent.insertBefore(
-          document.createTextNode(chunk.content),
-          node
-        );
+        parent.insertBefore(document.createTextNode(chunk.content), node);
       } else {
         const expression: string = chunk.content;
         const directive: Directive = buildTextDirective(
@@ -292,15 +333,13 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
         if (info.directive === "on" && info.argument) {
           events[info.argument.toLowerCase()] = attr.value;
         } else if (info.directive === "model") {
-          const model: Observer = parseExpression(info.attrValue)
+          const model: Observer = parseExpression(info.attrValue);
           events.value = function listener(value: any): void {
             model.set(value);
           };
         }
       } else {
-        observers.push(
-          link(parseExpression, cc, attr.name, attr.value)
-        );
+        observers.push(link(parseExpression, cc, attr.name, attr.value));
       }
     }
 
@@ -328,10 +367,7 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
     // set the first observer (the one that represents the component name)
     if (el.hasAttribute("is")) {
       observers.unshift(
-        parseExpression(
-          el.getAttribute("is"),
-          directive.refresh
-        )
+        parseExpression(el.getAttribute("is"), directive.refresh)
       );
     } else {
       observers.unshift({
@@ -371,7 +407,10 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
     } else if (node.nodeType === 1) {
       const el: HTMLElement = node as HTMLElement;
 
-      const eachAttr: string = attributeParser.getAttributeByDirective(el, "each");
+      const eachAttr: string = attributeParser.getAttributeByDirective(
+        el,
+        "each"
+      );
       const ifAttr: string = attributeParser.getAttributeByDirective(el, "if");
       const cName: string = node.nodeName.toLowerCase();
 
@@ -379,7 +418,10 @@ export function buildView(el: HTMLElement, obj: any, options?: ViewOptions): Vie
         loadListDirective(el, eachAttr);
       } else if (ifAttr) {
         loadConditionalDirective(el, ifAttr);
-      } else if (cName === "component" || options.components.hasOwnProperty(cName)) {
+      } else if (
+        cName === "component" ||
+        options.components.hasOwnProperty(cName)
+      ) {
         loadComponent(el);
       } else {
         loadBinders(el);

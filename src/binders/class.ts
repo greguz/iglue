@@ -8,7 +8,6 @@ interface BinderContext {
 }
 
 const binder: Binder<BinderContext> = {
-
   bind(): void {
     // initialize the class array
     this.classes = [];
@@ -69,7 +68,6 @@ const binder: Binder<BinderContext> = {
     // free resources
     this.classes = undefined;
   }
-
 };
 
 export default binder;
