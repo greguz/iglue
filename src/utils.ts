@@ -3,7 +3,7 @@
  */
 
 export interface Collection<T = any> {
-  [key: string]: T;
+  [key: string]: T | undefined;
 }
 
 /**
@@ -35,13 +35,12 @@ export function findIndex<T>(
 export function find<T>(
   obj: T[],
   predicate: (value: T, index: number, obj: T[]) => boolean
-): T {
+): T | undefined {
   for (let i = 0; i < obj.length; i++) {
     if (predicate(obj[i], i, obj) === true) {
       return obj[i];
     }
   }
-  return undefined;
 }
 
 /**
@@ -92,7 +91,7 @@ export function assign(target: any, ...sources: any[]): any {
 
 export function mapCollection<A, B>(
   collection: Collection<A>,
-  mapper: (entry: A, prop: string) => B
+  mapper: (entry: A | undefined, prop: string) => B
 ): Mapper<string, B> {
   return function extract(prop: string): B {
     return mapper(collection[prop], prop);
@@ -103,24 +102,24 @@ export function mapCollection<A, B>(
  * Returns true if the argument is an array
  */
 
-export function isArray(arr: any): boolean {
-  return arr instanceof Array;
+export function isArray(value: any): boolean {
+  return value instanceof Array;
 }
 
 /**
  * Returns true if the argument is an object
  */
 
-export function isObject(obj: any): boolean {
-  return typeof obj === "object" && obj !== null;
+export function isObject(value: any): boolean {
+  return typeof value === "object" && value !== null;
 }
 
 /**
  * Returns true if the argument is a function
  */
 
-export function isFunction(fn: any): boolean {
-  return typeof fn === "function";
+export function isFunction(value: any): boolean {
+  return typeof value === "function";
 }
 
 /**
@@ -164,7 +163,7 @@ export function parsePath(path: string): string[] {
       tokens.push(path.substring(1, end));
       path = path.substr(end + 1);
     } else {
-      const match = path.match(/^[^\.|\[]+/);
+      const match: any = path.match(/^[^\.|\[]+/);
       const token: string = match[0];
       tokens.push(token);
       path = path.substr(token.length);
