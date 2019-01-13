@@ -330,7 +330,7 @@ export function parseHTML(html: string, options: IParseHTMLOptions): void {
     }
   }
 
-  function parseEndTag(tagName?: string, start?: number, end?: number): void {
+  function parseEndTag(tagName?: any, start?: number, end?: number): void {
     let pos, lowerCasedTagName;
     if (start == null) start = index;
     if (end == null) end = index;
@@ -389,8 +389,8 @@ export function parseHTML(html: string, options: IParseHTMLOptions): void {
  */
 
 export function buildHTML(html: string): HTMLElement {
-  let root: HTMLElement;
-  let current: HTMLElement;
+  let root: any;
+  let current: any;
 
   parseHTML(html, {
     chars(text: string): void {

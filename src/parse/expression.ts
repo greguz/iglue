@@ -1,8 +1,4 @@
-import {
-  AttributeValueInfo,
-  FormatterInfo,
-  Value
-} from "../interfaces/AttributeInfo";
+import { AttributeValueInfo, Value } from "../interfaces/AttributeInfo";
 import { AttributeParser } from "../interfaces/AttributeParser";
 import { Context } from "../interfaces/Context";
 import { Formatter, FormatterFunction } from "../interfaces/Formatter";
@@ -11,53 +7,41 @@ import { Observer } from "../interfaces/Observer";
 import {
   isFunction,
   isObject,
-  throwError,
+  toThrow,
   parsePath,
   Collection,
-  Mapper,
-  mapCollection,
   passthrough
 } from "../utils";
 
 /**
- * Simple generic mapper (just one argument)
+ * Full formatter
  */
-
-type Format = Mapper<any, any>;
+interface F {
+  pull: FormatterFunction;
+  push: FormatterFunction;
+}
 
 /**
- * Getter function
+ * TODO: docs
  */
-
-type Getter = () => any;
-
-/**
- * Setter function
- */
-
-type Setter = (value: any) => void;
-
-/**
- * Map a formatter definition to a full formatter object
- */
-
-function mapFormatter(
-  definition: Formatter | FormatterFunction,
+function getFormatter(
+  formatters: Collection<Formatter | FormatterFunction>,
   name: string
-): Formatter {
+): F {
+  const definition = formatters[name];
   if (isFunction(definition)) {
     return {
-      pull: definition as FormatterFunction,
-      push: throwError(`Formatter "${name}" does not have push function`)
+      pull: definition,
+      push: toThrow(`Formatter "${name}" does not have push function`)
     };
   } else if (isObject(definition)) {
     return {
       pull:
-        (definition as Formatter).pull ||
-        throwError(`Formatter "${name}" does not have pull function`),
+        definition.pull ||
+        toThrow(`Formatter "${name}" does not have pull function`),
       push:
-        (definition as Formatter).push ||
-        throwError(`Formatter "${name}" does not have push function`)
+        definition.push ||
+        toThrow(`Formatter "${name}" does not have push function`)
     };
   } else {
     throw new Error(`Unable to resolve formatter "${name}"`);
@@ -67,9 +51,9 @@ function mapFormatter(
 /**
  * Build a getter function by object and path
  */
-
-function buildGetter(obj: any, path: string): Getter {
+function buildGetter(obj: any, path: string) {
   const tokens: string[] = parsePath(path);
+
   return function get(): any {
     let o: any = obj;
 
@@ -88,9 +72,9 @@ function buildGetter(obj: any, path: string): Getter {
 /**
  * Build a setter function by object and path
  */
-
-function buildSetter(obj: any, path: string): Setter {
+function buildSetter(obj: any, path: string) {
   const tokens: string[] = parsePath(path);
+
   return function set(value: any): void {
     let o: any = obj;
     let i: number;
@@ -110,8 +94,7 @@ function buildSetter(obj: any, path: string): Setter {
 /**
  * Map a value into a getter function
  */
-
-function buildValueGetter(context: Context, value: Value): Getter {
+function buildValueGetter(context: Context, value: Value) {
   if (value.type === "path") {
     return buildGetter(context, value.value);
   } else {
@@ -124,185 +107,155 @@ function buildValueGetter(context: Context, value: Value): Getter {
 /**
  * Map a value into a setter function
  */
-
-function buildValueSetter(context: Context, value: Value): Setter {
+function buildValueSetter(context: Context, value: Value) {
   if (value.type === "path") {
     return buildSetter(context, value.value);
   } else {
-    return function set(): void {
-      throw new Error("You cannot update a primitive value");
-    };
+    return toThrow("You cannot update a primitive value");
   }
 }
 
 /**
  * Get all used paths by the expression
  */
-
-function getPaths(info: AttributeValueInfo): string[] {
+function getPaths({ formatters, value, watch }: AttributeValueInfo): string[] {
   const paths: string[] = [];
-
-  if (info.value.type === "path") {
-    paths.push(info.value.value);
+  if (value.type === "path") {
+    paths.push(value.value);
   }
-
-  for (const path of info.watch) {
+  for (const path of watch) {
     paths.push(path);
   }
-
-  for (const fi of info.formatters) {
+  for (const fi of formatters) {
     for (const fa of fi.arguments) {
       if (fa.type === "path") {
         paths.push(fa.value);
       }
     }
   }
-
   return paths;
 }
 
 /**
  * Bind formatter arguments to its functions
  */
-
 function bindFormatterArguments(
   context: Context,
-  formatter: Formatter,
+  { pull, push }: F,
   values: Value[]
-): Formatter {
-  const getters: Getter[] = values.map(
-    (value: Value): Getter => buildValueGetter(context, value)
-  );
+): F {
+  const getters = values.map(value => buildValueGetter(context, value));
 
-  function getArguments(value: any): any[] {
-    const args: any[] = getters.map((getter: Getter): any => getter());
-    args.unshift(value);
+  function args(first: any): any[] {
+    const args = getters.map(getter => getter());
+    args.unshift(first);
     return args;
   }
 
   return {
     pull(value: any): any {
-      return formatter.pull.apply(this, getArguments(value));
+      return pull.apply(this, args(value));
     },
     push(value: any): any {
-      return formatter.push.apply(this, getArguments(value));
+      return push.apply(this, args(value));
     }
   };
 }
 
 /**
- * Compose functions
+ * Compose formatters array into a single formatter
  */
-
-function compose(formats: Format[]): Format {
-  return formats.reduce((previous: Format, next: Format): Format => {
+function composeFormatters(formatters: F[]): F {
+  function reducer(acc: FormatterFunction, current: FormatterFunction) {
     return function map(value: any): any {
-      return next.call(this, previous.call(this, value));
+      return current.call(this, acc.call(this, value));
     };
-  }, passthrough);
+  }
+  return {
+    pull: formatters
+      .map(formatter => formatter.pull)
+      .reduce(reducer, passthrough),
+    push: formatters
+      .map(formatter => formatter.push)
+      .reduceRight(reducer, passthrough)
+  };
 }
 
 /**
- * Pipe functions
+ * Parse single expression into an Observer
  */
-
-function pipe(formats: Format[]): Format {
-  return formats.reduceRight((previous: Format, next: Format): Format => {
-    return function map(value: any): any {
-      return next.call(this, previous.call(this, value));
-    };
-  }, passthrough);
-}
-
-/**
- * Expression parser type
- */
-
-export type ExpressionParser = (
+function parseExpression(
+  attributeParser: AttributeParser,
+  context: Context,
+  formatters: Collection<Formatter | FormatterFunction>,
   expression: string,
   callback?: (value: any) => void
-) => Observer;
+): Observer {
+  // Parse the expression into useful info
+  const info = attributeParser.parseValue(expression);
+
+  // Compose all formatters and bind arguments
+  const { pull, push } = composeFormatters(
+    info.formatters.map(entry =>
+      bindFormatterArguments(
+        context,
+        getFormatter(formatters, entry.name),
+        entry.arguments
+      )
+    )
+  );
+
+  // Target value getter
+  const getSourceValue = buildValueGetter(context, info.value);
+
+  // Compose getter and formatters
+  function get(): any {
+    return pull.call(context, getSourceValue());
+  }
+
+  // Target value setter
+  const setTargetValue = buildValueSetter(context, info.value);
+
+  // Compose setter and formatters
+  function set(value: any): void {
+    setTargetValue(push.call(context, value));
+  }
+
+  // Get paths to watch
+  const paths = isFunction(callback) ? getPaths(info) : [];
+
+  // Change callback function
+  function notify(): void {
+    (callback as any).call(context, get());
+  }
+
+  // Observe paths (start change reactivity)
+  for (const path of paths) {
+    context.$observe(path, notify);
+  }
+
+  // Stop change reactivity function
+  function unobserve(): void {
+    for (const path of paths) {
+      context.$unobserve(path, notify);
+    }
+  }
+
+  // Return observer instance
+  return {
+    get,
+    set,
+    unobserve
+  };
+}
 
 /**
- * Parse template expression into observer
+ * Build the expression parse
  */
-
 export function buildExpressionParser(
   attributeParser: AttributeParser,
   context: Context,
   formatters: Collection<Formatter | FormatterFunction>
-): ExpressionParser {
-  // map the formatter collection
-  const getFormatter: Mapper<string, Formatter> = mapCollection(
-    formatters,
-    mapFormatter
-  );
-
-  // return the parse function
-  return function parseExpression(
-    expression: string,
-    callback?: (value: any) => void
-  ): Observer {
-    // parse expression string
-    const info: AttributeValueInfo = attributeParser.parseValue(expression);
-
-    // bind formatter arguments
-    const formatters: Formatter[] = info.formatters.map(
-      (fi: FormatterInfo): Formatter =>
-        bindFormatterArguments(context, getFormatter(fi.name), fi.arguments)
-    );
-
-    // map formatters and compose the "pull value" function
-    const pull: Format = compose(
-      formatters.map((formatter: Formatter): Format => formatter.pull)
-    );
-
-    // getter for the source value from the store
-    const getSourceValue: Getter = buildValueGetter(context, info.value);
-
-    // get current value
-    function get(): any {
-      return pull.call(context, getSourceValue());
-    }
-
-    // map formatters and compose the "push value" function
-    const push: Format = pipe(
-      formatters.map((formatter: Formatter): Format => formatter.push)
-    );
-
-    // update store value
-    const setTargetValue: Setter = buildValueSetter(context, info.value);
-
-    // set current value
-    function set(value: any): void {
-      setTargetValue(push.call(context, value));
-    }
-
-    // paths used by the expression
-    const paths: string[] = isFunction(callback) ? getPaths(info) : [];
-
-    // notification callback to call
-    function notify(): void {
-      callback(get());
-    }
-
-    // start the reactivity
-    for (const path of paths) {
-      context.$observe(path, notify);
-    }
-
-    // stop the reactivity
-    function unobserve(): void {
-      for (const path of paths) {
-        context.$unobserve(path, notify);
-      }
-    }
-
-    // return the observer instance
-    return {
-      get,
-      set,
-      unobserve
-    };
-  };
+): (expression: string, callback?: (value: any) => void) => Observer {
+  return parseExpression.bind(attributeParser, context, formatters);
 }

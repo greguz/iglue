@@ -102,7 +102,7 @@ export function isArray(value: any): value is any[] {
 /**
  * Returns true if the argument is an object
  */
-export function isObject(value: any): boolean {
+export function isObject(value: any): value is Object {
   return typeof value === "object" && value !== null;
 }
 
@@ -173,7 +173,7 @@ export function passthrough<T>(value: T): T {
 /**
  * Return a function that throw an error if called
  */
-export function throwError(message: string): (...args: any[]) => any {
+export function toThrow(message: string): (...args: any[]) => any {
   return function ko(): void {
     throw new Error(message);
   };

@@ -13,31 +13,37 @@ import { AttributeParser } from "../interfaces/AttributeParser";
 function getRegExpGroup(
   str: string,
   regex: RegExp,
+  group: number
+): string | undefined;
+function getRegExpGroup(
+  str: string,
+  regex: RegExp,
   group: number,
-  err?: string
-): string | null {
-  const match: RegExpMatchArray = str.match(regex);
-
+  err: string
+): string;
+function getRegExpGroup(
+  str: string,
+  regex: RegExp,
+  group: number,
+  err?: string | undefined
+): string | undefined {
+  const match = str.match(regex);
   if (match) {
     if (typeof match[group] === "string") {
       return match[group];
     }
   }
-
   if (err) {
     throw new Error(err);
-  } else {
-    return null;
   }
 }
 
-function parseArgument(attrName: string): string | null {
+function parseArgument(attrName: string): string | undefined {
   return getRegExpGroup(attrName, /:([^\.]+)/, 1);
 }
 
 function parseModifiers(attrName: string): string[] {
-  const match: RegExpMatchArray = attrName.match(/\.([^\.]+)/g);
-
+  const match = attrName.match(/\.([^\.]+)/g);
   if (match) {
     return match.map((str: string): string => str.substr(1));
   } else {
@@ -89,14 +95,11 @@ function parseFormatterName(chunk: string): string {
 }
 
 function parseFormatterArguments(chunk: string): Value[] {
-  return chunk
-    .match(/(\S+)/g)
-    .slice(1)
-    .map(parseValue);
+  return (chunk.match(/(\S+)/g) || []).slice(1).map(parseValue);
 }
 
 function parseFormatters(attrValue: string): FormatterInfo[] {
-  const definition: string = getRegExpGroup(attrValue, /\|([^<]+)/, 1);
+  const definition = getRegExpGroup(attrValue, /\|([^<]+)/, 1);
   if (!definition) {
     return [];
   }
@@ -111,26 +114,20 @@ function parseFormatters(attrValue: string): FormatterInfo[] {
 }
 
 function parseWatchedPaths(attrValue: string): string[] {
-  const definition: string = getRegExpGroup(attrValue, /<(.+)/, 1);
-  if (definition) {
-    return definition.match(/\S+/g);
-  } else {
-    return [];
-  }
+  const definition = getRegExpGroup(attrValue, /<(.+)/, 1);
+  return definition ? definition.match(/\S+/g) || [] : [];
 }
 
 export function buildAttributeParser(prefix: string): AttributeParser {
   const regex = new RegExp("^" + prefix + "([^:.]+)");
 
-  function parseDirective(attrName: string, err?: string): string {
-    return getRegExpGroup(attrName, regex, 1, err);
-  }
-
   function parseAttributeName(attrName: string): AttributeNameInfo {
     return {
       prefix,
-      directive: parseDirective(
+      directive: getRegExpGroup(
         attrName,
+        regex,
+        1,
         `The attribute name "${attrName}" does not match with prefix "${prefix}"`
       ),
       argument: parseArgument(attrName),
@@ -147,31 +144,27 @@ export function buildAttributeParser(prefix: string): AttributeParser {
   }
 
   function parse(el: HTMLElement, attrName: string): AttributeInfo {
-    const attrValue: string = el.getAttribute(attrName);
-
+    const attrValue = el.getAttribute(attrName);
+    if (!attrValue) {
+      throw new Error();
+    }
     return {
       attrName,
+      ...parseAttributeName(attrName),
       attrValue,
-      prefix,
-      directive: parseDirective(
-        attrName,
-        `The attribute name "${attrName}" does not match with prefix "${prefix}"`
-      ),
-      argument: parseArgument(attrName),
-      modifiers: parseModifiers(attrName),
-      value: parseRootValue(attrValue),
-      formatters: parseFormatters(attrValue),
-      watch: parseWatchedPaths(attrValue)
+      ...parseAttributeValue(attrValue)
     };
   }
 
-  function getAttributeByDirective(el: HTMLElement, directive: string): string {
+  function getAttributeByDirective(
+    el: HTMLElement,
+    directive: string
+  ): string | undefined {
     for (let i = 0; i < el.attributes.length; i++) {
-      if (directive === parseDirective(el.attributes[i].name)) {
+      if (directive === getRegExpGroup(el.attributes[i].name, regex, 1)) {
         return el.attributes[i].name;
       }
     }
-    return null;
   }
 
   function match(attrName: string): boolean {

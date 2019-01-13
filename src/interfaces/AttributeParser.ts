@@ -31,5 +31,8 @@ export interface AttributeParser {
   /**
    * Get attribute by directive name
    */
-  getAttributeByDirective(el: HTMLElement, directive: string): string;
+  getAttributeByDirective(
+    el: HTMLElement,
+    directive: string
+  ): string | undefined;
 }
