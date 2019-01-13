@@ -1,28 +1,50 @@
-import { expect } from "chai";
 import "mocha";
+import { expect } from "chai";
 
-import { isObservedArray, observeArray, unobserveArray } from "./array";
+import { isArrayObserved, observeArray, unobserveArray } from "./array";
 
-function noop(): void {}
+describe("Array observing", () => {
+  function noop() {}
 
-describe("Array observing", function() {
-  it("should detect observing status", function() {
+  it("should observe array changes", () => {
     const arr: any[] = [];
-    expect(isObservedArray([])).to.be.false;
-    observeArray(arr, noop);
-    expect(isObservedArray(arr)).to.be.true;
+    let calls = 0;
+    observeArray(arr, () => calls++);
+    arr.push();
+    arr.shift();
+    arr.pop();
+    arr.splice(0, 0);
+    arr.sort();
+    arr.unshift();
+    arr.reverse();
+    expect(calls).to.equal(7);
   });
 
-  it("should remove observing listeners", function() {
+  it("should unobserve array changes", () => {
     const arr: any[] = [];
-    expect(isObservedArray(arr)).to.be.false;
-    let count: number = 0;
-    const listener = () => count++;
-    observeArray(arr, listener);
-    arr.push("a", "b", "c", "d");
-    unobserveArray(arr, listener);
-    arr.push("e", "f", "g", "h");
-    expect(count).to.equal(1);
-    expect(isObservedArray(arr)).to.be.false;
+    let calls = 0;
+    const fn = () => calls++;
+    arr.push();
+    arr.push();
+    observeArray(arr, fn);
+    arr.push();
+    arr.push();
+    unobserveArray(arr, fn);
+    arr.push();
+    arr.push();
+    expect(calls).to.be.equal(2);
+  });
+
+  it("should detect correct status", () => {
+    const arr: any[] = [];
+    expect(isArrayObserved(arr)).to.be.false;
+    observeArray(arr, noop);
+    expect(isArrayObserved(arr)).to.be.true;
+    observeArray(arr, noop);
+    expect(isArrayObserved(arr)).to.be.true;
+    unobserveArray(arr, noop);
+    expect(isArrayObserved(arr)).to.be.true;
+    unobserveArray(arr, noop);
+    expect(isArrayObserved(arr)).to.be.false;
   });
 });

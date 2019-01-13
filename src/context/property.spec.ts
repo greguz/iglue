@@ -1,106 +1,112 @@
-import { expect } from "chai";
 import "mocha";
+import { expect } from "chai";
 
-import { assign } from "../utils";
 import {
-  isObservedObject,
+  isPropertyObserved,
   observeProperty,
   unobserveProperty
 } from "./property";
 
-function noop(): void {}
+describe("Property observing", () => {
+  function noop() {}
 
-describe("Property observing", function() {
-  it("should detect observing status", function() {
-    const obj: any = { value: 42 };
-
-    expect(isObservedObject(obj)).to.be.false;
-    expect(isObservedObject(obj, "value")).to.be.false;
-
-    observeProperty(obj, "value", noop);
-
-    expect(isObservedObject(obj)).to.be.true;
-    expect(isObservedObject(obj, "value")).to.be.true;
-    expect(isObservedObject(obj, "other")).to.be.false;
+  it("should work", done => {
+    const obj: any = {};
+    observeProperty(obj, "value", value => {
+      expect(value).to.be.equal(42);
+      done();
+    });
+    obj.value = 42;
   });
 
-  it("should fail to override listeners container", function() {
-    const obj: any = { value: 42 };
-    observeProperty(obj, "value", noop);
-
-    function overrideOL(): void {
-      obj._op_ = [];
-    }
-    expect(overrideOL).to.throw();
-  });
-
-  it("should not clone listeners", function() {
-    const obj: any = { value: 42 };
-    observeProperty(obj, "value", noop);
-
-    const bro: any = assign({}, obj);
-
-    expect(isObservedObject(obj)).to.be.true;
-    expect(isObservedObject(bro)).to.be.false;
-    expect(bro._ol_).to.be.undefined;
-  });
-
-  it("should detect value changes", function() {
-    const obj: any = { value: 42 };
-
-    let expected: any;
-    let count: number = 0;
-    function callback() {
-      count++;
-      expect(obj.value).to.be.equal(expected);
-    }
-
-    observeProperty(obj, "value", callback);
-
-    expected = 4;
-    obj.value = 4;
-    obj.value = 4;
-
-    expected = 2;
-    obj.value = 2;
-    obj.value = 2;
-
-    expect(count).to.be.equal(2);
-  });
-
-  it("should stop value observing", function() {
-    const obj: any = { value: 42 };
-
-    let count: number = 0;
-    function callback() {
-      count++;
-    }
-
-    expect(isObservedObject(obj)).to.be.false;
-    expect(isObservedObject(obj, "value")).to.be.false;
-
-    observeProperty(obj, "value", callback);
-
-    expect(isObservedObject(obj)).to.be.true;
-    expect(isObservedObject(obj, "value")).to.be.true;
-
+  it("should fire correct times", () => {
+    const obj: any = { value: 1 };
+    let calls = 0;
+    observeProperty(obj, "value", () => calls++);
     obj.value = 1;
-
-    expect(unobserveProperty(obj, "value", () => null)).to.be.false;
-
-    expect(unobserveProperty(obj, "value", callback)).to.be.true;
-
-    unobserveProperty(obj, "value", callback);
-
+    obj.value = 1;
+    obj.value = 1;
     obj.value = 2;
+    obj.value = 2;
+    obj.value = 2;
+    obj.value = 42;
+    obj.value = 42;
+    obj.value = 42;
+    expect(calls).to.be.equal(2);
+  });
+
+  it("should not enumerate tickes var", () => {
+    const obj: any = { a: 1, b: 2, c: 3 };
+    observeProperty(obj, "value", noop);
+    for (const key in obj) {
+      expect(key).to.not.equal("_op_");
+    }
+  });
+
+  it("should prevet tickets var changes", () => {
+    const obj: any = {};
+    observeProperty(obj, "value", noop);
+    expect(() => (obj._op_ = "o_O")).to.throw(/assign/);
+  });
+
+  it("should stop property observe", () => {
+    const obj: any = {};
+    let calls = 0;
+    const fn = () => calls++;
+    observeProperty(obj, "value", fn);
+    obj.value = 1;
+    obj.value = 2;
+    unobserveProperty(obj, "value", fn);
     obj.value = 3;
     obj.value = 4;
-    obj.value = 5;
-    obj.value = 6;
+    expect(calls).to.be.equal(2);
+  });
 
-    expect(count).to.be.equal(1);
+  it("should work with getters and setters", () => {
+    const obj: any = {};
+    let value: any;
+    Object.defineProperty(obj, "value", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return value;
+      },
+      set(x: number) {
+        value = x / 2;
+      }
+    });
+    observeProperty(obj, "value", x => {
+      expect(x).to.be.equal(value);
+      expect(x).to.be.equal(1);
+    });
+    obj.value = 2;
+  });
 
-    expect(isObservedObject(obj)).to.be.true;
-    expect(isObservedObject(obj, "value")).to.be.false;
+  it("should detect correct status", () => {
+    const obj: any = {};
+    expect(isPropertyObserved(obj, "value")).to.be.false;
+    observeProperty(obj, "value", noop);
+    expect(isPropertyObserved(obj, "value")).to.be.true;
+    observeProperty(obj, "value", noop);
+    expect(isPropertyObserved(obj, "value")).to.be.true;
+    unobserveProperty(obj, "value", noop);
+    expect(isPropertyObserved(obj, "value")).to.be.true;
+    unobserveProperty(obj, "value", noop);
+    expect(isPropertyObserved(obj, "value")).to.be.false;
+  });
+
+  it("should throw with non-objects", () => {
+    expect(() => observeProperty(undefined, "value", noop)).to.throw;
+    expect(() => observeProperty(null, "value", noop)).to.throw;
+    expect(() => observeProperty(1, "value", noop)).to.throw;
+    expect(() => observeProperty("", "value", noop)).to.throw;
+    expect(() => observeProperty(true, "value", noop)).to.throw;
+  });
+
+  it("should return true when the notifier is removed", () => {
+    const obj: any = {};
+    observeProperty(obj, "value", noop);
+    expect(unobserveProperty(obj, "value", noop.bind(null))).to.be.false;
+    expect(unobserveProperty(obj, "value", noop)).to.be.true;
   });
 });
