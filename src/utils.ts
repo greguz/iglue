@@ -1,7 +1,6 @@
 /**
  * Generic collection object
  */
-
 export interface Collection<T = any> {
   [key: string]: T | undefined;
 }
@@ -9,13 +8,11 @@ export interface Collection<T = any> {
 /**
  * Generic map function
  */
-
 export type Mapper<A, B> = (arg: A) => B;
 
 /**
  * Like Array.prototype.findIndex
  */
-
 export function findIndex<T>(
   obj: T[],
   predicate: (value: T, index: number, obj: T[]) => boolean
@@ -31,7 +28,6 @@ export function findIndex<T>(
 /**
  * Like Array.prototype.find
  */
-
 export function find<T>(
   obj: T[],
   predicate: (value: T, index: number, obj: T[]) => boolean
@@ -46,7 +42,6 @@ export function find<T>(
 /**
  * Like Object.assign but wihout symbols
  */
-
 export function assign<T>(target: T): T;
 export function assign<T, S>(target: T, source: S): T & S;
 export function assign<T, S0, S1>(target: T, s0: S0, s1: S1): T & S0 & S1;
@@ -88,7 +83,6 @@ export function assign(target: any, ...sources: any[]): any {
 /**
  * Map a collection object
  */
-
 export function mapCollection<A, B>(
   collection: Collection<A>,
   mapper: (entry: A | undefined, prop: string) => B
@@ -101,15 +95,13 @@ export function mapCollection<A, B>(
 /**
  * Returns true if the argument is an array
  */
-
-export function isArray(value: any): boolean {
+export function isArray(value: any): value is any[] {
   return value instanceof Array;
 }
 
 /**
  * Returns true if the argument is an object
  */
-
 export function isObject(value: any): boolean {
   return typeof value === "object" && value !== null;
 }
@@ -117,15 +109,13 @@ export function isObject(value: any): boolean {
 /**
  * Returns true if the argument is a function
  */
-
-export function isFunction(value: any): boolean {
+export function isFunction(value: any): value is Function {
   return typeof value === "function";
 }
 
 /**
  * Like Array.prototype.includes
  */
-
 export function includes<T>(arr: T[], target: T): boolean {
   for (const entry of arr) {
     if (entry === target) {
@@ -138,7 +128,6 @@ export function includes<T>(arr: T[], target: T): boolean {
 /**
  * Remove the targeted element, returns true if the element is removed
  */
-
 export function remove<T>(arr: T[], target: T): boolean {
   const index: number = findIndex(arr, (entry: T): boolean => entry === target);
   if (index >= 0) {
@@ -150,7 +139,6 @@ export function remove<T>(arr: T[], target: T): boolean {
 /**
  * Parse object path into tokens array
  */
-
 export function parsePath(path: string): string[] {
   // TODO you can do better than this...
   const tokens: string[] = [];
@@ -178,7 +166,6 @@ export function parsePath(path: string): string[] {
 /**
  * Simple passthrough function
  */
-
 export function passthrough<T>(value: T): T {
   return value;
 }
@@ -186,7 +173,6 @@ export function passthrough<T>(value: T): T {
 /**
  * Return a function that throw an error if called
  */
-
 export function throwError(message: string): (...args: any[]) => any {
   return function ko(): void {
     throw new Error(message);
@@ -196,7 +182,6 @@ export function throwError(message: string): (...args: any[]) => any {
 /**
  * Empty function
  */
-
 export function noop(): void {
   // nothing to do
 }
