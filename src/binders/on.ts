@@ -2,8 +2,8 @@ import { Binder } from "../interfaces/Binder";
 import { Binding } from "../interfaces/Binding";
 
 interface BinderContext {
-  listener: (event: Event) => void;
-  handler: (...args: any[]) => void;
+  listener: ((event: Event) => void) | undefined;
+  handler: ((...args: any[]) => void) | undefined;
 }
 
 const binder: Binder<BinderContext> = {
@@ -22,7 +22,7 @@ const binder: Binder<BinderContext> = {
         );
       }
     };
-    el.addEventListener(binding.argument, this.listener, false);
+    el.addEventListener(binding.argument as string, this.listener, false);
   },
 
   routine(el: HTMLElement, handler: any): void {
@@ -30,7 +30,11 @@ const binder: Binder<BinderContext> = {
   },
 
   unbind(el: HTMLElement, binding: Binding): void {
-    el.removeEventListener(binding.argument, this.listener, false);
+    el.removeEventListener(
+      binding.argument as string,
+      this.listener as any,
+      false
+    );
     this.listener = undefined;
     this.handler = undefined;
   }
