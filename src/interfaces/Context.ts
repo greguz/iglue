@@ -6,19 +6,16 @@ export interface Context {
   /**
    * Source object for this context
    */
-
-  $source: Partial<Context>;
+  $source: any;
 
   /**
    * Context own properties
    */
-
   $own: string[];
 
   /**
    * Observe a specified path
    */
-
   $observe(
     path: string,
     callback: (newValue: any, oldValue: any) => void
@@ -27,7 +24,6 @@ export interface Context {
   /**
    * Stop path observing
    */
-
   $unobserve(
     path: string,
     callback: (newValue: any, oldValue: any) => void
@@ -36,6 +32,5 @@ export interface Context {
   /**
    * Any other property
    */
-
   [property: string]: any;
 }

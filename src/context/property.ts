@@ -1,14 +1,14 @@
 import { Collection, isObject, remove } from "../utils";
 
 /**
- * Notifier function to call on value change
+ * Property value change callback
  */
 export type PropertyNotifier = (value: any) => void;
 
 /**
- * Single observed property information
+ * Represents a single observed property
  */
-interface PropertyTicket {
+interface Ticket {
   /**
    * Original property descriptor
    */
@@ -22,9 +22,9 @@ interface PropertyTicket {
 /**
  * Read tickets storage
  */
-function getStore(obj: any, property = "_op_"): Collection<PropertyTicket> {
+function read(obj: any, property = "_op_"): Collection<Ticket> {
   if (!isObject(obj)) {
-    throw new Error("Argument is not a object");
+    throw new Error("Argument is not an object");
   }
   if (!obj.hasOwnProperty(property)) {
     Object.defineProperty(obj, property, { value: {} });
@@ -33,7 +33,7 @@ function getStore(obj: any, property = "_op_"): Collection<PropertyTicket> {
 }
 
 /**
- * Get the property descriptor (deep version)
+ * Get the property descriptor (deep/proto version)
  */
 function getPropertyDescriptor(obj: any, property: string): PropertyDescriptor {
   let descriptor: PropertyDescriptor | undefined;
@@ -56,7 +56,7 @@ function getPropertyDescriptor(obj: any, property: string): PropertyDescriptor {
 }
 
 /**
- * TODO: docs
+ * Wrap the descriptor value into a function
  */
 function getStaticGetter(descriptor: PropertyDescriptor) {
   return function staticGetter() {
@@ -65,7 +65,7 @@ function getStaticGetter(descriptor: PropertyDescriptor) {
 }
 
 /**
- * TODO: docs
+ * Update the descriptor value and fire the notifiers
  */
 function getStaticSetter(
   descriptor: PropertyDescriptor,
@@ -83,7 +83,7 @@ function getStaticSetter(
 }
 
 /**
- * TODO: docs
+ * Fire the custom setter, read from getter the updated value and trigger notifiers
  */
 function getDynamicSetter(
   get: () => any,
@@ -102,7 +102,7 @@ function getDynamicSetter(
 }
 
 /**
- * Start property observing
+ * Observe object property
  */
 export function observeProperty(
   obj: any,
@@ -110,10 +110,10 @@ export function observeProperty(
   notifier: PropertyNotifier
 ): void {
   // Read storage property
-  const store = getStore(obj);
+  const tickets = read(obj);
 
   // Read current property ticket
-  const ticket = store[property];
+  const ticket = tickets[property];
 
   if (ticket) {
     // Ticket in place, push new notifier
@@ -142,7 +142,7 @@ export function observeProperty(
     });
 
     // Save ticket
-    store[property] = {
+    tickets[property] = {
       descriptor,
       notifiers
     };
@@ -150,7 +150,7 @@ export function observeProperty(
 }
 
 /**
- * Stop property observing, returns true is the notifier is removed
+ * Unobserve object property, returns true if the notifier is removed
  */
 export function unobserveProperty(
   obj: any,
@@ -158,10 +158,10 @@ export function unobserveProperty(
   notifier: PropertyNotifier
 ): boolean {
   // Read tickets storage
-  const store = getStore(obj);
+  const tickets = read(obj);
 
   // Read property ticket
-  const info = store[property];
+  const info = tickets[property];
   if (info) {
     const { descriptor, notifiers } = info;
 
@@ -174,7 +174,7 @@ export function unobserveProperty(
       Object.defineProperty(obj, property, descriptor);
 
       // Remove property ticket
-      store[property] = undefined;
+      tickets[property] = undefined;
     }
 
     // Return the removed status
@@ -186,8 +186,8 @@ export function unobserveProperty(
 }
 
 /**
- * Returns true the object is observed, optionally the property may be specified
+ * Returns true if the property is observed
  */
 export function isPropertyObserved(obj: any, property: string): boolean {
-  return !!getStore(obj)[property];
+  return !!read(obj)[property];
 }

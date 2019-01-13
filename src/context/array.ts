@@ -1,7 +1,7 @@
 import { isArray, remove } from "../utils";
 
 /**
- * Notifier function to call on array change
+ * Array change callback
  */
 export type ArrayNotifier = () => void;
 
@@ -50,7 +50,7 @@ function wrap(fn: (...args: any[]) => any, notifiers: ArrayNotifier[]) {
 }
 
 /**
- * Observe array changes
+ * Observe array
  */
 export function observeArray(arr: any, notifier: ArrayNotifier): void {
   // Read current notifiers
@@ -71,7 +71,7 @@ export function observeArray(arr: any, notifier: ArrayNotifier): void {
 }
 
 /**
- * Remove the observe notifier, returns true when the notifier is removed
+ * Unobserve array, returns true if the notifier is removed
  */
 export function unobserveArray(arr: any, notifier: ArrayNotifier): boolean {
   // Read current notifiers
@@ -95,7 +95,7 @@ export function unobserveArray(arr: any, notifier: ArrayNotifier): boolean {
 }
 
 /**
- * Returns true when the argument is an observed array
+ * Returns true if the array is observed
  */
 export function isArrayObserved(arr: any): boolean {
   return read(arr).length > 0;
