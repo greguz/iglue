@@ -28,7 +28,7 @@ function read(arr: any, property: string = "_oa_"): ArrayNotifier[] {
   if (!arr.hasOwnProperty(property)) {
     Object.defineProperty(arr, property, { value: [] });
   }
-  return arr[property];
+  return (arr as any)[property];
 }
 
 /**
