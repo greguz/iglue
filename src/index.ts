@@ -89,12 +89,15 @@ export const formatters: Collection<Formatter | FormatterFunction> = {
 
 export function bind(
   el: HTMLElement,
-  data: object,
-  options?: ViewOptions
+  obj: object,
+  { binders, components, formatters, prefix }: ViewOptions = {}
 ): View {
-  options = options || {};
-  options.binders = assign({}, binders, options.binders);
-  options.components = assign({}, components, options.components);
-  options.formatters = assign({}, formatters, options.formatters);
-  return buildView(el, data, options);
+  return buildView(
+    el,
+    obj,
+    prefix || "i-",
+    assign({}, binders, binders),
+    assign({}, components, components),
+    assign({}, formatters, formatters)
+  );
 }
