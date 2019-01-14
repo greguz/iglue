@@ -4,7 +4,6 @@ export interface AttributeInfo extends AttributeNameInfo, AttributeValueInfo {
 }
 
 export interface AttributeNameInfo {
-  prefix?: string;
   directive: string;
   argument?: string;
   modifiers: string[];

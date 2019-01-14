@@ -8,8 +8,6 @@ import {
   Value
 } from "../interfaces/AttributeInfo";
 
-import { AttributeParser } from "../interfaces/AttributeParser";
-
 function getRegExpGroup(
   str: string,
   regex: RegExp,
@@ -118,64 +116,91 @@ function parseWatchedPaths(attrValue: string): string[] {
   return definition ? definition.match(/\S+/g) || [] : [];
 }
 
-export function buildAttributeParser(prefix: string): AttributeParser {
-  const regex = new RegExp("^" + prefix + "([^:.]+)");
-
-  function parseAttributeName(attrName: string): AttributeNameInfo {
-    return {
-      prefix,
-      directive: getRegExpGroup(
-        attrName,
-        regex,
-        1,
-        `The attribute name "${attrName}" does not match with prefix "${prefix}"`
-      ),
-      argument: parseArgument(attrName),
-      modifiers: parseModifiers(attrName)
-    };
+/**
+ * TODO: docs
+ */
+export function getPrefixRegExp(prefix: string | RegExp) {
+  if (typeof prefix === "string") {
+    return new RegExp("^" + prefix + "([^:.]+)");
+  } else {
+    return prefix;
   }
+}
 
-  function parseAttributeValue(attrValue: string): AttributeValueInfo {
-    return {
-      value: parseRootValue(attrValue),
-      formatters: parseFormatters(attrValue),
-      watch: parseWatchedPaths(attrValue)
-    };
-  }
-
-  function parse(el: HTMLElement, attrName: string): AttributeInfo {
-    const attrValue = el.getAttribute(attrName);
-    if (!attrValue) {
-      throw new Error();
-    }
-    return {
-      attrName,
-      ...parseAttributeName(attrName),
-      attrValue,
-      ...parseAttributeValue(attrValue)
-    };
-  }
-
-  function getAttributeByDirective(
-    el: HTMLElement,
-    directive: string
-  ): string | undefined {
-    for (let i = 0; i < el.attributes.length; i++) {
-      if (directive === getRegExpGroup(el.attributes[i].name, regex, 1)) {
-        return el.attributes[i].name;
-      }
-    }
-  }
-
-  function match(attrName: string): boolean {
-    return regex.test(attrName);
-  }
-
+/**
+ * TODO: docs
+ */
+export function parseAttributeName(
+  prefix: string | RegExp,
+  attrName: string
+): AttributeNameInfo {
   return {
-    match,
-    parseName: parseAttributeName,
-    parseValue: parseAttributeValue,
-    parse,
-    getAttributeByDirective
+    directive: getRegExpGroup(
+      attrName,
+      getPrefixRegExp(prefix),
+      1,
+      `The attribute name "${attrName}" does not match with prefix "${prefix}"`
+    ),
+    argument: parseArgument(attrName),
+    modifiers: parseModifiers(attrName)
   };
+}
+
+/**
+ * TODO: docs
+ */
+export function parseAttributeValue(attrValue: string): AttributeValueInfo {
+  return {
+    value: parseRootValue(attrValue),
+    formatters: parseFormatters(attrValue),
+    watch: parseWatchedPaths(attrValue)
+  };
+}
+
+/**
+ * TODO: docs
+ */
+export function parseAttribute(
+  prefix: string | RegExp,
+  el: HTMLElement,
+  attrName: string
+): AttributeInfo {
+  const attrValue = el.getAttribute(attrName);
+  if (!attrValue) {
+    throw new Error();
+  }
+  return {
+    attrName,
+    ...parseAttributeName(prefix, attrName),
+    attrValue,
+    ...parseAttributeValue(attrValue)
+  };
+}
+
+/**
+ * TODO: docs
+ */
+export function getAttributeByDirective(
+  prefix: string | RegExp,
+  el: HTMLElement,
+  directive: string
+): string | undefined {
+  for (let i = 0; i < el.attributes.length; i++) {
+    if (
+      directive ===
+      getRegExpGroup(el.attributes[i].name, getPrefixRegExp(prefix), 1)
+    ) {
+      return el.attributes[i].name;
+    }
+  }
+}
+
+/**
+ * TODO: docs
+ */
+export function matchPrefix(
+  prefix: string | RegExp,
+  attrName: string
+): boolean {
+  return getPrefixRegExp(prefix).test(attrName);
 }
