@@ -1,5 +1,4 @@
 import { AttributeValueInfo, Value } from "../interfaces/AttributeInfo";
-import { AttributeParser } from "../interfaces/AttributeParser";
 import { Context } from "../interfaces/Context";
 import { Formatter, FormatterFunction } from "../interfaces/Formatter";
 import { Observer } from "../interfaces/Observer";
@@ -184,19 +183,15 @@ function composeFormatters(formatters: F[]): F {
 /**
  * Parse single expression into an Observer
  */
-function parseExpression(
-  attributeParser: AttributeParser,
+export function parseExpression(
   context: Context,
   formatters: Collection<Formatter | FormatterFunction>,
-  expression: string,
+  expression: AttributeValueInfo,
   callback?: (value: any) => void
 ): Observer {
-  // Parse the expression into useful info
-  const info = attributeParser.parseValue(expression);
-
   // Compose all formatters and bind arguments
   const { pull, push } = composeFormatters(
-    info.formatters.map(entry =>
+    expression.formatters.map(entry =>
       bindFormatterArguments(
         context,
         getFormatter(formatters, entry.name),
@@ -206,7 +201,7 @@ function parseExpression(
   );
 
   // Target value getter
-  const getSourceValue = buildValueGetter(context, info.value);
+  const getSourceValue = buildValueGetter(context, expression.value);
 
   // Compose getter and formatters
   function get(): any {
@@ -214,7 +209,7 @@ function parseExpression(
   }
 
   // Target value setter
-  const setTargetValue = buildValueSetter(context, info.value);
+  const setTargetValue = buildValueSetter(context, expression.value);
 
   // Compose setter and formatters
   function set(value: any): void {
@@ -222,7 +217,7 @@ function parseExpression(
   }
 
   // Get paths to watch
-  const paths = isFunction(callback) ? getPaths(info) : [];
+  const paths = isFunction(callback) ? getPaths(expression) : [];
 
   // Change callback function
   function notify(): void {
@@ -247,15 +242,4 @@ function parseExpression(
     set,
     unobserve
   };
-}
-
-/**
- * Build the expression parse
- */
-export function buildExpressionParser(
-  attributeParser: AttributeParser,
-  context: Context,
-  formatters: Collection<Formatter | FormatterFunction>
-): (expression: string, callback?: (value: any) => void) => Observer {
-  return parseExpression.bind(attributeParser, context, formatters);
 }
