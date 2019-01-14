@@ -185,3 +185,17 @@ export function toThrow(message: string): (...args: any[]) => any {
 export function noop(): void {
   // nothing to do
 }
+
+/**
+ * Get and ensure the parent node
+ */
+export function getParent(el: HTMLElement): HTMLElement {
+  const parent = el.parentElement;
+  if (parent) {
+    return parent;
+  } else {
+    throw new Error(
+      "This element has not parent, this is probably due to a bug"
+    );
+  }
+}
