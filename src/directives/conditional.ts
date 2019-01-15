@@ -2,40 +2,34 @@ import { AttributeInfo } from "../interfaces/AttributeInfo";
 import { Directive } from "../interfaces/Directive";
 import { View } from "../interfaces/View";
 
-export interface ConditionalDirectiveOptions {
-  el: HTMLElement;
-  info: AttributeInfo;
-  buildView: (el: HTMLElement) => View;
-}
+import { getParent } from "../utils";
 
 export function buildConditionalDirective(
-  options: ConditionalDirectiveOptions
+  el: HTMLElement,
+  info: AttributeInfo,
+  buildView: (el: HTMLElement) => View
 ): Directive {
-  // shortcut
-  const info: AttributeInfo = options.info;
+  // Parent element
+  const parent = getParent(el);
 
-  // get the parent element
-  const parent: HTMLElement = options.el.parentElement;
+  // Comment node as placeholder
+  const comment = document.createComment(` IF : ${info.attrValue} `);
 
-  // create a placeholder node
-  const comment: Comment = document.createComment(` IF : ${info.attrValue} `);
+  // Current rendered node into DOM
+  let node: Comment | HTMLElement = el;
 
-  // current rendered node into DOM
-  let node: Comment | HTMLElement = options.el;
+  // Current conditional status
+  let status: boolean | undefined;
 
-  // current condition status
-  let status: boolean;
+  // Current rendered view instance
+  let view: View | undefined;
 
-  // current rendered view instance
-  let view: View;
-
-  // remove original binding attribute from DOM
-  options.el.removeAttribute(info.attrName);
+  // Remove original attribute from DOM
+  el.removeAttribute(info.attrName);
 
   /**
    * Swap the current rendered DOM node with another
    */
-
   function swap(update: Comment | HTMLElement): void {
     if (update !== node) {
       parent.replaceChild(update, node);
@@ -46,9 +40,8 @@ export function buildConditionalDirective(
   /**
    * Directive#refresh
    */
-
   function refresh(value: any): void {
-    const condition: boolean = !!value;
+    const condition = !!value;
 
     if (condition !== status) {
       if (view) {
@@ -57,8 +50,8 @@ export function buildConditionalDirective(
       }
 
       if (condition) {
-        swap(options.el);
-        view = options.buildView(options.el);
+        swap(el);
+        view = buildView(el);
       } else {
         swap(comment);
       }
@@ -70,17 +63,16 @@ export function buildConditionalDirective(
   /**
    * Directive#unbind
    */
-
   function unbind(): void {
     if (view) {
       view.unbind();
       view = undefined;
     }
-    options.el.setAttribute(info.attrName, info.attrValue);
-    swap(options.el);
+    el.setAttribute(info.attrName, info.attrValue);
+    swap(el);
   }
 
-  // return the directive instance
+  // Return built directive
   return {
     refresh,
     unbind
