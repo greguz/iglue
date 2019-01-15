@@ -3,10 +3,25 @@ import { Directive } from "../interfaces/Directive";
 import { View } from "../interfaces/View";
 
 import { buildHTML } from "../parse/html";
-import { Mapper } from "../utils";
+import { getParent } from "../utils";
 
-function parseTemplate(component: Component, context: object): HTMLElement {
-  if (component.render) {
+/**
+ * Represent current component state
+ */
+interface State {
+  el: HTMLElement;
+  name: string;
+  view: View;
+  component: Component;
+}
+
+/**
+ * Create the component HTML element
+ */
+function parseTemplate(component: Component, context: any): HTMLElement {
+  if (component.render && component.template) {
+    throw new Error("over specialized component");
+  } else if (component.render) {
     return component.render.call(context);
   } else if (component.template) {
     return buildHTML(component.template);
@@ -15,142 +30,146 @@ function parseTemplate(component: Component, context: object): HTMLElement {
   }
 }
 
-export interface ComponentDirectiveOptions {
-  el: HTMLElement;
-  context: object;
-  getComponent: Mapper<string, Component>;
-  buildView: (el: HTMLElement, obj: object) => View;
+/**
+ * Mount a component and start data binding
+ */
+function mount(
+  name: string,
+  context: any,
+  component: Component,
+  buildView: (obj: any, el: HTMLElement) => View
+): State {
+  if (component.create) {
+    component.create.call(context);
+  }
+
+  const el = parseTemplate(component, context);
+  const view = buildView(context, el);
+
+  Object.defineProperty(context, "$el", {
+    configurable: true,
+    value: el
+  });
+
+  if (component.bind) {
+    component.bind.call(context);
+  }
+
+  return {
+    name,
+    component,
+    view,
+    el
+  };
 }
 
+/**
+ * Unmount and stop current component data binding
+ */
+function unmount(state: State): State {
+  const { component, view } = state;
+  const { context } = view;
+
+  if (component.unbind) {
+    component.unbind.call(context);
+  }
+
+  view.unbind();
+
+  if (component.destroy) {
+    component.destroy.call(context);
+  }
+
+  return state;
+}
+
+/**
+ * Create first state
+ */
+function create(
+  el: HTMLElement,
+  name: string,
+  context: any,
+  component: Component,
+  buildView: (obj: any, el: HTMLElement) => View
+) {
+  const parent = getParent(el);
+  const state = mount(name, context, component, buildView);
+
+  parent.replaceChild(state.el, el);
+  if (state.component.attach) {
+    state.component.attach.call(context);
+  }
+
+  return state;
+}
+
+/**
+ * Swap state to another
+ */
+function swap(
+  state: State,
+  name: string,
+  component: Component,
+  buildView: (obj: any, el: HTMLElement) => View
+) {
+  const parent = getParent(state.el);
+  const context = state.view.context;
+
+  const newState = mount(name, context, component, buildView);
+  const oldState = unmount(state);
+
+  if (oldState.component.detach) {
+    oldState.component.detach.call(context);
+  }
+  parent.replaceChild(newState.el, oldState.el);
+  if (newState.component.attach) {
+    newState.component.attach.call(context);
+  }
+
+  return newState;
+}
+
+/**
+ * Destroy current state
+ */
+function destroy(state: State, el: HTMLElement) {
+  const parent = getParent(state.el);
+  const context = state.view.context;
+
+  const oldState = unmount(state);
+
+  if (oldState.component.detach) {
+    oldState.component.detach.call(context);
+  }
+  parent.replaceChild(el, oldState.el);
+}
+
+/**
+ * Build component directive
+ */
 export function buildComponentDirective(
-  options: ComponentDirectiveOptions
+  el: HTMLElement,
+  context: any,
+  component: (name: string) => Component,
+  buildView: (obj: any, el: HTMLElement) => View
 ): Directive {
-  // get the parent element
-  const parent: HTMLElement = options.el.parentElement;
+  let state: State | undefined;
 
-  // node present inside the DOM
-  let currentElement: HTMLElement = options.el;
-
-  // current component name
-  let currentName: string;
-
-  // bound component view
-  let currentView: View;
-
-  // current component definition object
-  let currentComponent: Component;
-
-  // component context
-  const context: any = options.context;
-
-  /**
-   * Unmount and stop current component data binding
-   */
-
-  function unmount(): void {
-    // DOM and data-binding still ok
-    if (currentComponent.unbind) {
-      currentComponent.unbind.call(context);
-    }
-
-    // unbind the view
-    currentView.unbind();
-
-    // data-binding is dead
-    if (currentComponent.detach) {
-      currentComponent.detach.call(context);
-    }
-
-    // DOM restored and data-binding not running
-    if (currentComponent.destroy) {
-      currentComponent.destroy.call(context);
-    }
-
-    // delete current component
-    currentName = undefined;
-    currentComponent = undefined;
-    currentView = undefined;
-  }
-
-  /**
-   * Mount a component and start data binding
-   */
-
-  function mount(name: string): void {
-    // resolve component name
-    const component: Component = options.getComponent(name);
-
-    // call creation hook
-    if (component.create) {
-      component.create.call(context);
-    }
-
-    // create the component HTML node
-    const componentNode: HTMLElement = parseTemplate(component, context);
-
-    // remove current node from DOM
-    parent.replaceChild(componentNode, currentElement);
-
-    // save the target DOM element into the context
-    Object.defineProperty(context, "$el", {
-      configurable: true,
-      value: currentElement
-    });
-
-    // call DOM attach hook
-    if (component.attach) {
-      component.attach.call(context);
-    }
-
-    // create a new view for this component
-    const view: View = options.buildView(componentNode, context);
-
-    // save the target DOM element into the context
-    Object.defineProperty(context, "$el", {
-      configurable: true,
-      value: view.el
-    });
-
-    // call last life hook
-    if (component.bind) {
-      component.bind.call(context);
-    }
-
-    // update status
-    currentName = name;
-    currentComponent = component;
-    currentElement = componentNode;
-    currentView = view;
-  }
-
-  /**
-   * Directive#refresh
-   */
-
-  function refresh(name: string): void {
-    if (name !== currentName) {
-      if (currentComponent) {
-        unmount();
-      }
-      mount(name);
-    } else {
-      currentView.refresh();
-    }
-  }
-
-  /**
-   * Directive#unbind
-   */
-
-  function unbind(): void {
-    unmount();
-    parent.replaceChild(options.el, currentElement);
-    currentElement = options.el;
-  }
-
-  // return the directive
   return {
-    refresh,
-    unbind
+    refresh() {
+      if (!state) {
+        state = create(el, name, context, component(name), buildView);
+      } else if (state.name !== name) {
+        state = swap(state, name, component(name), buildView);
+      } else {
+        state.view.refresh();
+      }
+    },
+    unbind() {
+      if (state) {
+        destroy(state, el);
+      }
+    }
   };
 }
