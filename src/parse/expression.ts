@@ -3,6 +3,7 @@ import { Context } from "../interfaces/Context";
 import { Formatter, FormatterFunction } from "../interfaces/Formatter";
 
 import {
+  isArray,
   isFunction,
   isObject,
   toThrow,
@@ -32,11 +33,11 @@ function getFormatter(
 /**
  * Build a getter function by object and path
  */
-function buildGetter(obj: any, path: string) {
-  const tokens: string[] = parsePath(path);
+function buildGetter(path: string) {
+  const tokens = parsePath(path);
 
-  return function get(): any {
-    let o: any = obj;
+  return function get(this: any): any {
+    let o: any = this;
 
     for (const token of tokens) {
       if (isObject(o)) {
@@ -53,47 +54,150 @@ function buildGetter(obj: any, path: string) {
 /**
  * Build a setter function by object and path
  */
-function buildSetter(obj: any, path: string) {
-  const tokens: string[] = parsePath(path);
+function buildSetter(path: string) {
+  const tokens = parsePath(path);
 
-  return function set(value: any): void {
-    let o: any = obj;
+  return function set(this: any, value: any): void {
+    let o: any = this;
     let i: number;
 
     for (i = 0; i < tokens.length - 1; i++) {
       const token: string = tokens[i];
-      if (!isObject(o[token])) {
+
+      if (o[token] === undefined) {
+        if (/^\d+$/.test(token)) {
+          o[token] = [];
+        } else {
+          o[token] = {};
+        }
+      } else if (!isObject(o[token])) {
         throw new Error("Unable to set the target object");
       }
       o = o[token];
     }
 
-    o[tokens[i]] = value;
+    const last = tokens[i];
+    if (isArray(o) && /^\d+$/.test(last)) {
+      o.splice(parseInt(last, 10), 1, value);
+    } else {
+      o[last] = value;
+    }
   };
 }
 
 /**
  * Map a value into a getter function
  */
-function buildValueGetter(context: Context, value: Value) {
-  if (value.type === "path") {
-    return buildGetter(context, value.value);
-  } else {
-    return function get(): any {
-      return value.value;
-    };
-  }
+function buildValueGetter(value: Value) {
+  return value.type === "path" ? buildGetter(value.value) : () => value.value;
 }
 
 /**
  * Map a value into a setter function
  */
-function buildValueSetter(context: Context, value: Value) {
-  if (value.type === "path") {
-    return buildSetter(context, value.value);
+function buildValueSetter(value: Value) {
+  return value.type === "path"
+    ? buildSetter(value.value)
+    : toThrow("You cannot update a primitive value");
+}
+
+/**
+ * Bind formatter arguments to its functions
+ */
+function bindFormatterArguments(
+  format: FormatterFunction,
+  values: Value[]
+): FormatterFunction {
+  const getters = values.map(buildValueGetter);
+
+  return function formatValue(this: any, value: any): any {
+    return format.apply(this, [
+      value,
+      ...getters.map(getter => getter.call(this))
+    ]);
+  };
+}
+
+/**
+ * Compose multiple formatter functions into a single function
+ */
+function composeFormatterFunctions(
+  formats: FormatterFunction[]
+): FormatterFunction {
+  if (formats.length <= 0) {
+    // No formatters specified, just return a simple passthrough function
+    return passthrough;
+  } else if (formats.length === 1) {
+    // Simple formatter, return itself
+    return formats[0];
   } else {
-    return toThrow("You cannot update a primitive value");
+    // Reduce all functions into a single function
+    return formats.reduce(
+      (acc: FormatterFunction, current: FormatterFunction) => {
+        return function format(this: any, value: any): any {
+          return current.call(this, acc.call(this, value));
+        };
+      }
+    );
   }
+}
+
+/**
+ * Build a value getter by expression
+ */
+export function getExpressionGetter(
+  formatters: Collection<Formatter | FormatterFunction>,
+  expression: AttributeValueInfo
+) {
+  const formatter: (name: string) => Formatter = getFormatter.bind(
+    null,
+    formatters
+  );
+
+  const pull = composeFormatterFunctions(
+    expression.formatters.map(entry =>
+      bindFormatterArguments(
+        formatter(entry.name).pull ||
+          toThrow(`Formatter "${entry.name}" does not have pull function`),
+        entry.arguments
+      )
+    )
+  );
+
+  const getSourceValue = buildValueGetter(expression.value);
+
+  return function get(this: any): any {
+    return pull.call(this, getSourceValue.call(this));
+  };
+}
+
+/**
+ * Build a value setter by expression
+ */
+export function getExpressionSetter(
+  formatters: Collection<Formatter | FormatterFunction>,
+  expression: AttributeValueInfo
+) {
+  const formatter: (name: string) => Formatter = getFormatter.bind(
+    null,
+    formatters
+  );
+
+  const push = composeFormatterFunctions(
+    expression.formatters.map(entry =>
+      bindFormatterArguments(
+        formatter(entry.name).push ||
+          toThrow(`Formatter "${entry.name}" does not have push function`),
+        entry.arguments
+      )
+    )
+  );
+
+  const setTargetValue = buildValueSetter(expression.value);
+
+  return function set(this: any, value: any): void {
+    setTargetValue.call(this, push.call(this, value));
+  };
 }
 
 /**
@@ -118,92 +222,6 @@ function getPaths({ formatters, value, watch }: AttributeValueInfo): string[] {
 }
 
 /**
- * Bind formatter arguments to its functions
- */
-function bindFormatterArguments(
-  context: Context,
-  fn: FormatterFunction,
-  values: Value[]
-): FormatterFunction {
-  const getters = values.map(value => buildValueGetter(context, value));
-
-  function args(first: any): any[] {
-    const args = getters.map(getter => getter());
-    args.unshift(first);
-    return args;
-  }
-
-  return function x(value: any): any {
-    return fn.apply(this, args(value));
-  };
-}
-
-/**
- * Reduce function for transformers
- */
-function reducer(acc: FormatterFunction, current: FormatterFunction) {
-  return function map(value: any): any {
-    return current.call(this, acc.call(this, value));
-  };
-}
-
-/**
- * Build a value getter by expression
- */
-export function getExpressionGetter(
-  context: Context,
-  formatters: Collection<Formatter | FormatterFunction>,
-  expression: AttributeValueInfo
-) {
-  const pull = expression.formatters
-    .map(entry =>
-      bindFormatterArguments(
-        context,
-        getFormatter(formatters, entry.name).pull ||
-          toThrow(`Formatter "${entry.name}" does not have pull function`),
-        entry.arguments
-      )
-    )
-    .reduce(reducer, passthrough);
-
-  // Target value getter
-  const getSourceValue = buildValueGetter(context, expression.value);
-
-  // Compose getter and formatters
-  return function get(): any {
-    return pull.call(context, getSourceValue());
-  };
-}
-
-/**
- * Build a value setter by expression
- */
-export function getExpressionSetter(
-  context: Context,
-  formatters: Collection<Formatter | FormatterFunction>,
-  expression: AttributeValueInfo
-) {
-  const push = expression.formatters
-    .map(entry =>
-      bindFormatterArguments(
-        context,
-        getFormatter(formatters, entry.name).push ||
-          toThrow(`Formatter "${entry.name}" does not have push function`),
-        entry.arguments
-      )
-    )
-    .reduceRight(reducer, passthrough);
-
-  // Target value setter
-  const setTargetValue = buildValueSetter(context, expression.value);
-
-  // Compose setter and formatters
-  return function set(value: any): void {
-    setTargetValue(push.call(context, value));
-  };
-}
-
-/**
  * Observe expression targets
  */
 export function observeExpression(
@@ -211,15 +229,12 @@ export function observeExpression(
   expression: AttributeValueInfo,
   callback: () => void
 ) {
-  // Get paths to watch
   const paths = getPaths(expression);
 
-  // Observe paths (start change reactivity)
   for (const path of paths) {
     context.$observe(path, callback);
   }
 
-  // Stop change reactivity function
   return function unobserve(): void {
     for (const path of paths) {
       context.$unobserve(path, callback);
