@@ -45,7 +45,8 @@ function applySpecification(
 /**
  * Build a binder directive
  */
-export function buildBinderDirective(
+export function getBinderDirective(
+  el: HTMLElement,
   binder: Binder,
   binding: Binding
 ): Directive {
@@ -53,9 +54,6 @@ export function buildBinderDirective(
   if (binder.argumentRequired === true && !binding.argument) {
     throw new Error(`Binder ${binding.directive} requires an argument`);
   }
-
-  // Target DOM element
-  const el = binding.el;
 
   // Binder context
   const context: any = {};
