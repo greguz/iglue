@@ -1,7 +1,6 @@
 import { AttributeValueInfo, Value } from "../interfaces/AttributeInfo";
 import { Context } from "../interfaces/Context";
 import { Formatter, FormatterFunction } from "../interfaces/Formatter";
-import { Observer } from "../interfaces/Observer";
 
 import {
   isFunction,
@@ -13,35 +12,18 @@ import {
 } from "../utils";
 
 /**
- * Full formatter
- */
-interface F {
-  pull: FormatterFunction;
-  push: FormatterFunction;
-}
-
-/**
- * TODO: docs
+ * Get and normalize a formatter
  */
 function getFormatter(
   formatters: Collection<Formatter | FormatterFunction>,
   name: string
-): F {
+): Formatter {
   const definition = formatters[name];
+
   if (isFunction(definition)) {
-    return {
-      pull: definition,
-      push: toThrow(`Formatter "${name}" does not have push function`)
-    };
+    return { pull: definition };
   } else if (isObject(definition)) {
-    return {
-      pull:
-        definition.pull ||
-        toThrow(`Formatter "${name}" does not have pull function`),
-      push:
-        definition.push ||
-        toThrow(`Formatter "${name}" does not have push function`)
-    };
+    return definition;
   } else {
     throw new Error(`Unable to resolve formatter "${name}"`);
   }
@@ -140,9 +122,9 @@ function getPaths({ formatters, value, watch }: AttributeValueInfo): string[] {
  */
 function bindFormatterArguments(
   context: Context,
-  { pull, push }: F,
+  fn: FormatterFunction,
   values: Value[]
-): F {
+): FormatterFunction {
   const getters = values.map(value => buildValueGetter(context, value));
 
   function args(first: any): any[] {
@@ -151,95 +133,96 @@ function bindFormatterArguments(
     return args;
   }
 
-  return {
-    pull(value: any): any {
-      return pull.apply(this, args(value));
-    },
-    push(value: any): any {
-      return push.apply(this, args(value));
-    }
+  return function x(value: any): any {
+    return fn.apply(this, args(value));
   };
 }
 
 /**
- * Compose formatters array into a single formatter
+ * Reduce function for transformers
  */
-function composeFormatters(formatters: F[]): F {
-  function reducer(acc: FormatterFunction, current: FormatterFunction) {
-    return function map(value: any): any {
-      return current.call(this, acc.call(this, value));
-    };
-  }
-  return {
-    pull: formatters
-      .map(formatter => formatter.pull)
-      .reduce(reducer, passthrough),
-    push: formatters
-      .map(formatter => formatter.push)
-      .reduceRight(reducer, passthrough)
+function reducer(acc: FormatterFunction, current: FormatterFunction) {
+  return function map(value: any): any {
+    return current.call(this, acc.call(this, value));
   };
 }
 
 /**
- * Parse single expression into an Observer
+ * Build a value getter by expression
  */
-export function parseExpression(
+export function getExpressionGetter(
   context: Context,
   formatters: Collection<Formatter | FormatterFunction>,
-  expression: AttributeValueInfo,
-  callback?: (value: any) => void
-): Observer {
-  // Compose all formatters and bind arguments
-  const { pull, push } = composeFormatters(
-    expression.formatters.map(entry =>
+  expression: AttributeValueInfo
+) {
+  const pull = expression.formatters
+    .map(entry =>
       bindFormatterArguments(
         context,
-        getFormatter(formatters, entry.name),
+        getFormatter(formatters, entry.name).pull ||
+          toThrow(`Formatter "${entry.name}" does not have pull function`),
         entry.arguments
       )
     )
-  );
+    .reduce(reducer, passthrough);
 
   // Target value getter
   const getSourceValue = buildValueGetter(context, expression.value);
 
   // Compose getter and formatters
-  function get(): any {
+  return function get(): any {
     return pull.call(context, getSourceValue());
-  }
+  };
+}
+
+/**
+ * Build a value setter by expression
+ */
+export function getExpressionSetter(
+  context: Context,
+  formatters: Collection<Formatter | FormatterFunction>,
+  expression: AttributeValueInfo
+) {
+  const push = expression.formatters
+    .map(entry =>
+      bindFormatterArguments(
+        context,
+        getFormatter(formatters, entry.name).push ||
+          toThrow(`Formatter "${entry.name}" does not have push function`),
+        entry.arguments
+      )
+    )
+    .reduceRight(reducer, passthrough);
 
   // Target value setter
   const setTargetValue = buildValueSetter(context, expression.value);
 
   // Compose setter and formatters
-  function set(value: any): void {
+  return function set(value: any): void {
     setTargetValue(push.call(context, value));
-  }
+  };
+}
 
+/**
+ * Observe expression targets
+ */
+export function observeExpression(
+  context: Context,
+  expression: AttributeValueInfo,
+  callback: () => void
+) {
   // Get paths to watch
-  const paths = isFunction(callback) ? getPaths(expression) : [];
-
-  // Change callback function
-  function notify(): void {
-    (callback as any).call(context, get());
-  }
+  const paths = getPaths(expression);
 
   // Observe paths (start change reactivity)
   for (const path of paths) {
-    context.$observe(path, notify);
+    context.$observe(path, callback);
   }
 
   // Stop change reactivity function
-  function unobserve(): void {
+  return function unobserve(): void {
     for (const path of paths) {
-      context.$unobserve(path, notify);
+      context.$unobserve(path, callback);
     }
-  }
-
-  // Return observer instance
-  return {
-    get,
-    set,
-    unobserve
   };
 }
