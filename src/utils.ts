@@ -81,18 +81,6 @@ export function assign(target: any, ...sources: any[]): any {
 }
 
 /**
- * Map a collection object
- */
-export function mapCollection<A, B>(
-  collection: Collection<A>,
-  mapper: (entry: A | undefined, prop: string) => B
-): Mapper<string, B> {
-  return function extract(prop: string): B {
-    return mapper(collection[prop], prop);
-  };
-}
-
-/**
  * Returns true if the argument is an array
  */
 export function isArray(value: any): value is any[] {
@@ -198,4 +186,15 @@ export function getParent(el: HTMLElement): HTMLElement {
       "This element has not parent, this is probably due to a bug"
     );
   }
+}
+
+/**
+ * Element attributes to array of attributes
+ */
+export function getAttributes(el: HTMLElement) {
+  const results: Attr[] = [];
+  for (let i = 0; i < el.attributes.length; i++) {
+    results.push(el.attributes[i]);
+  }
+  return results;
 }
