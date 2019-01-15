@@ -4,10 +4,10 @@ import { View } from "../interfaces/View";
 
 import { getParent } from "../utils";
 
-export function buildConditionalDirective(
+export function getConditionalDirective(
+  buildView: (el: HTMLElement) => View,
   el: HTMLElement,
-  info: AttributeInfo,
-  buildView: (el: HTMLElement) => View
+  info: AttributeInfo
 ): Directive {
   // Parent element
   const parent = getParent(el);

@@ -148,11 +148,11 @@ function destroy(state: State, el: HTMLElement) {
 /**
  * Build component directive
  */
-export function buildComponentDirective(
-  el: HTMLElement,
-  context: any,
+export function getComponentDirective(
+  buildView: (obj: any, el: HTMLElement) => View,
   component: (name: string) => Component,
-  buildView: (obj: any, el: HTMLElement) => View
+  context: any,
+  el: HTMLElement
 ): Directive {
   let state: State | undefined;
 

@@ -6,11 +6,11 @@ import { View } from "../interfaces/View";
 import { buildContext } from "../context/context";
 import { getParent, isArray, isNumber, isObject, isString } from "../utils";
 
-export function buildListDirective(
-  el: HTMLElement,
-  info: AttributeInfo,
+export function getListDirective(
+  buildView: (obj: any, el: HTMLElement) => View,
   context: Context,
-  buildView: (obj: any, el: HTMLElement) => View
+  el: HTMLElement,
+  info: AttributeInfo
 ): Directive {
   // Parent element
   const parent = getParent(el);
