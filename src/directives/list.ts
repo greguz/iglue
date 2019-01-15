@@ -4,68 +4,90 @@ import { Directive } from "../interfaces/Directive";
 import { View } from "../interfaces/View";
 
 import { buildContext } from "../context/context";
+import { getParent, isArray, isObject } from "../utils";
 
-export interface ListDirectiveOptions {
-  el: HTMLElement;
-  info: AttributeInfo;
-  context: Context;
-  buildView: (el: HTMLElement, obj: object) => View;
-}
+export function buildListDirective(
+  el: HTMLElement,
+  info: AttributeInfo,
+  context: Context,
+  buildView: (obj: any, el: HTMLElement) => View
+): Directive {
+  // Parent element
+  const parent = getParent(el);
 
-export function buildListDirective(options: ListDirectiveOptions): Directive {
-  const info: AttributeInfo = options.info;
-  const container: HTMLElement = options.el.parentElement;
-  const marker: Comment = document.createComment(` EACH ${info.value.value} `);
+  // Static element into DOM to use as position marker
+  const marker = document.createComment(` EACH ${info.value.value} `);
 
-  let views: View[] = [];
+  // Currentlty rendered views
+  const views: View[] = [];
 
-  options.el.removeAttribute(info.attrName);
+  // Remove original DOM attribute
+  el.removeAttribute(info.attrName);
 
-  container.insertBefore(marker, options.el);
-  container.removeChild(options.el);
+  // Insert marker element into DOM
+  parent.insertBefore(marker, el);
 
+  // Remove origianl element from DOM
+  parent.removeChild(el);
+
+  /**
+   * Clone the source node element
+   */
   function clone(): HTMLElement {
-    return options.el.cloneNode(true) as HTMLElement;
+    return el.cloneNode(true) as HTMLElement;
   }
 
+  /**
+   * Build the context for a single list entry
+   */
   function buildListContext(entry: any, keyOrIndex: string | number): Context {
-    const context: Context = buildContext(options.context, [
-      info.argument,
+    const listContext = buildContext(context, [
+      info.argument as string,
       "$key",
       "$index"
     ]);
 
-    context.$key = typeof keyOrIndex === "string" ? keyOrIndex : null;
-    context.$index = typeof keyOrIndex === "number" ? keyOrIndex : null;
-    context[info.argument] = entry;
+    listContext.$key = typeof keyOrIndex === "string" ? keyOrIndex : null;
+    listContext.$index = typeof keyOrIndex === "number" ? keyOrIndex : null;
+    listContext[info.argument as string] = entry;
 
-    return context;
+    return listContext;
   }
 
-  function refresh(data: any): void {
+  /**
+   * Remove rendered views
+   */
+  function clean() {
     while (views.length > 0) {
-      const view: View = views.pop();
+      const view = views.pop() as View;
       view.unbind();
-      container.removeChild(view.el);
+      parent.removeChild(view.el);
     }
+  }
+
+  /**
+   * Directive#refresh
+   */
+  function refresh(data: any): void {
+    clean();
 
     let previous: Node = marker;
     function next(entry: any, keyOrIndex: string | number): void {
-      const el: HTMLElement = clone();
-      const data: Context = buildListContext(entry, keyOrIndex);
+      const el = clone();
+      const ec = buildListContext(entry, keyOrIndex);
 
-      container.insertBefore(el, previous.nextSibling);
+      parent.insertBefore(el, previous.nextSibling);
 
-      views.push(options.buildView(el, data));
+      views.push(buildView(ec, el));
 
-      previous = previous.nextSibling;
+      previous = previous.nextSibling as Node;
     }
 
-    if (data instanceof Array) {
+    if (isArray(data)) {
       for (let i = 0; i < data.length; i++) {
         next(data[i], i);
       }
-    } else if (typeof data === "object" && data !== null) {
+    } else if (isObject(data)) {
       for (const key in data) {
         if (data.hasOwnProperty(key)) {
           next(data[key], key);
@@ -74,19 +96,24 @@ export function buildListDirective(options: ListDirectiveOptions): Directive {
     }
   }
 
+  /**
+   * Directive#unbind
+   */
   function unbind(): void {
-    while (views.length > 0) {
-      const view: View = views.pop();
-      view.unbind();
-      container.removeChild(view.el);
-    }
+    // Remove rendered views
+    clean();
 
-    container.insertBefore(options.el, marker);
-    container.removeChild(marker);
+    // Restore original attribute value
+    el.setAttribute(info.attrName, info.attrValue);
 
-    options.el.setAttribute(info.attrName, info.attrValue);
+    // Restore original element
+    parent.insertBefore(el, marker);
+
+    // Remove marker
+    parent.removeChild(marker);
   }
 
+  // Return build directive
   return {
     refresh,
     unbind
