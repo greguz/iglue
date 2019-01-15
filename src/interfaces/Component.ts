@@ -13,32 +13,32 @@ export interface Component<T = any> {
   render?: (this: T) => HTMLElement;
 
   /**
-   * Component loaded, data-binding and DOM not initialized
+   * 1. Data is available
    */
   create?: (this: T) => void;
 
   /**
-   * DOM initialized, data-binding is not running
-   */
-  attach?: (this: T) => void;
-
-  /**
-   * Both DOM and data-binding are initialized
+   * 2. Reactivity and DOM is ready
    */
   bind?: (this: T) => void;
 
   /**
-   * The data-binding and the DOM are still running
+   * 3. Attached into DOM
    */
-  unbind?: (this: T) => void;
+  attach?: (this: T) => void;
 
   /**
-   * The data-binding is stopped, the DOM is still untached
+   * 4. Detached from DOM
    */
   detach?: (this: T) => void;
 
   /**
-   * Both data-biding and DOM are dead
+   * 5. DOM uninitialized
+   */
+  unbind?: (this: T) => void;
+
+  /**
+   * 6. Data is still here
    */
   destroy?: (this: T) => void;
 }
