@@ -1,35 +1,9 @@
-import { Binder, BinderRoutine } from "../interfaces/Binder";
+import { Binder } from "../interfaces/Binder";
 import { Binding } from "../interfaces/Binding";
 import { Directive } from "../interfaces/Directive";
 import { Specification } from "../interfaces/Specification";
 
-import { Collection, isObject, isFunction } from "../utils";
-
-/**
- * Get and normalize a binder
- */
-function getBinder(
-  binders: Collection<Binder | BinderRoutine>,
-  name: string
-): Binder {
-  const definition = binders[name];
-
-  if (isFunction(definition)) {
-    return { routine: definition };
-  } else if (isObject(definition)) {
-    return definition;
-  } else {
-    return {
-      routine(el: HTMLElement, value: any): void {
-        if (value === undefined || value === null) {
-          el.removeAttribute(name);
-        } else {
-          el.setAttribute(name, value.toString());
-        }
-      }
-    };
-  }
-}
+import { isFunction, isString } from "../utils";
 
 /**
  * Apply value specification utility
@@ -47,16 +21,16 @@ function applySpecification(
       value = spec.default;
     }
   } else {
-    if (typeof spec.type === "string" && typeof value !== spec.type) {
+    if (isString(spec.type) && typeof value !== spec.type) {
       throw new Error(`The bound value "${source}" is not a "${spec.type}"`);
     }
-    if (typeof spec.type === "function" && !(value instanceof spec.type)) {
+    if (isFunction(spec.type) && !(value instanceof spec.type)) {
       throw new Error(
         `The bound value "${source}" is not an instance of ${spec.type}`
       );
     }
     if (spec.validator) {
-      const valid: boolean = spec.validator.call(null, value);
+      const valid = spec.validator.call(null, value);
       if (!valid) {
         throw new Error(
           `The bound value "${value}" from "${source}" is not valid`
@@ -72,12 +46,9 @@ function applySpecification(
  * Build a binder directive
  */
 export function buildBinderDirective(
-  binders: Collection<Binder | BinderRoutine>,
+  binder: Binder,
   binding: Binding
 ): Directive {
-  // Get the target binder
-  const binder = getBinder(binders, binding.directive);
-
   // Required argument check
   if (binder.argumentRequired === true && !binding.argument) {
     throw new Error(`Binder ${binding.directive} requires an argument`);
