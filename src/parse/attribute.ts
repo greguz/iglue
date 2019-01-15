@@ -8,6 +8,11 @@ import {
   Value
 } from "../interfaces/AttributeInfo";
 
+import { isString } from "../utils";
+
+/**
+ * Get the first matching group, or throw error if necessary
+ */
 function getRegExpGroup(
   str: string,
   regex: RegExp,
@@ -27,7 +32,7 @@ function getRegExpGroup(
 ): string | undefined {
   const match = str.match(regex);
   if (match) {
-    if (typeof match[group] === "string") {
+    if (isString(match[group])) {
       return match[group];
     }
   }
@@ -36,10 +41,16 @@ function getRegExpGroup(
   }
 }
 
+/**
+ * Get the attribute name's argument
+ */
 function parseArgument(attrName: string): string | undefined {
   return getRegExpGroup(attrName, /:([^\.]+)/, 1);
 }
 
+/**
+ * Get the attribute name's modifiers
+ */
 function parseModifiers(attrName: string): string[] {
   const match = attrName.match(/\.([^\.]+)/g);
   if (match) {
@@ -49,16 +60,25 @@ function parseModifiers(attrName: string): string[] {
   }
 }
 
+/**
+ * Get path value by path
+ */
 function buildPathValue(value: string): PathValue {
   return { type: "path", value };
 }
 
+/**
+ * Get primitive value by its value
+ */
 function buildPrimitiveValue(
   value: string | number | boolean | null | undefined
 ): PrimitiveValue {
   return { type: "primitive", value };
 }
 
+/**
+ * Parse single value
+ */
 function parseValue(value: string): Value {
   if (value === "undefined") {
     return buildPrimitiveValue(undefined);
@@ -77,6 +97,9 @@ function parseValue(value: string): Value {
   }
 }
 
+/**
+ * Parse root (and mandatory) value
+ */
 function parseRootValue(attrValue: string): Value {
   return parseValue(
     getRegExpGroup(
@@ -88,14 +111,23 @@ function parseRootValue(attrValue: string): Value {
   );
 }
 
+/**
+ * Get formatter name from chunk
+ */
 function parseFormatterName(chunk: string): string {
   return getRegExpGroup(chunk, /(\S+)/, 1, "Empty formatter found");
 }
 
+/**
+ * Get formatter arguments from chunk
+ */
 function parseFormatterArguments(chunk: string): Value[] {
   return (chunk.match(/(\S+)/g) || []).slice(1).map(parseValue);
 }
 
+/**
+ * Get all formatters info from attribute value
+ */
 function parseFormatters(attrValue: string): FormatterInfo[] {
   const definition = getRegExpGroup(attrValue, /\|([^<]+)/, 1);
   if (!definition) {
@@ -111,16 +143,19 @@ function parseFormatters(attrValue: string): FormatterInfo[] {
   );
 }
 
+/**
+ * Get watched paths
+ */
 function parseWatchedPaths(attrValue: string): string[] {
   const definition = getRegExpGroup(attrValue, /<(.+)/, 1);
   return definition ? definition.match(/\S+/g) || [] : [];
 }
 
 /**
- * TODO: docs
+ * Ensure prefix regular expression
  */
 export function getPrefixRegExp(prefix: string | RegExp) {
-  if (typeof prefix === "string") {
+  if (isString(prefix)) {
     return new RegExp("^" + prefix + "([^:.]+)");
   } else {
     return prefix;
@@ -128,7 +163,7 @@ export function getPrefixRegExp(prefix: string | RegExp) {
 }
 
 /**
- * TODO: docs
+ * Get all info from an attribute name
  */
 export function parseAttributeName(
   prefix: string | RegExp,
@@ -147,7 +182,7 @@ export function parseAttributeName(
 }
 
 /**
- * TODO: docs
+ * Get all info from an attribute value
  */
 export function parseAttributeValue(attrValue: string): AttributeValueInfo {
   return {
@@ -158,7 +193,7 @@ export function parseAttributeValue(attrValue: string): AttributeValueInfo {
 }
 
 /**
- * TODO: docs
+ * Get, validate and parse an attribute
  */
 export function parseAttribute(
   prefix: string | RegExp,
@@ -167,7 +202,7 @@ export function parseAttribute(
 ): AttributeInfo {
   const attrValue = el.getAttribute(attrName);
   if (!attrValue) {
-    throw new Error();
+    throw new Error(`Attribute ${attrName} not found`);
   }
   return {
     attrName,
@@ -178,7 +213,7 @@ export function parseAttribute(
 }
 
 /**
- * TODO: docs
+ * Get attribute name by directive name
  */
 export function getAttributeByDirective(
   prefix: string | RegExp,
@@ -196,7 +231,7 @@ export function getAttributeByDirective(
 }
 
 /**
- * TODO: docs
+ * Test prefix presence
  */
 export function matchPrefix(
   prefix: string | RegExp,
