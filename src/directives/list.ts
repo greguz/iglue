@@ -4,7 +4,7 @@ import { Directive } from "../interfaces/Directive";
 import { View } from "../interfaces/View";
 
 import { buildContext } from "../context/context";
-import { getParent, isArray, isObject } from "../utils";
+import { getParent, isArray, isNumber, isObject, isString } from "../utils";
 
 export function buildListDirective(
   el: HTMLElement,
@@ -47,8 +47,8 @@ export function buildListDirective(
       "$index"
     ]);
 
-    listContext.$key = typeof keyOrIndex === "string" ? keyOrIndex : null;
-    listContext.$index = typeof keyOrIndex === "number" ? keyOrIndex : null;
+    listContext.$key = isString(keyOrIndex) ? keyOrIndex : null;
+    listContext.$index = isNumber(keyOrIndex) ? keyOrIndex : null;
     listContext[info.argument as string] = entry;
 
     return listContext;
