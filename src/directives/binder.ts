@@ -1,12 +1,39 @@
-import { Binder } from "../interfaces/Binder";
+import { Binder, BinderRoutine } from "../interfaces/Binder";
 import { Binding } from "../interfaces/Binding";
 import { Directive } from "../interfaces/Directive";
 import { Specification } from "../interfaces/Specification";
 
+import { Collection, isObject, isFunction } from "../utils";
+
+/**
+ * Get and normalize a binder
+ */
+function getBinder(
+  binders: Collection<Binder | BinderRoutine>,
+  name: string
+): Binder {
+  const definition = binders[name];
+
+  if (isFunction(definition)) {
+    return { routine: definition };
+  } else if (isObject(definition)) {
+    return definition;
+  } else {
+    return {
+      routine(el: HTMLElement, value: any): void {
+        if (value === undefined || value === null) {
+          el.removeAttribute(name);
+        } else {
+          el.setAttribute(name, value.toString());
+        }
+      }
+    };
+  }
+}
+
 /**
  * Apply value specification utility
  */
-
 function applySpecification(
   value: any,
   source: string,
@@ -44,26 +71,28 @@ function applySpecification(
 /**
  * Build a binder directive
  */
-
 export function buildBinderDirective(
-  binder: Binder,
+  binders: Collection<Binder | BinderRoutine>,
   binding: Binding
 ): Directive {
-  // argument required check
+  // Get the target binder
+  const binder = getBinder(binders, binding.directive);
+
+  // Required argument check
   if (binder.argumentRequired === true && !binding.argument) {
-    throw new Error(`The binder ${binding.directive} requires an argument`);
+    throw new Error(`Binder ${binding.directive} requires an argument`);
   }
 
-  // shortcut
-  const el: HTMLElement = binding.el;
+  // Target DOM element
+  const el = binding.el;
 
-  // context object
+  // Binder context
   const context: any = {};
 
-  // remove the binding argument
+  // Remove original attribute from DOM
   el.removeAttribute(binding.attrName);
 
-  // trigger bind hook
+  // Trigger first hook
   if (binder.bind) {
     binder.bind.call(context, el, binding);
   }
@@ -71,14 +100,13 @@ export function buildBinderDirective(
   /**
    * Directive#refresh
    */
-
   function refresh(value: any): void {
-    // apply value validation
+    // Apply value specification
     if (binder.value) {
       value = applySpecification(value, binding.attrValue, binder.value);
     }
 
-    // execute binder routine
+    // Trigger second hook
     if (binder.routine) {
       binder.routine.call(context, el, value, binding);
     }
@@ -87,18 +115,17 @@ export function buildBinderDirective(
   /**
    * Directive#unbind
    */
-
   function unbind(): void {
-    // trigger unbind hook
+    // Trigger last hook
     if (binder.unbind) {
       binder.unbind.call(context, el, binding);
     }
 
-    // restore original DOM attribute
+    // Restore original DOM attribute
     el.setAttribute(binding.attrName, binding.attrValue);
   }
 
-  // return the configured directive
+  // Return built directive
   return {
     refresh,
     unbind
