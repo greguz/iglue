@@ -45,7 +45,7 @@ const binder: Binder<BinderContext> = {
       }
 
       // save current status
-      this.classes = newClasses;
+      this.classes = [...newClasses];
     }
   },
 
