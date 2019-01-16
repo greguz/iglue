@@ -1,4 +1,4 @@
-import { includes, isArray } from "../utils";
+import { includes, isArray, isString } from "../utils";
 
 import { Binder } from "../interfaces/Binder";
 import { Binding } from "../interfaces/Binding";
@@ -22,7 +22,7 @@ const binder: Binder<BinderContext> = {
 
       // get the new class list
       let newClasses: string[];
-      if (typeof value === "string" && value !== "") {
+      if (isString(value)) {
         newClasses = value.match(/\S+/g) || [];
       } else if (isArray(value)) {
         newClasses = value;
