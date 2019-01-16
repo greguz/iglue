@@ -4,13 +4,12 @@ import { Formatter, FormatterFunction } from "./interfaces/Formatter";
 import { View, ViewOptions } from "./interfaces/View";
 
 import $binders from "./binders";
-import { buildView } from "./view";
+import { getView } from "./view";
 import { assign, Collection } from "./utils";
 
 /**
  * Public interfaces
  */
-
 export * from "./interfaces/AttributeInfo";
 export * from "./interfaces/Binder";
 export * from "./interfaces/Binding";
@@ -23,25 +22,21 @@ export * from "./interfaces/View";
 /**
  * Public APIs
  */
-
 export * from "./context";
 
 /**
  * Global components
  */
-
 export const components: Collection<Component> = {};
 
 /**
  * Global binders
  */
-
 export const binders: Collection<Binder | BinderRoutine> = $binders;
 
 /**
  * Global formatters
  */
-
 export const formatters: Collection<Formatter | FormatterFunction> = {
   args(method: any, ...boundArgs: any[]): (...args: any[]) => any {
     if (typeof method !== "function") {
@@ -86,18 +81,17 @@ export const formatters: Collection<Formatter | FormatterFunction> = {
 /**
  * Bind a new view API
  */
-
 export function bind(
   el: HTMLElement,
-  obj: object,
-  { binders, components, formatters, prefix }: ViewOptions = {}
+  obj: any = {},
+  options: ViewOptions = {}
 ): View {
-  return buildView(
-    el,
+  return getView(
+    options.prefix || "i-",
+    assign({}, binders, options.binders),
+    assign({}, components, options.components),
+    assign({}, formatters, options.formatters),
     obj,
-    prefix || "i-",
-    assign({}, binders, binders),
-    assign({}, components, components),
-    assign({}, formatters, formatters)
+    el
   );
 }

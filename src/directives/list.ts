@@ -3,11 +3,11 @@ import { Context } from "../interfaces/Context";
 import { Directive } from "../interfaces/Directive";
 import { View } from "../interfaces/View";
 
-import { buildContext } from "../context/context";
+import { getContext } from "../context/context";
 import { getParent, isArray, isNumber, isObject, isString } from "../utils";
 
 export function getListDirective(
-  buildView: (obj: any, el: HTMLElement) => View,
+  getView: (obj: any, el: HTMLElement) => View,
   context: Context,
   el: HTMLElement,
   info: AttributeInfo
@@ -40,8 +40,8 @@ export function getListDirective(
   /**
    * Build the context for a single list entry
    */
-  function buildListContext(entry: any, keyOrIndex: string | number): Context {
-    const listContext = buildContext(context, [
+  function getListContext(entry: any, keyOrIndex: string | number): Context {
+    const listContext = getContext(context, [
       info.argument as string,
       "$key",
       "$index"
@@ -74,11 +74,11 @@ export function getListDirective(
     let previous: Node = marker;
     function next(entry: any, keyOrIndex: string | number): void {
       const el = clone();
-      const ec = buildListContext(entry, keyOrIndex);
+      const ec = getListContext(entry, keyOrIndex);
 
       parent.insertBefore(el, previous.nextSibling);
 
-      views.push(buildView(ec, el));
+      views.push(getView(ec, el));
 
       previous = previous.nextSibling as Node;
     }
