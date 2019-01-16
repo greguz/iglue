@@ -5,6 +5,11 @@ import { AttributeInfo } from "./AttributeInfo";
  */
 export interface Binding extends Readonly<AttributeInfo> {
   /**
+   * Currently bound context
+   */
+  context: any;
+
+  /**
    * Get current value
    */
   get(): any;
