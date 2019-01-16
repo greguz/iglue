@@ -15,7 +15,7 @@ export function parseText(text: string, regex: RegExp): Chunk[] {
   // Current text index
   let index: number = 0;
 
-  // Each all regexp matches
+  // tslint:disable-next-line
   while ((match = regex.exec(text))) {
     // Extract previous text
     if (index !== match.index) {

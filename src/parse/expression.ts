@@ -3,13 +3,13 @@ import { Context } from "../interfaces/Context";
 import { Formatter, FormatterFunction } from "../interfaces/Formatter";
 
 import {
+  Collection,
   isArray,
   isFunction,
   isObject,
-  toThrow,
   parsePath,
-  Collection,
-  passthrough
+  passthrough,
+  toThrow
 } from "../utils";
 
 /**

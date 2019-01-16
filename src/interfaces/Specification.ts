@@ -15,6 +15,7 @@ export interface Specification<T = any> {
   /**
    * Required "typeof" return value
    */
+  // tslint:disable-next-line
   type?: string | Function;
 
   /**

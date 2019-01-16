@@ -73,12 +73,12 @@ export function getListDirective(
 
     let previous: Node = marker;
     function next(entry: any, keyOrIndex: string | number): void {
-      const el = clone();
+      const ee = clone();
       const ec = getListContext(entry, keyOrIndex);
 
-      parent.insertBefore(el, previous.nextSibling);
+      parent.insertBefore(ee, previous.nextSibling);
 
-      views.push(getView(ec, el));
+      views.push(getView(ec, ee));
 
       previous = previous.nextSibling as Node;
     }

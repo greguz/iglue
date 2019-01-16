@@ -220,6 +220,7 @@ export function getAttributeByDirective(
   el: HTMLElement,
   directive: string
 ): string | undefined {
+  // tslint:disable-next-line
   for (let i = 0; i < el.attributes.length; i++) {
     if (
       directive ===

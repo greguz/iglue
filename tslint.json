@@ -6,6 +6,7 @@
     "object-literal-sort-keys": false,
     "space-before-function-paren": ["error", "always"],
     "forin": false,
-    "interface-name": [true, "never-prefix"]
+    "interface-name": [true, "never-prefix"],
+    "arrow-parens": [true, "ban-single-arg-parens"]
   }
 }
