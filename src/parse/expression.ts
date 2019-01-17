@@ -9,7 +9,8 @@ import {
   isObject,
   parsePath,
   passthrough,
-  toThrow
+  toThrow,
+  uniq
 } from "../utils";
 
 /**
@@ -218,7 +219,7 @@ function getPaths({ formatters, value, watch }: AttributeValueInfo): string[] {
       }
     }
   }
-  return paths;
+  return uniq(paths);
 }
 
 /**

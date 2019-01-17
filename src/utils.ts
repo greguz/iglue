@@ -128,6 +128,19 @@ export function includes<T>(arr: T[], target: T): boolean {
 }
 
 /**
+ * Remove duplicates from an array
+ */
+export function uniq<T>(arr: T[]): T[] {
+  const result: T[] = [];
+  for (const entry of arr) {
+    if (!includes(result, entry)) {
+      result.push(entry);
+    }
+  }
+  return result;
+}
+
+/**
  * Remove the targeted element, returns true if the element is removed
  */
 export function remove<T>(arr: T[], target: T): boolean {
