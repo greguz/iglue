@@ -61,21 +61,22 @@ function buildTextDirectives(this: App, node: Text): Directive[] {
   // https://developer.mozilla.org/en-US/docs/Web/API/Node/parentElement
   const parent = node.parentNode as HTMLElement;
 
+  // Build directives
+  const directives = parseText(node.data, /{([^}]+)}/g)
+    // Set in place all text nodes
+    .map(chunk => ({
+      ...chunk,
+      node: parent.insertBefore(document.createTextNode(chunk.content), node)
+    }))
+    // Get dynamic nodes
+    .filter(chunk => chunk.type === "expression")
+    // Map node to directive
+    .map(chunk => buildTextDirective.call(this, chunk.node));
+
   // Remove origianl text node
   parent.removeChild(node);
 
-  return (
-    parseText(node.data, /{([^}]+)}/g)
-      // Set in place all text nodes
-      .map(chunk => ({
-        ...chunk,
-        node: parent.insertBefore(document.createTextNode(chunk.content), node)
-      }))
-      // Get dynamic nodes
-      .filter(chunk => chunk.type === "expression")
-      // Map node to directive
-      .map(chunk => buildTextDirective.call(this, chunk.node))
-  );
+  return directives;
 }
 
 /**
