@@ -1,41 +1,27 @@
-import { AttributeValueInfo, AttributeInfo } from "./interfaces/AttributeInfo";
+import { App } from "./interfaces/App";
 import { Binder, BinderRoutine } from "./interfaces/Binder";
 import { Component } from "./interfaces/Component";
-import { Context } from "./interfaces/Context";
 import { Directive } from "./interfaces/Directive";
 import { Formatter, FormatterFunction } from "./interfaces/Formatter";
 import { View } from "./interfaces/View";
 
 import {
-  Collection,
-  assign,
-  isFunction,
-  isObject,
-  getAttributes,
-  noop
-} from "./utils";
-
-import {
   getAttributeByDirective,
   getPrefixRegExp,
-  matchPrefix,
-  parseAttribute,
-  parseAttributeValue
+  matchPrefix
 } from "./parse/attribute";
-import {
-  getExpressionGetter,
-  getExpressionSetter,
-  observeExpression
-} from "./parse/expression";
+import { getExpressionGetter, observeExpression } from "./parse/expression";
 import { parseText } from "./parse/text";
 
-import { getContext } from "./context";
+import { buildContext } from "./context";
 
-import { getBinderDirective } from "./directives/binder";
-import { getComponentDirective } from "./directives/component";
-import { getConditionalDirective } from "./directives/conditional";
-import { getListDirective } from "./directives/list";
-import { getTextDirective } from "./directives/text";
+import { buildBinderDirective } from "./directives/binder";
+import { buildComponentDirective } from "./directives/component";
+import { buildConditionalDirective } from "./directives/conditional";
+import { buildListDirective } from "./directives/list";
+import { buildTextDirective } from "./directives/text";
+
+import { Collection, getAttributes } from "./utils";
 
 /**
  * Traverse DOM nodes
@@ -49,8 +35,7 @@ function traverseDOM(
     onText(node as Text);
   } else if (node.nodeType === 1) {
     const el = node as HTMLElement;
-    const go = onElement(el);
-    if (go === true) {
+    if (onElement(el) === true) {
       for (let i = 0; i < el.childNodes.length; i++) {
         traverseDOM(el.childNodes[i], onText, onElement);
       }
@@ -59,462 +44,118 @@ function traverseDOM(
 }
 
 /**
- * Get component by name
+ * Build all possible binders directive from DOM element
  */
-export function getComponent(
-  components: Collection<Component>,
-  name: string
-): Component {
-  const definition = components[name];
-  if (isObject(definition)) {
-    return definition;
-  } else {
-    throw new Error(`Unable to find component "${name}"`);
-  }
-}
-
-/**
- * Get and normalize a binder
- */
-function getBinder(
-  binders: Collection<Binder | BinderRoutine>,
-  name: string
-): Binder {
-  const definition = binders[name];
-
-  if (isFunction(definition)) {
-    return { routine: definition };
-  } else if (isObject(definition)) {
-    return definition;
-  } else {
-    return {
-      routine(el: HTMLElement, value: any): void {
-        if (value === undefined || value === null) {
-          el.removeAttribute(name);
-        } else {
-          el.setAttribute(name, value.toString());
-        }
-      }
-    };
-  }
-}
-
-/**
- * Represents a reactive DOM element
- */
-interface Subscription {
-  refresh(): void;
-  unbind(): void;
-}
-
-/**
- * Make reactive a directive and return a subscription
- */
-function getSubscription(
-  context: Context,
-  formatters: Collection<Formatter | FormatterFunction>,
-  directive: Directive,
-  expression: AttributeValueInfo
-): Subscription {
-  const get = getExpressionGetter(formatters, expression);
-
-  function refresh() {
-    directive.refresh(get.call(context));
-  }
-
-  const unobserve = observeExpression(context, expression, refresh);
-
-  function unbind() {
-    unobserve();
-    directive.unbind();
-  }
-
-  return {
-    refresh,
-    unbind
-  };
-}
-
-/**
- * Create single binder subscription
- */
-function getBinderSubscription(
-  context: Context,
-  formatters: Collection<Formatter | FormatterFunction>,
-  binders: Collection<Binder | BinderRoutine>,
-  info: AttributeInfo,
-  el: HTMLElement
-): Subscription {
-  return getSubscription(
-    context,
-    formatters,
-    getBinderDirective(
-      el,
-      getBinder(binders, info.directive),
-      assign(
-        {
-          context,
-          get: getExpressionGetter(formatters, info).bind(context),
-          set: getExpressionSetter(formatters, info).bind(context)
-        },
-        info
-      )
-    ),
-    info
-  );
-}
-
-/**
- * Each all element's attributes and create all binder subscriptions
- */
-function getBindersSubscriptions(
-  prefix: RegExp,
-  context: Context,
-  formatters: Collection<Formatter | FormatterFunction>,
-  binders: Collection<Binder | BinderRoutine>,
-  el: HTMLElement
-): Subscription[] {
+function buildBinderDirectives(this: App, el: HTMLElement): Directive[] {
   return getAttributes(el)
     .map(attr => attr.name)
-    .filter(attrName => matchPrefix(prefix, attrName))
-    .map(attrName => parseAttribute(prefix, el, attrName))
-    .map(info => getBinderSubscription(context, formatters, binders, info, el));
+    .filter(attrName => matchPrefix(this.prefix, attrName))
+    .map(attrName => buildBinderDirective.call(this, el, attrName));
 }
 
 /**
- * Create subscriptions for a text node element
+ * Build text directives from text node
  */
-function getTextSubscriptions(
-  context: Context,
-  formatters: Collection<Formatter | FormatterFunction>,
-  node: Text
-): Subscription[] {
+function buildTextDirectives(this: App, node: Text): Directive[] {
   // IE11 fix, use parentNode instead of parentElement
   // https://developer.mozilla.org/en-US/docs/Web/API/Node/parentElement
   const parent = node.parentNode as HTMLElement;
-  const chunks = parseText(node.data, /{([^}]+)}/g);
 
-  const subscriptions = chunks
-    // Set in place all text nodes
-    .map(chunk => ({
-      ...chunk,
-      node: parent.insertBefore(document.createTextNode(chunk.content), node)
-    }))
-    // Get dynamic nodes
-    .filter(chunk => chunk.type === "expression")
-    // Build subscriptions
-    .map(chunk =>
-      getSubscription(
-        context,
-        formatters,
-        getTextDirective(chunk.node),
-        parseAttributeValue(chunk.content)
-      )
-    );
-
-  // Remove origianl node
+  // Remove origianl text node
   parent.removeChild(node);
 
-  return subscriptions;
-}
-
-/**
- * Get conditional directive subscription
- */
-function getConditionalSubscription(
-  getView: (el: HTMLElement) => View,
-  context: Context,
-  formatters: Collection<Formatter | FormatterFunction>,
-  el: HTMLElement,
-  info: AttributeInfo
-) {
-  return getSubscription(
-    context,
-    formatters,
-    getConditionalDirective(getView, el, info),
-    info
+  return (
+    parseText(node.data, /{([^}]+)}/g)
+      // Set in place all text nodes
+      .map(chunk => ({
+        ...chunk,
+        node: parent.insertBefore(document.createTextNode(chunk.content), node)
+      }))
+      // Get dynamic nodes
+      .filter(chunk => chunk.type === "expression")
+      // Map node to directive
+      .map(chunk => buildTextDirective.call(this, chunk.node))
   );
 }
 
 /**
- * Get list directive subscription
+ * Make reactive a directive and return its subscription
  */
-function getListSubscription(
-  getView: (obj: any, el: HTMLElement) => View,
-  context: Context,
-  formatters: Collection<Formatter | FormatterFunction>,
-  el: HTMLElement,
-  info: AttributeInfo
-) {
-  return getSubscription(
-    context,
-    formatters,
-    getListDirective(getView, context, el, info),
-    info
-  );
-}
+function buildSubscription(app: App, directive: Directive) {
+  const { context, formatters } = app;
 
-/**
- * Make a property reactive between two objects
- */
-function linkProperty(
-  formatters: Collection<Formatter | FormatterFunction>,
-  expression: AttributeValueInfo,
-  source: Context,
-  target: any,
-  property: string
-) {
-  // Source value getter
-  const get = getExpressionGetter(formatters, expression);
+  // Directive value getter function
+  const get = getExpressionGetter(formatters, directive);
 
-  // Sync target property value
-  function sync() {
-    target[property] = get.call(source);
+  // Render the directive
+  function update() {
+    directive.update.call(app, get.call(context));
   }
 
-  // Initialize the value
-  sync();
+  // Make directive reactive and get the ticket
+  const unobserve = observeExpression(context, directive, update);
 
-  // Start source-to-target reactivity
-  return observeExpression(source, expression, sync);
-}
-
-/**
- * Get component events collection from component DOM element
- */
-function getComponentEvents(
-  prefix: RegExp,
-  formatters: Collection<Formatter | FormatterFunction>,
-  el: HTMLElement
-) {
-  return getAttributes(el)
-    .filter(attr => matchPrefix(prefix, attr.name))
-    .reduce<Collection<() => Function>>((acc, attr) => {
-      const info = parseAttribute(prefix, el, attr.name);
-
-      if (info.directive === "on") {
-        if (info.argument) {
-          acc[info.argument.toLowerCase()] = getExpressionGetter(
-            formatters,
-            info
-          );
-        } else {
-          throw new Error();
-        }
-      } else if (info.directive === "model") {
-        const updateModelValue = getExpressionSetter(formatters, info);
-        acc.value = function getter() {
-          return updateModelValue;
-        };
-      }
-
-      return acc;
-    }, {});
-}
-
-/**
- * $emit API of component context
- */
-function $emit(context: any, events: any, event: string, ...args: any[]): void {
-  const getter = events[event];
-  if (getter) {
-    const listener = getter.call(context);
-    if (isFunction(listener)) {
-      listener.apply(context, args);
-    }
+  // Clean function
+  function unbind() {
+    unobserve();
+    directive.unbind.call(app);
   }
-}
 
-/**
- * Make reactive component context (parent>to>child)
- */
-function linkParentContext(
-  prefix: RegExp,
-  formatters: Collection<Formatter | FormatterFunction>,
-  source: any,
-  target: any,
-  el: HTMLElement
-) {
-  return getAttributes(el)
-    .filter(attr => !matchPrefix(prefix, attr.name))
-    .map(attr =>
-      linkProperty(
-        formatters,
-        parseAttributeValue(attr.value),
-        source,
-        target,
-        attr.name
-      )
-    )
-    .reduce(
-      (acc, current) =>
-        function() {
-          acc();
-          current();
-        },
-      noop
-    );
-}
-
-/**
- * Build the component subscription
- */
-function getComponentSubscription(
-  getView: (obj: any, el: HTMLElement) => View,
-  prefix: RegExp,
-  formatters: Collection<Formatter | FormatterFunction>,
-  components: Collection<Component>,
-  context: any,
-  el: HTMLElement
-): Subscription {
-  // Events collection
-  const events = getComponentEvents(prefix, formatters, el);
-
-  // Component's context
-  const cc: any = {};
-
-  // Inject $emit API
-  Object.defineProperty(cc, "$emit", {
-    value: $emit.bind(null, cc, events)
-  });
-
-  // Make component context reactive
-  const unobserve = linkParentContext(prefix, formatters, context, cc, el);
-
-  // Build component directive
-  const directive = getComponentDirective(
-    getView,
-    getComponent.bind(null, components),
-    cc,
-    el
-  );
-
-  // Currenct component name getter
-  const getComponentName: () => string = el.hasAttribute("is")
-    ? getExpressionGetter(
-        formatters,
-        parseAttributeValue(el.getAttribute("is") as string)
-      ).bind(context)
-    : () => el.tagName.toLowerCase();
-
-  // Return the subscription
+  // Return composed subscription
   return {
-    refresh(): void {
-      directive.refresh(getComponentName());
-    },
-    unbind(): void {
-      unobserve();
-      directive.unbind();
-    }
+    update,
+    unbind
   };
 }
 
 /**
  * Create a new view
  */
-export function getView(
+export function buildView(
+  el: HTMLElement,
+  obj: any,
   prefix: string | RegExp,
   binders: Collection<Binder | BinderRoutine>,
   components: Collection<Component>,
-  formatters: Collection<Formatter | FormatterFunction>,
-  obj: any,
-  el: HTMLElement
+  formatters: Collection<Formatter | FormatterFunction>
 ): View {
   // Build view context
-  const context = getContext(obj);
+  const context = buildContext(obj);
 
   // Cache prefix regular expression
   const prefixRegExp = getPrefixRegExp(prefix);
 
-  const _getView: (obj: any, el: HTMLElement) => View = getView.bind(
-    null,
-    prefixRegExp,
+  // Create the app instance
+  const app: App = {
     binders,
     components,
-    formatters
-  );
-
-  const _parseAttribute: (
-    el: HTMLElement,
-    attrName: string
-  ) => AttributeInfo = parseAttribute.bind(null, prefixRegExp);
-
-  const _getAttributeByDirective: (
-    el: HTMLElement,
-    directiveName: string
-  ) => string | undefined = getAttributeByDirective.bind(null, prefixRegExp);
-
-  const _getBindersSubscriptions: (
-    el: HTMLElement
-  ) => Subscription[] = getBindersSubscriptions.bind(
-    null,
-    prefixRegExp,
     context,
     formatters,
-    binders
-  );
+    prefix: prefixRegExp,
+    buildView: (a: HTMLElement, b?: any) =>
+      buildView(a, b || context, prefix, binders, components, formatters)
+  };
 
-  const _getComponentSubscription: (
-    el: HTMLElement
-  ) => Subscription = getComponentSubscription.bind(
-    null,
-    _getView,
-    prefixRegExp,
-    formatters,
-    components,
-    context
-  );
-
-  const _getConditionalSubscription: (
-    el: HTMLElement,
-    info: AttributeInfo
-  ) => Subscription = getConditionalSubscription.bind(
-    null,
-    _getView,
-    context,
-    formatters
-  );
-
-  const _getListSubscription: (
-    el: HTMLElement,
-    info: AttributeInfo
-  ) => Subscription = getListSubscription.bind(
-    null,
-    _getView,
-    context,
-    formatters
-  );
-
-  const _getTextSubscriptions: (
-    node: Text
-  ) => Subscription[] = getTextSubscriptions.bind(null, context, formatters);
-
-  let subscriptions: Subscription[] = [];
-
-  const _push: (
-    ...subscriptions: Subscription[]
-  ) => number = subscriptions.push.bind(subscriptions);
-
+  // Build view directives
+  const directives: Directive[] = [];
   traverseDOM(
     el,
     text => {
-      _push(..._getTextSubscriptions(text));
+      directives.push(...buildTextDirectives.call(app, text));
     },
     child => {
-      const eachAttr = _getAttributeByDirective(child, "each");
-      const ifAttr = _getAttributeByDirective(child, "if");
+      const eachAttr = getAttributeByDirective(prefixRegExp, child, "each");
+      const ifAttr = getAttributeByDirective(prefixRegExp, child, "if");
       const cName = child.nodeName.toLowerCase();
 
       if (eachAttr) {
-        _push(_getListSubscription(child, _parseAttribute(child, eachAttr)));
+        directives.push(buildListDirective.call(app, child, eachAttr));
       } else if (ifAttr) {
-        _push(
-          _getConditionalSubscription(child, _parseAttribute(child, ifAttr))
-        );
+        directives.push(buildConditionalDirective.call(app, child, ifAttr));
       } else if (cName === "component" || components.hasOwnProperty(cName)) {
-        _push(_getComponentSubscription(child));
+        directives.push(buildComponentDirective.call(app, child));
       } else {
-        _push(..._getBindersSubscriptions(child));
+        directives.push(...buildBinderDirectives.call(app, child));
 
         // Keep DOM scanning
         return true;
@@ -522,25 +163,33 @@ export function getView(
     }
   );
 
-  const reducer = (acc: Function, method: Function) => {
+  // Make directives reactive and get subscriptions
+  const subscriptions = directives.map(directive =>
+    buildSubscription(app, directive)
+  );
+
+  // Multiple void functions to single function reducer
+  const reducer = (accumulator: VoidFunction, fn: VoidFunction) => {
     return () => {
-      acc();
-      method();
+      accumulator();
+      fn();
     };
   };
 
-  const refresh = subscriptions.map(sub => sub.refresh).reduce(reducer);
+  // Build view#update method
+  const update = subscriptions.map(sub => sub.update).reduce(reducer);
 
+  // Build view#unbind method
   const unbind = subscriptions.map(sub => sub.unbind).reduce(reducer);
 
   // First render
-  refresh();
+  update();
 
   // Return view instance
   return {
     el,
     context,
-    refresh,
+    update,
     unbind
   };
 }

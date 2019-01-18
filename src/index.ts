@@ -4,8 +4,8 @@ import { Formatter, FormatterFunction } from "./interfaces/Formatter";
 import { View, ViewOptions } from "./interfaces/View";
 
 import $binders from "./binders";
-import { getView } from "./view";
-import { assign, Collection } from "./utils";
+import { buildView } from "./view";
+import { Collection } from "./utils";
 
 /**
  * Public interfaces
@@ -86,12 +86,12 @@ export function bind(
   obj: any = {},
   options: ViewOptions = {}
 ): View {
-  return getView(
-    options.prefix || "i-",
-    assign({}, binders, options.binders),
-    assign({}, components, options.components),
-    assign({}, formatters, options.formatters),
+  return buildView(
+    el,
     obj,
-    el
+    options.prefix || "i-",
+    { ...binders, ...options.binders },
+    { ...components, ...options.components },
+    { ...formatters, ...options.formatters }
   );
 }

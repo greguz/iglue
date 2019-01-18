@@ -74,7 +74,7 @@ function $unobserve(this: Context, path: string, callback: PathNotifier): void {
 /**
  * Build a context object
  */
-export function getContext(obj: any, ownProperties: string[] = []): Context {
+export function buildContext(obj: any, ownProperties: string[] = []): Context {
   if (!isObject(obj)) {
     throw new Error("Unable to observe this value");
   }

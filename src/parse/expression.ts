@@ -37,7 +37,7 @@ function getFormatter(
 function buildGetter(path: string) {
   const tokens = parsePath(path);
 
-  return function get(this: any): any {
+  return function get(): any {
     let o: any = this;
 
     for (const token of tokens) {
@@ -58,7 +58,7 @@ function buildGetter(path: string) {
 function buildSetter(path: string) {
   const tokens = parsePath(path);
 
-  return function set(this: any, value: any): void {
+  return function set(value: any): void {
     let o: any = this;
     let i: number;
 
@@ -111,7 +111,7 @@ function bindFormatterArguments(
 ): FormatterFunction {
   const getters = values.map(buildValueGetter);
 
-  return function formatValue(this: any, value: any): any {
+  return function formatValue(value: any): any {
     return format.apply(this, [
       value,
       ...getters.map(getter => getter.call(this))
@@ -135,7 +135,7 @@ function composeFormatterFunctions(
     // Reduce all functions into a single function
     return formats.reduce(
       (acc: FormatterFunction, current: FormatterFunction) => {
-        return function format(this: any, value: any): any {
+        return function format(value: any): any {
           return current.call(this, acc.call(this, value));
         };
       }
@@ -167,7 +167,7 @@ export function getExpressionGetter(
 
   const getSourceValue = buildValueGetter(expression.value);
 
-  return function get(this: any): any {
+  return function get(): any {
     return pull.call(this, getSourceValue.call(this));
   };
 }
@@ -196,7 +196,7 @@ export function getExpressionSetter(
 
   const setTargetValue = buildValueSetter(expression.value);
 
-  return function set(this: any, value: any): void {
+  return function set(value: any): void {
     setTargetValue.call(this, push.call(this, value));
   };
 }

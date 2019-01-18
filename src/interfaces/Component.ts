@@ -1,7 +1,7 @@
 /**
  * Component definition interface
  */
-export interface Component<T = any> {
+export interface Component {
   /**
    * HTML template
    */
@@ -10,35 +10,35 @@ export interface Component<T = any> {
   /**
    * Custom rendering function
    */
-  render?: (this: T) => HTMLElement;
+  render?(): HTMLElement;
 
   /**
    * 1. Data is available
    */
-  create?: (this: T) => void;
+  create?(): void;
 
   /**
    * 2. Reactivity and DOM is ready
    */
-  bind?: (this: T) => void;
+  bind?(): void;
 
   /**
    * 3. Attached into DOM
    */
-  attach?: (this: T) => void;
+  attach?(): void;
 
   /**
    * 4. Detached from DOM
    */
-  detach?: (this: T) => void;
+  detach?(): void;
 
   /**
    * 5. DOM uninitialized
    */
-  unbind?: (this: T) => void;
+  unbind?(): void;
 
   /**
    * 6. Data is still here
    */
-  destroy?: (this: T) => void;
+  destroy?(): void;
 }

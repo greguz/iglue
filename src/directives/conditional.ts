@@ -1,22 +1,30 @@
-import { AttributeInfo } from "../interfaces/AttributeInfo";
+import { App } from "../interfaces/App";
 import { Directive } from "../interfaces/Directive";
 import { View } from "../interfaces/View";
 
-import { getParent } from "../utils";
+import { parseAttribute } from "../parse/attribute";
 
-export function getConditionalDirective(
-  buildView: (el: HTMLElement) => View,
+import { replaceChild } from "../utils";
+
+/**
+ * Build conditional directive
+ */
+export function buildConditionalDirective(
+  this: App,
   el: HTMLElement,
-  info: AttributeInfo
+  attrName: string
 ): Directive {
-  // Parent element
-  const parent = getParent(el);
+  // Extract app data
+  const { prefix, buildView } = this;
 
-  // Comment node as placeholder
+  // Parse attribute
+  const info = parseAttribute(prefix, el, attrName);
+
+  // Create marker element
   const comment = document.createComment(` IF : ${info.attrValue} `);
 
   // Current rendered node into DOM
-  let node: Comment | HTMLElement = el;
+  let node: Node = el;
 
   // Current conditional status
   let status: boolean | undefined;
@@ -27,54 +35,40 @@ export function getConditionalDirective(
   // Remove original attribute from DOM
   el.removeAttribute(info.attrName);
 
-  /**
-   * Swap the current rendered DOM node with another
-   */
-  function swap(update: Comment | HTMLElement): void {
-    if (update !== node) {
-      parent.replaceChild(update, node);
-      node = update;
-    }
-  }
-
-  /**
-   * Directive#refresh
-   */
-  function refresh(value: any): void {
-    const condition = !!value;
-
-    if (condition !== status) {
-      if (view) {
-        view.unbind();
-        view = undefined;
-      }
-
-      if (condition) {
-        swap(el);
-        view = buildView(el);
-      } else {
-        swap(comment);
-      }
-
-      status = condition;
-    }
-  }
-
-  /**
-   * Directive#unbind
-   */
-  function unbind(): void {
-    if (view) {
-      view.unbind();
-      view = undefined;
-    }
-    el.setAttribute(info.attrName, info.attrValue);
-    swap(el);
-  }
-
   // Return built directive
   return {
-    refresh,
-    unbind
+    ...info,
+    update(this: App, value: any): void {
+      // Enforce boolean type
+      const condition = !!value;
+
+      if (condition !== status) {
+        // Destroy previous view if necessary
+        if (view) {
+          view.unbind();
+        }
+
+        // Swap current node with correct node
+        node = replaceChild(condition ? el : comment, node);
+
+        // Update currenct view status
+        view = condition ? buildView(el) : undefined;
+
+        // Update currenct condition status
+        status = condition;
+      }
+    },
+    unbind(this: App): void {
+      // Clean current view
+      if (view) {
+        view.unbind();
+      }
+
+      // Restore original attribute value
+      el.setAttribute(info.attrName, info.attrValue);
+
+      // Restore original element
+      replaceChild(node, el);
+    }
   };
 }

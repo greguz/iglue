@@ -202,20 +202,6 @@ export function noop(): void {
 }
 
 /**
- * Get and ensure the parent node
- */
-export function getParent(el: HTMLElement): HTMLElement {
-  const parent = el.parentElement;
-  if (parent) {
-    return parent;
-  } else {
-    throw new Error(
-      "This element has not parent, this is probably due to a bug"
-    );
-  }
-}
-
-/**
  * Element attributes to array of attributes
  */
 export function getAttributes(el: HTMLElement) {
@@ -224,4 +210,42 @@ export function getAttributes(el: HTMLElement) {
     results.push(el.attributes[i]);
   }
   return results;
+}
+
+/**
+ * Get parent element
+ */
+export function parentElement(node: Node): HTMLElement {
+  const parent = node.parentElement || node.parentNode;
+  if (!parent) {
+    throw new Error("Parent element not found");
+  }
+  if (parent.nodeType !== 1) {
+    throw new Error("Invalid parent element");
+  }
+  return parent as HTMLElement;
+}
+
+/**
+ * Insert DOM element before another one
+ */
+export function insertBefore<T extends Node>(newNode: T, oldNode: Node): T {
+  parentElement(oldNode).insertBefore(newNode, oldNode);
+  return newNode;
+}
+
+/**
+ * Insert DOM element after another one
+ */
+export function insertAfter<T extends Node>(newNode: T, oldNode: Node): T {
+  parentElement(oldNode).insertBefore(newNode, oldNode.nextSibling);
+  return newNode;
+}
+
+/**
+ * Replace DOM element
+ */
+export function replaceChild<T extends Node>(newChild: T, oldChild: Node): T {
+  parentElement(oldChild).replaceChild(newChild, oldChild);
+  return newChild;
 }

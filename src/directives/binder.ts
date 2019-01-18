@@ -1,9 +1,14 @@
+import { App } from "../interfaces/App";
+import { AttributeInfo } from "../interfaces/AttributeInfo";
 import { Binder } from "../interfaces/Binder";
 import { Binding } from "../interfaces/Binding";
 import { Directive } from "../interfaces/Directive";
 import { Specification } from "../interfaces/Specification";
 
-import { isFunction, isString } from "../utils";
+import { parseAttribute } from "../parse/attribute";
+import { getExpressionGetter, getExpressionSetter } from "../parse/expression";
+
+import { isFunction, isObject, isString } from "../utils";
 
 /**
  * Apply value specification utility
@@ -43,60 +48,98 @@ function applySpecification(
 }
 
 /**
+ * Get and normalize a binder
+ */
+function getBinderByName(this: App, name: string): Binder {
+  const definition = this.binders[name];
+
+  if (isFunction(definition)) {
+    return { routine: definition };
+  } else if (isObject(definition)) {
+    return definition;
+  } else {
+    return {
+      routine(el: HTMLElement, value: any): void {
+        if (value === undefined || value === null) {
+          el.removeAttribute(name);
+        } else {
+          el.setAttribute(name, value.toString());
+        }
+      }
+    };
+  }
+}
+
+/**
+ * Build binding object
+ */
+function buildBinding(this: App, info: AttributeInfo): Binding {
+  const { context, formatters } = this;
+
+  const get = getExpressionGetter(formatters, info).bind(context);
+  const set = getExpressionSetter(formatters, info).bind(context);
+
+  return {
+    ...info,
+    context,
+    get,
+    set
+  };
+}
+
+/**
  * Build a binder directive
  */
-export function getBinderDirective(
+export function buildBinderDirective(
+  this: App,
   el: HTMLElement,
-  binder: Binder,
-  binding: Binding
+  attrName: string
 ): Directive {
-  // Required argument check
-  if (binder.argumentRequired === true && !binding.argument) {
-    throw new Error(`Binder ${binding.directive} requires an argument`);
+  // Parse target attribute info
+  const info = parseAttribute(this.prefix, el, attrName);
+
+  // Build binding object
+  const binding: Binding = buildBinding.call(this, info);
+
+  // Retrieve target binder (custom directive)
+  const binder: Binder = getBinderByName.call(this, info.directive);
+
+  // Enforce directive argument
+  if (binder.argumentRequired === true && !info.argument) {
+    throw new Error(`Binder ${info.directive} requires an argument`);
   }
 
-  // Binder context
-  const context: any = {};
-
-  // Remove original attribute from DOM
-  el.removeAttribute(binding.attrName);
+  // Create binder context
+  const context = {} as any;
 
   // Trigger first hook
   if (binder.bind) {
     binder.bind.call(context, el, binding);
   }
 
-  /**
-   * Directive#refresh
-   */
-  function refresh(value: any): void {
-    // Apply value specification
-    if (binder.value) {
-      value = applySpecification(value, binding.attrValue, binder.value);
-    }
-
-    // Trigger second hook
-    if (binder.routine) {
-      binder.routine.call(context, el, value, binding);
-    }
-  }
-
-  /**
-   * Directive#unbind
-   */
-  function unbind(): void {
-    // Trigger last hook
-    if (binder.unbind) {
-      binder.unbind.call(context, el, binding);
-    }
-
-    // Restore original DOM attribute
-    el.setAttribute(binding.attrName, binding.attrValue);
-  }
+  // Remove original attribute from DOM
+  el.removeAttribute(attrName);
 
   // Return built directive
   return {
-    refresh,
-    unbind
+    ...info,
+    update(this: App, value: any) {
+      // Apply custom value validation
+      if (binder.value) {
+        value = applySpecification(value, info.attrValue, binder.value);
+      }
+      // Trigger routine hook
+      if (binder.routine) {
+        binder.routine.call(context, el, value, binding);
+      }
+    },
+    unbind(this: App) {
+      // Trigger routine hook
+      if (binder.unbind) {
+        binder.unbind.call(context, el, binding);
+      }
+      // Restore original attribute
+      el.setAttribute(attrName, info.attrValue);
+    }
   };
 }

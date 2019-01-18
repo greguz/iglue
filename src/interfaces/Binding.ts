@@ -7,7 +7,7 @@ export interface Binding extends Readonly<AttributeInfo> {
   /**
    * Currently bound context
    */
-  context: any;
+  readonly context: any;
 
   /**
    * Get current value

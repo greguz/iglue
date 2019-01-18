@@ -1,14 +1,17 @@
+import { App } from "./App";
+import { AttributeValueInfo } from "./AttributeInfo";
+
 /**
- * Represents an active view
+ * Represents a chunk of UI
  */
-export interface Directive {
+export interface Directive extends AttributeValueInfo {
   /**
-   * Re-render the UI
+   * Fired every time there's a value update
    */
-  refresh(value: any): void;
+  update(this: App, value: any): void;
 
   /**
-   * Destroy and unload the resources
+   * Fired during view unbind
    */
-  unbind(): void;
+  unbind(this: App): void;
 }

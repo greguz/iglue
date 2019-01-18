@@ -21,7 +21,7 @@ export interface View {
   /**
    * Re-render the entire UI
    */
-  refresh(): void;
+  update(): void;
 
   /**
    * Stop data binding and destroy the view

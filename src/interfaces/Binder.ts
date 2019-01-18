@@ -4,7 +4,7 @@ import { Specification } from "./Specification";
 /**
  * Binder configuration
  */
-export interface Binder<T = any, V = any> {
+export interface Binder<T = any> {
   /**
    * Enforce binding argument
    */
@@ -13,31 +13,30 @@ export interface Binder<T = any, V = any> {
   /**
    * Bound value specifications
    */
-  value?: Specification<V>;
+  value?: Specification<T>;
 
   /**
    * Triggered when the binding is created
    */
-  bind?: (this: T, el: HTMLElement, binding: Binding) => void;
+  bind?: (el: HTMLElement, binding: Binding) => void;
 
   /**
    * Triggered when the watched value changes
    */
-  routine?: BinderRoutine<T, V>;
+  routine?: BinderRoutine<T>;
 
   /**
    * Triggered when the binding is destroyed
    */
-  unbind?: (this: T, el: HTMLElement, binding: Binding) => void;
+  unbind?: (el: HTMLElement, binding: Binding) => void;
 }
 
 /**
  * Binder routine function
  */
 
-export type BinderRoutine<T = any, V = any> = (
-  this: T,
+export type BinderRoutine<T = any> = (
   el: HTMLElement,
-  value: V,
+  value: T,
   binding: Binding
 ) => void;
