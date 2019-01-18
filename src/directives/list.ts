@@ -103,9 +103,6 @@ export function buildListDirective(
   // Remove original DOM attribute
   el.removeAttribute(info.attrName);
 
-  // Clone original node util
-  const clone = () => el.cloneNode(true) as HTMLElement;
-
   // Return build directive
   return {
     ...info,
@@ -121,10 +118,10 @@ export function buildListDirective(
 
       // Insert all views
       for (const entry of entries) {
-        const ee = clone();
+        const ee = el.cloneNode(true) as HTMLElement;
         const ec = buildEntryContext.call(this, argument, entry);
 
-        insertAfter(clone(), previous);
+        insertAfter(ee, previous);
         views.push(buildView(ee, ec));
 
         previous = previous.nextSibling as Node;
