@@ -7,13 +7,13 @@ import { buildContext } from "../context/context";
 import { parseAttribute } from "../parse/attribute";
 
 import {
-  parentElement,
   insertAfter,
-  replaceChild,
   isArray,
   isNumber,
   isObject,
-  isString
+  isString,
+  parentElement,
+  replaceChild
 } from "../utils";
 
 /**

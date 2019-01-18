@@ -121,7 +121,7 @@ function getComponentEvents(this: App, el: HTMLElement) {
 
   return getAttributes(el)
     .filter(attr => matchPrefix(prefix, attr.name))
-    .reduce<Collection<() => Function>>((events, attr) => {
+    .reduce<Collection<() => ((...args: any[]) => void)>>((events, attr) => {
       const info = parseAttribute(prefix, el, attr.name);
 
       if (info.directive === "on") {
