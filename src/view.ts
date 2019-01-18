@@ -21,7 +21,7 @@ import { buildConditionalDirective } from "./directives/conditional";
 import { buildListDirective } from "./directives/list";
 import { buildTextDirective } from "./directives/text";
 
-import { Collection, getAttributes } from "./utils";
+import { Collection, getAttributes, parentElement } from "./utils";
 
 /**
  * Traverse DOM nodes
@@ -57,9 +57,8 @@ function buildBinderDirectives(this: App, el: HTMLElement): Directive[] {
  * Build text directives from text node
  */
 function buildTextDirectives(this: App, node: Text): Directive[] {
-  // IE11 fix, use parentNode instead of parentElement
-  // https://developer.mozilla.org/en-US/docs/Web/API/Node/parentElement
-  const parent = node.parentNode as HTMLElement;
+  // Get the parent element
+  const parent = parentElement(node);
 
   // Build directives
   const directives = parseText(node.data, /{([^}]+)}/g)
