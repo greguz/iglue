@@ -41,4 +41,9 @@ export interface Component {
    * 6. Data is still here
    */
   destroy?(): void;
+
+  /**
+   * Build default component data
+   */
+  data?(): object;
 }

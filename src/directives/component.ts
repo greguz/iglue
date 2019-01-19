@@ -23,6 +23,40 @@ import {
 } from "../utils";
 
 /**
+ * Getters collection to retrieve all configured event listeners
+ */
+type Events = Collection<() => Function>;
+
+/**
+ * Property binding
+ */
+interface Binding {
+  property: string;
+  expression: AttributeValueInfo;
+}
+
+/**
+ * Extended app for component
+ */
+interface Cap extends App {
+  bindings: Binding[];
+  events: Events;
+}
+
+/**
+ * $emit API of component context
+ */
+function $emit(this: Cap, event: string, ...args: any[]): void {
+  const getter = this.events[event];
+  if (getter) {
+    const listener = getter.call(this.context);
+    if (isFunction(listener)) {
+      listener.apply(this.context, args);
+    }
+  }
+}
+
+/**
  * Represent current component state
  */
 interface State {
@@ -30,12 +64,13 @@ interface State {
   name: string;
   view: View;
   component: Component;
+  unobserve: VoidFunction;
 }
 
 /**
  * Get component by name
  */
-function getComponentByName(this: App, name: string): Component {
+function getComponentByName(this: Cap, name: string): Component {
   const definition = this.components[name];
   if (isObject(definition)) {
     return definition;
@@ -63,10 +98,22 @@ function buildComponentElement(
 }
 
 /**
+ * Get bindings from DOM element
+ */
+function getBindings(this: Cap, el: HTMLElement): Binding[] {
+  return getAttributes(el)
+    .filter(attr => !matchPrefix(this.prefix, attr.name))
+    .map(attr => ({
+      property: attr.name,
+      expression: parseAttributeValue(attr.value)
+    }));
+}
+
+/**
  * Make a property reactive between two objects
  */
 function linkProperty(
-  this: App,
+  this: Cap,
   target: any,
   property: string,
   expression: AttributeValueInfo
@@ -89,20 +136,10 @@ function linkProperty(
 /**
  * Make reactive component context (parent>to>child)
  */
-function linkParentContext(
-  this: App,
-  target: any,
-  el: HTMLElement
-): VoidFunction {
-  return getAttributes(el)
-    .filter(attr => !matchPrefix(this.prefix, attr.name))
-    .map<VoidFunction>(attr =>
-      linkProperty.call(
-        this,
-        target,
-        attr.name,
-        parseAttributeValue(attr.value)
-      )
+function linkProperties(this: Cap, target: any): VoidFunction {
+  return this.bindings
+    .map<VoidFunction>(binding =>
+      linkProperty.call(this, target, binding.property, binding.expression)
     )
     .reduce(
       (acc, fn) => () => {
@@ -116,12 +153,12 @@ function linkParentContext(
 /**
  * Get component events collection from component DOM element
  */
-function getComponentEvents(this: App, el: HTMLElement) {
+function getEvents(this: Cap, el: HTMLElement) {
   const { formatters, prefix } = this;
 
   return getAttributes(el)
     .filter(attr => matchPrefix(prefix, attr.name))
-    .reduce<Collection<() => ((...args: any[]) => void)>>((events, attr) => {
+    .reduce<Events>((events, attr) => {
       const info = parseAttribute(prefix, el, attr.name);
 
       if (info.directive === "on") {
@@ -137,24 +174,23 @@ function getComponentEvents(this: App, el: HTMLElement) {
 }
 
 /**
- * $emit API of component context
- */
-function $emit(this: any, events: any, event: string, ...args: any[]): void {
-  const getter = events[event];
-  if (getter) {
-    const listener = getter.call(this);
-    if (isFunction(listener)) {
-      listener.apply(this, args);
-    }
-  }
-}
-
-/**
  * Mount a component and start data binding
  */
-function mount(this: App, name: string, context: any): State {
+function mount(this: Cap, name: string): State {
   // Fetch component object
   const component: Component = getComponentByName.call(this, name);
+
+  // Create component context
+  const context: any = component.data ? component.data.call(null) : {};
+  if (!isObject(context)) {
+    throw new Error("Component data is not an object");
+  }
+
+  // Inject $emit API
+  Object.defineProperty(context, "$emit", { value: $emit.bind(this) });
+
+  // Make component context reactive (parent > child)
+  const unobserve = linkProperties.call(this, context);
 
   // First hook
   if (component.create) {
@@ -181,16 +217,20 @@ function mount(this: App, name: string, context: any): State {
     name,
     component,
     view,
-    el
+    el,
+    unobserve
   };
 }
 
 /**
  * Unmount and stop current component data binding
  */
-function unmount(this: App, state: State): State {
+function unmount(this: Cap, state: State): State {
   const { component, view } = state;
   const { context } = view;
+
+  // Stop reactivity
+  state.unobserve();
 
   // Trigger first hook
   if (component.unbind) {
@@ -211,16 +251,16 @@ function unmount(this: App, state: State): State {
 /**
  * Create first state
  */
-function create(this: App, name: string, context: any, el: HTMLElement): State {
+function create(this: Cap, name: string, el: HTMLElement): State {
   // Create a new state
-  const state: State = mount.call(this, name, context);
+  const state: State = mount.call(this, name);
 
   // Inject view element into DOM
   replaceChild(el, state.el);
 
   // Trigger last hook
   if (state.component.attach) {
-    state.component.attach.call(context);
+    state.component.attach.call(state.view.context);
   }
 
   return state;
@@ -229,19 +269,18 @@ function create(this: App, name: string, context: any, el: HTMLElement): State {
 /**
  * Swap state to another
  */
-function swap(this: App, name: string, state: State) {
+function swap(this: Cap, name: string, state: State) {
   const parent = parentElement(state.el);
-  const context = state.view.context;
 
-  const newState: State = mount.call(this, name, context);
+  const newState: State = mount.call(this, name);
   const oldState: State = unmount.call(this, state);
 
   if (oldState.component.detach) {
-    oldState.component.detach.call(context);
+    oldState.component.detach.call(oldState.view.context);
   }
   parent.replaceChild(newState.el, oldState.el);
   if (newState.component.attach) {
-    newState.component.attach.call(context);
+    newState.component.attach.call(newState.view.context);
   }
 
   return newState;
@@ -250,7 +289,7 @@ function swap(this: App, name: string, state: State) {
 /**
  * Destroy current state
  */
-function destroy(this: App, state: State, el: HTMLElement) {
+function destroy(this: Cap, state: State, el: HTMLElement) {
   const parent = parentElement(state.el);
   const context = state.view.context;
 
@@ -288,36 +327,28 @@ export function buildComponentDirective(this: App, el: HTMLElement): Directive {
   // Build this directive info
   const info = buildDirectiveInfo(el);
 
-  // Component context object
-  const context: any = {};
-
-  // Events collection
-  const events = getComponentEvents.call(this, el);
-
-  // Inject $emit API
-  Object.defineProperty(context, "$emit", {
-    value: $emit.bind(this.context, events)
-  });
-
-  // Make component context reactive
-  const unobserve = linkParentContext.call(this, context, el);
+  // Build component application instance
+  const cap: Cap = {
+    ...this,
+    events: getEvents.call(this, el),
+    bindings: getBindings.call(this, el)
+  };
 
   // Return build directive
   return {
     ...info,
     update(this: App, name: string) {
       if (!state) {
-        state = create.call(this, name, context, el);
+        state = create.call(cap, name, el);
       } else if (state.name !== name) {
-        state = swap.call(this, name, state);
+        state = swap.call(cap, name, state);
       } else {
         state.view.update();
       }
     },
     unbind(this: App) {
-      unobserve();
       if (state) {
-        destroy.call(this, state, el);
+        destroy.call(cap, state, el);
         state = undefined;
       }
     }
