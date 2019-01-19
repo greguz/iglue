@@ -1,3 +1,7 @@
+/* tslint:disable */
+
+import { Collection } from "../utils";
+
 /**
  * Component definition interface
  */
@@ -46,4 +50,9 @@ export interface Component {
    * Build default component data
    */
   data?(): object;
+
+  /**
+   * Component methods
+   */
+  methods?: Collection<Function>;
 }

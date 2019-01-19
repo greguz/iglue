@@ -13,6 +13,7 @@ import { getExpressionGetter, observeExpression } from "../parse/expression";
 import { buildHTML } from "../parse/html";
 
 import {
+  assign,
   Collection,
   getAttributes,
   isFunction,
@@ -25,7 +26,7 @@ import {
 /**
  * Getters collection to retrieve all configured event listeners
  */
-type Events = Collection<() => Function>;
+type Events = Collection<() => (...args: any[]) => any>;
 
 /**
  * Property binding
@@ -181,9 +182,12 @@ function mount(this: Cap, name: string): State {
   const component: Component = getComponentByName.call(this, name);
 
   // Create component context
-  const context: any = component.data ? component.data.call(null) : {};
-  if (!isObject(context)) {
-    throw new Error("Component data is not an object");
+  const context: any = {};
+  if (component.data) {
+    assign(context, component.data.call(null));
+  }
+  if (component.methods) {
+    assign(context, component.methods);
   }
 
   // Inject $emit API
