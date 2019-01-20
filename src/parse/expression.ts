@@ -8,10 +8,54 @@ import {
   isFunction,
   isObject,
   parsePath,
-  passthrough,
-  toThrow,
   uniq
 } from "../utils";
+
+/**
+ * Simple map function
+ */
+type Mapper = (value: any) => any;
+
+/**
+ * Simplest type of map function
+ */
+function passthrough<T>(value: T): T {
+  return value;
+}
+
+/**
+ * Compose two map functions into a single one
+ */
+function composeMappers(first: Mapper, second: Mapper): Mapper {
+  return function composedMapper(value: any): any {
+    return second.call(this, first.call(this, value));
+  };
+}
+
+/**
+ * Reduce multiple mappers into a single one
+ */
+function reduceMappers(mappers: Mapper[]): Mapper {
+  return mappers.length <= 0 ? passthrough : mappers.reduce(composeMappers);
+}
+
+/**
+ * Return a function that throw an error if called
+ */
+function toThrow(message: string): (...args: any[]) => any {
+  return function ko(): void {
+    throw new Error(message);
+  };
+}
+
+/**
+ * Wrap const value into a function
+ */
+function toConst<T>(value: T) {
+  return function get() {
+    return value;
+  };
+}
 
 /**
  * Get and normalize a formatter
@@ -90,7 +134,9 @@ function buildSetter(path: string) {
  * Map a value into a getter function
  */
 function buildValueGetter(value: Value) {
-  return value.type === "path" ? buildGetter(value.value) : () => value.value;
+  return value.type === "path"
+    ? buildGetter(value.value)
+    : toConst(value.value);
 }
 
 /**
@@ -108,7 +154,7 @@ function buildValueSetter(value: Value) {
 function bindFormatterArguments(
   format: FormatterFunction,
   values: Value[]
-): FormatterFunction {
+): Mapper {
   const getters = values.map(buildValueGetter);
 
   return function formatValue(value: any): any {
@@ -117,30 +163,6 @@ function bindFormatterArguments(
       ...getters.map(getter => getter.call(this))
     ]);
   };
-}
-
-/**
- * Compose multiple formatter functions into a single function
- */
-function composeFormatterFunctions(
-  formats: FormatterFunction[]
-): FormatterFunction {
-  if (formats.length <= 0) {
-    // No formatters specified, just return a simple passthrough function
-    return passthrough;
-  } else if (formats.length === 1) {
-    // Simple formatter, return itself
-    return formats[0];
-  } else {
-    // Reduce all functions into a single function
-    return formats.reduce(
-      (acc: FormatterFunction, current: FormatterFunction) => {
-        return function format(value: any): any {
-          return current.call(this, acc.call(this, value));
-        };
-      }
-    );
-  }
 }
 
 /**
@@ -155,7 +177,7 @@ export function getExpressionGetter(
     formatters
   );
 
-  const pull = composeFormatterFunctions(
+  const pull = reduceMappers(
     expression.formatters.map(entry =>
       bindFormatterArguments(
         formatter(entry.name).pull ||
@@ -184,7 +206,7 @@ export function getExpressionSetter(
     formatters
   );
 
-  const push = composeFormatterFunctions(
+  const push = reduceMappers(
     expression.formatters.map(entry =>
       bindFormatterArguments(
         formatter(entry.name).push ||

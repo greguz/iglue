@@ -6,11 +6,6 @@ export interface Collection<T = any> {
 }
 
 /**
- * Generic map function
- */
-export type Mapper<A, B> = (arg: A) => B;
-
-/**
  * Like Array.prototype.findIndex
  */
 export function findIndex<T>(
@@ -176,22 +171,6 @@ export function parsePath(path: string): string[] {
     }
   }
   return tokens;
-}
-
-/**
- * Simple passthrough function
- */
-export function passthrough<T>(value: T): T {
-  return value;
-}
-
-/**
- * Return a function that throw an error if called
- */
-export function toThrow(message: string): (...args: any[]) => any {
-  return function ko(): void {
-    throw new Error(message);
-  };
 }
 
 /**
