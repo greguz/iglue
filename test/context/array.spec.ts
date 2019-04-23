@@ -1,7 +1,11 @@
 import "mocha";
 import { expect } from "chai";
 
-import { isArrayObserved, observeArray, unobserveArray } from "./array";
+import {
+  isArrayObserved,
+  observeArray,
+  unobserveArray
+} from "../../src/context/array";
 
 describe("Array observing", () => {
   function noop() {}

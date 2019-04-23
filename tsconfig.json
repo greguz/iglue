@@ -7,7 +7,7 @@
     "noImplicitAny": true,
     "noUnusedLocals": true,
     "noUnusedParameters": false,
-    "outDir": "dist",
+    "outDir": "dist/src",
     "removeComments": true,
     "rootDir": "src",
     "strictNullChecks": true,

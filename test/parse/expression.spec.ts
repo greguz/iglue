@@ -1,7 +1,10 @@
 import "mocha";
 import { expect } from "chai";
 
-import { getExpressionGetter, getExpressionSetter } from "./expression";
+import {
+  getExpressionGetter,
+  getExpressionSetter
+} from "../../src/parse/expression";
 
 describe("Expressions", () => {
   const formatters = {

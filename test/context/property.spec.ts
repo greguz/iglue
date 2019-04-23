@@ -5,7 +5,7 @@ import {
   isPropertyObserved,
   observeProperty,
   unobserveProperty
-} from "./property";
+} from "../../src/context/property";
 
 describe("Property observing", () => {
   function noop() {}

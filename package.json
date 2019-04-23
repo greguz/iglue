@@ -8,7 +8,7 @@
   "scripts": {
     "test:ts": "tsc --noEmit",
     "test:lint": "tslint -c tslint.json -e **/*.spec.ts src/**/*.ts",
-    "test:unit": "mocha -r ts-node/register src/**/*.spec.ts",
+    "test:unit": "tsc -p tsconfig.test.json && mocha dist/**/*.spec.js",
     "test": "npm run test:ts && npm run test:lint && npm run test:unit",
     "build:umd": "rollup --config --format umd --name iglue --file dist/iglue.js",
     "build:cjs": "rollup --config --format cjs --file dist/iglue.cjs.js",
