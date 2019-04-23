@@ -1,9 +1,8 @@
-import { Binder, BinderRoutine } from "./interfaces/Binder";
 import { Component } from "./interfaces/Component";
 import { Formatter, FormatterFunction } from "./interfaces/Formatter";
 import { View, ViewOptions } from "./interfaces/View";
 
-import $binders from "./binders";
+import binders from "./binders";
 import { buildView } from "./view";
 import { Collection } from "./utils";
 
@@ -25,14 +24,14 @@ export * from "./interfaces/View";
 export * from "./context";
 
 /**
+ * Global binders
+ */
+export { binders };
+
+/**
  * Global components
  */
 export const components: Collection<Component> = {};
-
-/**
- * Global binders
- */
-export const binders: Collection<Binder | BinderRoutine> = $binders;
 
 /**
  * Global formatters
@@ -83,7 +82,7 @@ export const formatters: Collection<Formatter | FormatterFunction> = {
  */
 export function bind(
   el: HTMLElement,
-  obj: any = {},
+  obj: object = {},
   options: ViewOptions = {}
 ): View {
   return buildView(
