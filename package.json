@@ -24,15 +24,14 @@
   "license": "MIT",
   "devDependencies": {
     "@types/chai": "^4.1.7",
-    "@types/mocha": "^5.2.5",
+    "@types/mocha": "^5.2.6",
     "chai": "^4.2.0",
-    "mocha": "^5.2.0",
+    "mocha": "^6.1.4",
     "rimraf": "^2.6.3",
-    "rollup": "^1.1.0",
-    "rollup-plugin-typescript": "^1.0.0",
-    "ts-node": "^7.0.1",
-    "tslint": "^5.12.1",
-    "typescript": "^3.2.2"
+    "rollup": "^1.10.1",
+    "rollup-plugin-typescript": "^1.0.1",
+    "tslint": "^5.16.0",
+    "typescript": "^3.4.4"
   },
   "repository": {
     "type": "git",
