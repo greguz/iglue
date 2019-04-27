@@ -1,26 +1,20 @@
-import { App } from "../interfaces/App";
+import { Application } from "../interfaces/Application";
+import { Attribute } from "../interfaces/Attribute";
 import { Context } from "../interfaces/Context";
 import { Directive } from "../interfaces/Directive";
 import { View } from "../interfaces/View";
 
 import { buildContext } from "../context/context";
-import { parseAttribute } from "../parse/attribute";
 
-import {
-  insertAfter,
-  isArray,
-  isNumber,
-  isObject,
-  isString,
-  parentElement,
-  replaceChild
-} from "../utils";
+import { insertAfter, parentElement, replaceNode } from "../utils/dom";
+import { isArray, isObject } from "../utils/language";
 
 /**
- * Represents single array entry
+ * List entry
  */
 interface Entry {
-  key: number | string;
+  index?: number;
+  key?: string;
   value: any;
 }
 
@@ -29,7 +23,7 @@ interface Entry {
  */
 function buildEntries(data: any): Entry[] {
   if (isArray(data)) {
-    return data.map((value, key) => ({ key, value }));
+    return data.map((value, index) => ({ index, value }));
   } else if (isObject(data)) {
     const result: Entry[] = [];
     for (const key in data) {
@@ -47,19 +41,16 @@ function buildEntries(data: any): Entry[] {
  * Build entry context
  */
 function buildEntryContext(
-  this: App,
+  app: Application,
   argument: string,
-  { key, value }: Entry
+  { index, key, value }: Entry
 ): Context {
-  // Build new context from source context plus some special props
-  const context = buildContext(this.context, [argument, "$key", "$index"]);
+  const context = buildContext(app.context, ["$index", "$key", argument]);
 
-  // Set own properties
-  context.$key = isString(key) ? key : null;
-  context.$index = isNumber(key) ? key : null;
+  context.$index = index;
+  context.$key = key;
   context[argument] = value;
 
-  // Return build context object
   return context;
 }
 
@@ -78,64 +69,65 @@ function unload(views: View[]) {
  * Build list directive
  */
 export function buildListDirective(
-  this: App,
+  app: Application,
   el: HTMLElement,
-  attrName: string
+  attribute: Attribute
 ): Directive {
   // Extract useful data from app
-  const { prefix, buildView } = this;
-
-  // Parse target attribute
-  const info = parseAttribute(prefix, el, attrName);
+  const { buildView } = app;
 
   // Ensure argument value
-  const argument = info.argument || "$value";
+  const argument = attribute.argument || "$value";
 
   // Currently rendered views
   const views: View[] = [];
 
   // Static element into DOM to use as position marker
-  const marker = document.createComment(` EACH ${info.value.value} `);
+  const marker = document.createComment(` EACH ${attribute.target.value} `);
 
   // Swap original element with maker
-  replaceChild(marker, el);
+  replaceNode(marker, el);
 
   // Remove original DOM attribute
-  el.removeAttribute(info.attrName);
+  el.removeAttribute(attribute.name);
+
+  function update(data: any) {
+    // Remove rendered views
+    unload(views);
+
+    // Get current entries
+    const entries = buildEntries(data);
+
+    // Last inserted node
+    let previous: Node = marker;
+
+    // Insert all views
+    for (const entry of entries) {
+      const ee = el.cloneNode(true) as HTMLElement;
+      const ec = buildEntryContext.call(this, argument, entry);
+
+      insertAfter(ee, previous);
+      views.push(buildView(ee, ec));
+
+      previous = previous.nextSibling as Node;
+    }
+  }
+
+  function unbind() {
+    // Remove rendered views
+    unload(views);
+
+    // Restore original attribute value
+    el.setAttribute(attribute.name, attribute.value);
+
+    // Restore original element
+    replaceNode(el, marker);
+  }
 
   // Return build directive
   return {
-    ...info,
-    update(this: App, data: any) {
-      // Remove rendered views
-      unload(views);
-
-      // Get current entries
-      const entries = buildEntries(data);
-
-      // Last inserted node
-      let previous: Node = marker;
-
-      // Insert all views
-      for (const entry of entries) {
-        const ee = el.cloneNode(true) as HTMLElement;
-        const ec = buildEntryContext.call(this, argument, entry);
-
-        insertAfter(ee, previous);
-        views.push(buildView(ee, ec));
-
-        previous = previous.nextSibling as Node;
-      }
-    },
-    unbind(this: App) {
-      // Remove rendered views
-      unload(views);
-
-      // Restore original attribute value
-      el.setAttribute(info.attrName, info.attrValue);
-
-      // Restore original element
-      replaceChild(el, marker);
-    }
+    ...attribute,
+    update,
+    unbind
   };
 }

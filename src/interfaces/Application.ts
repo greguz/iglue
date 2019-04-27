@@ -4,13 +4,12 @@ import { Context } from "./Context";
 import { Formatter, FormatterFunction } from "./Formatter";
 import { View } from "./View";
 
-import { Collection } from "../utils";
+import { Collection } from "../utils/type";
 
-export interface App {
-  binders: Collection<Binder | BinderRoutine>;
-  components: Collection<Component>;
+export interface Application {
   context: Context;
+  binders: Collection<Binder | BinderRoutine>;
   formatters: Collection<Formatter | FormatterFunction>;
-  prefix: RegExp;
-  buildView: (el: HTMLElement, obj?: any) => View;
+  components: Collection<Component>;
+  buildView: (el: HTMLElement, obj?: object) => View;
 }

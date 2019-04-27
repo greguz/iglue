@@ -1,22 +1,24 @@
-import { App } from "../interfaces/App";
+import { Application } from "../interfaces/Application";
 import { Directive } from "../interfaces/Directive";
 
 import { parseAttributeValue } from "../parse/attribute";
 
-export function buildTextDirective(this: App, node: Text): Directive {
-  // Save the original node's content
-  const content = node.data;
+import { isNil } from "../utils/language";
+
+export function buildTextDirective(app: Application, node: Text): Directive {
+  const originalContent = node.data;
+
+  function update(value: any) {
+    node.data = isNil(value) ? "" : value.toString();
+  }
+
+  function unbind() {
+    node.data = originalContent;
+  }
 
   return {
-    // Expression info
-    ...parseAttributeValue(content),
-    // Refresh node content
-    update(this: App, value: any) {
-      node.data = value === undefined || value === null ? "" : value.toString();
-    },
-    // Restore original content
-    unbind(this: App) {
-      node.data = content;
-    }
+    ...parseAttributeValue(originalContent),
+    update,
+    unbind
   };
 }

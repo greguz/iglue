@@ -1,21 +1,19 @@
-import { AttributeInfo } from "./AttributeInfo";
+import { Attribute } from "./Attribute";
+import { Context } from "./Context";
 
-/**
- * Represents a bingind between DOM attribute and a target value
- */
-export interface Binding extends Readonly<AttributeInfo> {
-  /**
-   * Currently bound context
-   */
-  readonly context: any;
+import { Getter, Setter } from "../utils/type";
 
+export interface Binding extends Attribute {
   /**
-   * Get current value
+   * Bound context object
    */
-  get(): any;
-
+  context: Context;
   /**
-   * Update the bound value
+   * Get bound value
    */
-  set(value: any): void;
+  get: Getter;
+  /**
+   * Set bound value
+   */
+  set: Setter;
 }

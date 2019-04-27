@@ -1,4 +1,6 @@
-import { Collection, isArray, isObject, parsePath, remove } from "../utils";
+import { remove } from "../utils/array";
+import { isArray, isObject, parsePath } from "../utils/language";
+import { Collection } from "../utils/type";
 
 import { observeArray, unobserveArray } from "./array";
 import { observeProperty, unobserveProperty } from "./property";

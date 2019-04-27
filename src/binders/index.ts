@@ -1,5 +1,6 @@
 import { Binder, BinderRoutine } from "../interfaces/Binder";
-import { Collection } from "../utils";
+
+import { Collection } from "../utils/type";
 
 import $class from "./class";
 import $on from "./on";

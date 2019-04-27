@@ -1,7 +1,8 @@
-import { includes, isArray, isString } from "../utils";
-
 import { Binder } from "../interfaces/Binder";
 import { Binding } from "../interfaces/Binding";
+
+import { includes } from "../utils/array";
+import { isArray, isString } from "../utils/language";
 
 interface BinderContext {
   classes: string[] | undefined;

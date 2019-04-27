@@ -17,7 +17,7 @@ const binder: Binder<BinderContext> = {
       } else {
         throw new Error(
           `The target value bound with "${
-            binding.attrValue
+            binding.value
           }" is not a valid handler for event "${binding.argument}"`
         );
       }

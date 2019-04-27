@@ -1,4 +1,6 @@
-import { Collection, isObject, remove } from "../utils";
+import { remove } from "../utils/array";
+import { isObject } from "../utils/language";
+import { Collection } from "../utils/type";
 
 /**
  * Property value change callback

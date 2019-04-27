@@ -1,45 +1,47 @@
-import { App } from "../interfaces/App";
-import { AttributeInfo } from "../interfaces/AttributeInfo";
+import { Application } from "../interfaces/Application";
+import { Attribute } from "../interfaces/Attribute";
 import { Binder } from "../interfaces/Binder";
 import { Binding } from "../interfaces/Binding";
 import { Directive } from "../interfaces/Directive";
 import { Specification } from "../interfaces/Specification";
 
-import { parseAttribute } from "../parse/attribute";
-import { getExpressionGetter, getExpressionSetter } from "../parse/expression";
+import {
+  buildExpressionGetter,
+  buildExpressionSetter
+} from "../parse/expression";
 
-import { isFunction, isObject, isString } from "../utils";
+import { isArray, isFunction, isNil, isObject } from "../utils/language";
+
+function isInstanceOf(value: any, Type: Function) {
+  return typeof value === "object"
+    ? value instanceof Type
+    : Object.getPrototypeOf(value) === Type.prototype;
+}
 
 /**
  * Apply value specification utility
  */
-function applySpecification(
-  value: any,
-  source: string,
-  spec: Specification
-): any {
-  if (value === null || value === undefined) {
+function applySpec(value: any, spec: Specification): any {
+  if (isNil(value)) {
     if (spec.required === true) {
-      throw new Error(`The required bound value "${source}" is not defined`);
+      throw new Error(`Value "${value}" does not meet the requirements`);
     }
     if (spec.hasOwnProperty("default")) {
       value = spec.default;
     }
   } else {
-    if (isString(spec.type) && typeof value !== spec.type) {
-      throw new Error(`The bound value "${source}" is not a "${spec.type}"`);
-    }
-    if (isFunction(spec.type) && !(value instanceof spec.type)) {
-      throw new Error(
-        `The bound value "${source}" is not an instance of ${spec.type}`
-      );
+    if (spec.type) {
+      const types = isArray(spec.type) ? spec.type : [spec.type];
+      for (const Type of types) {
+        if (!isInstanceOf(value, Type)) {
+          throw new Error(`Value "${value}" does not meet the requirements`);
+        }
+      }
     }
     if (spec.validator) {
       const valid = spec.validator.call(null, value);
       if (!valid) {
-        throw new Error(
-          `The bound value "${value}" from "${source}" is not valid`
-        );
+        throw new Error(`Value "${value}" does not meet the requirements`);
       }
     }
   }
@@ -50,8 +52,8 @@ function applySpecification(
 /**
  * Get and normalize a binder
  */
-function getBinderByName(this: App, name: string): Binder {
-  const definition = this.binders[name];
+function getBinderByName(app: Application, name: string): Binder {
+  const definition = app.binders[name];
 
   if (isFunction(definition)) {
     return { routine: definition };
@@ -60,7 +62,7 @@ function getBinderByName(this: App, name: string): Binder {
   } else {
     return {
       routine(el: HTMLElement, value: any): void {
-        if (value === undefined || value === null) {
+        if (isNil(value)) {
           el.removeAttribute(name);
         } else {
           el.setAttribute(name, value.toString());
@@ -73,17 +75,14 @@ function getBinderByName(this: App, name: string): Binder {
 /**
  * Build binding object
  */
-function buildBinding(this: App, info: AttributeInfo): Binding {
-  const { context, formatters } = this;
-
-  const get = getExpressionGetter(formatters, info).bind(context);
-  const set = getExpressionSetter(formatters, info).bind(context);
+function buildBinding(app: Application, attr: Attribute): Binding {
+  const { context, formatters } = app;
 
   return {
-    ...info,
+    ...attr,
     context,
-    get,
-    set
+    get: buildExpressionGetter(attr, formatters).bind(context),
+    set: buildExpressionSetter(attr, formatters).bind(context)
   };
 }
 
@@ -91,55 +90,42 @@ function buildBinding(this: App, info: AttributeInfo): Binding {
  * Build a binder directive
  */
 export function buildBinderDirective(
-  this: App,
+  app: Application,
   el: HTMLElement,
-  attrName: string
+  attribute: Attribute
 ): Directive {
-  // Parse target attribute info
-  const info = parseAttribute(this.prefix, el, attrName);
-
-  // Build binding object
-  const binding: Binding = buildBinding.call(this, info);
-
-  // Retrieve target binder (custom directive)
-  const binder: Binder = getBinderByName.call(this, info.directive);
-
-  // Enforce directive argument
-  if (binder.argumentRequired === true && !info.argument) {
-    throw new Error(`Binder ${info.directive} requires an argument`);
+  const binder = getBinderByName(app, attribute.directive);
+  if (binder.argumentRequired === true && !attribute.argument) {
+    throw new Error(`Binder ${attribute.directive} requires an argument`);
   }
 
-  // Create binder context
-  const context = {} as any;
+  const binding = buildBinding(app, attribute);
+  const context: any = {};
 
-  // Trigger first hook
   if (binder.bind) {
     binder.bind.call(context, el, binding);
   }
+  el.removeAttribute(attribute.name);
 
-  // Remove original attribute from DOM
-  el.removeAttribute(attrName);
-
-  // Return built directive
-  return {
-    ...info,
-    update(this: App, value: any) {
-      // Apply custom value validation
-      if (binder.value) {
-        value = applySpecification(value, info.attrValue, binder.value);
-      }
-      // Trigger routine hook
-      if (binder.routine) {
-        binder.routine.call(context, el, value, binding);
-      }
-    },
-    unbind(this: App) {
-      // Trigger routine hook
-      if (binder.unbind) {
-        binder.unbind.call(context, el, binding);
-      }
-      // Restore original attribute
-      el.setAttribute(attrName, info.attrValue);
+  function update(value: any) {
+    if (binder.value) {
+      value = applySpec(value, binder.value);
     }
+    if (binder.routine) {
+      binder.routine.call(context, el, value, binding);
+    }
+  }
+
+  function unbind() {
+    if (binder.unbind) {
+      binder.unbind.call(context, el, binding);
+    }
+    el.setAttribute(attribute.name, attribute.value);
+  }
+
+  return {
+    ...attribute,
+    update,
+    unbind
   };
 }

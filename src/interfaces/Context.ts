@@ -1,36 +1,27 @@
-/**
- * The observed data object
- */
+export type ContextCallback = (newValue: any, oldValue: any) => void;
 
+/**
+ * Observed data object
+ */
 export interface Context {
   /**
-   * Source object for this context
+   * Source data object to observe
    */
   $source: any;
-
   /**
-   * Context own properties
+   * Context's own properties (properties that does not exist inside $source)
    */
   $own: string[];
-
   /**
-   * Observe a specified path
+   * Observe value changes by path
    */
-  $observe(
-    path: string,
-    callback: (newValue: any, oldValue: any) => void
-  ): void;
-
+  $observe(path: string, callback: ContextCallback): void;
   /**
-   * Stop path observing
+   * Stop value changes observing
    */
-  $unobserve(
-    path: string,
-    callback: (newValue: any, oldValue: any) => void
-  ): void;
-
+  $unobserve(path: string, callback: ContextCallback): void;
   /**
-   * Any other property
+   * Properties inherit from $source object
    */
   [property: string]: any;
 }

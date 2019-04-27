@@ -1,5 +1,8 @@
 import { Context } from "../interfaces/Context";
-import { includes, isObject } from "../utils";
+
+import { includes } from "../utils/array";
+import { isObject } from "../utils/language";
+
 import { observePath, PathNotifier, unobservePath } from "./path";
 
 /**

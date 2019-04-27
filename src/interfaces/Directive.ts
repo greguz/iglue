@@ -1,17 +1,6 @@
-import { App } from "./App";
-import { AttributeValueInfo } from "./AttributeInfo";
+import { Expression } from "./Expression";
 
-/**
- * Represents a chunk of UI
- */
-export interface Directive extends AttributeValueInfo {
-  /**
-   * Fired every time there's a value update
-   */
-  update(this: App, value: any): void;
-
-  /**
-   * Fired during view unbind
-   */
-  unbind(this: App): void;
+export interface Directive extends Expression {
+  update: (value: any) => void;
+  unbind: () => void;
 }

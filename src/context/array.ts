@@ -1,4 +1,5 @@
-import { isArray, remove } from "../utils";
+import { remove } from "../utils/array";
+import { isArray } from "../utils/language";
 
 /**
  * Array change callback

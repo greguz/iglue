@@ -1,17 +1,10 @@
-import { App } from "./interfaces/App";
+import { Application } from "./interfaces/Application";
+import { Attribute } from "./interfaces/Attribute";
 import { Binder, BinderRoutine } from "./interfaces/Binder";
 import { Component } from "./interfaces/Component";
 import { Directive } from "./interfaces/Directive";
 import { Formatter, FormatterFunction } from "./interfaces/Formatter";
 import { View } from "./interfaces/View";
-
-import {
-  getAttributeByDirective,
-  getPrefixRegExp,
-  matchPrefix
-} from "./parse/attribute";
-import { getExpressionGetter, observeExpression } from "./parse/expression";
-import { parseText } from "./parse/text";
 
 import { buildContext } from "./context";
 
@@ -21,7 +14,13 @@ import { buildConditionalDirective } from "./directives/conditional";
 import { buildListDirective } from "./directives/list";
 import { buildTextDirective } from "./directives/text";
 
-import { Collection, getAttributes, parentElement } from "./utils";
+import { parseAttributes } from "./parse/attribute";
+import { buildExpressionGetter, observeExpression } from "./parse/expression";
+import { parseText } from "./parse/text";
+
+import { find } from "./utils/array";
+import { parentElement } from "./utils/dom";
+import { Collection } from "./utils/type";
 
 /**
  * Traverse DOM nodes
@@ -46,34 +45,76 @@ function traverseDOM(
 /**
  * Build all possible binders directive from DOM element
  */
-function buildBinderDirectives(this: App, el: HTMLElement): Directive[] {
-  return getAttributes(el)
-    .map(attr => attr.name)
-    .filter(attrName => matchPrefix(this.prefix, attrName))
-    .map(attrName => buildBinderDirective.call(this, el, attrName));
+function buildBinderDirectives(
+  app: Application,
+  el: HTMLElement,
+  attributes: Attribute[]
+): Directive[] {
+  return attributes.map(attr => buildBinderDirective(app, el, attr));
 }
 
 /**
  * Build text directives from text node
  */
-function buildTextDirectives(this: App, node: Text): Directive[] {
-  // Get the parent element
+function buildTextDirectives(app: Application, node: Text): Directive[] {
   const parent = parentElement(node);
+  const chunks = parseText(node.data);
+  const directives: Directive[] = [];
 
-  // Build directives
-  const directives = parseText(node.data, /{([^}]+)}/g)
-    // Set in place all text nodes
-    .map(chunk => ({
-      ...chunk,
-      node: parent.insertBefore(document.createTextNode(chunk.content), node)
-    }))
-    // Get dynamic nodes
-    .filter(chunk => chunk.type === "expression")
-    // Map node to directive
-    .map(chunk => buildTextDirective.call(this, chunk.node));
+  for (const chunk of chunks) {
+    const chunkNode = document.createTextNode(chunk.content);
 
-  // Remove origianl text node
+    parent.insertBefore(chunkNode, node);
+
+    if (chunk.type === "expression") {
+      directives.push(buildTextDirective(app, chunkNode));
+    }
+  }
+
   parent.removeChild(node);
+
+  return directives;
+}
+
+/**
+ * Build the directives list
+ */
+function buildDirectives(app: Application, el: HTMLElement) {
+  const { components } = app;
+  let directives: Directive[] = [];
+
+  traverseDOM(
+    el,
+    text => {
+      directives = directives.concat(buildTextDirectives(app, text));
+    },
+    child => {
+      const attributes = parseAttributes(child);
+
+      const eachAttr = find(attributes, attr => attr.directive === "each");
+      if (eachAttr) {
+        directives.push(buildListDirective(app, child, eachAttr));
+        return;
+      }
+
+      const ifAttr = find(attributes, attr => attr.directive === "if");
+      if (ifAttr) {
+        directives.push(buildConditionalDirective(app, child, ifAttr));
+        return;
+      }
+
+      const cName = child.nodeName.toLowerCase();
+      if (cName === "component" || components.hasOwnProperty(cName)) {
+        directives.push(buildComponentDirective(app, child));
+        return;
+      }
+
+      directives = directives.concat(
+        buildBinderDirectives(app, child, attributes)
+      );
+      return true;
+    }
+  );
 
   return directives;
 }
@@ -81,30 +122,46 @@ function buildTextDirectives(this: App, node: Text): Directive[] {
 /**
  * Make reactive a directive and return its subscription
  */
-function buildSubscription(app: App, directive: Directive) {
+function buildSubscription(app: Application, directive: Directive) {
   const { context, formatters } = app;
 
-  // Directive value getter function
-  const get = getExpressionGetter(formatters, directive);
+  const get = buildExpressionGetter(directive, formatters);
 
-  // Render the directive
   function update() {
-    directive.update.call(app, get.call(context));
+    directive.update(get.call(context));
   }
 
-  // Make directive reactive and get the ticket
   const unobserve = observeExpression(context, directive, update);
 
-  // Clean function
   function unbind() {
     unobserve();
-    directive.unbind.call(app);
+    directive.unbind();
   }
 
-  // Return composed subscription
   return {
     update,
     unbind
+  };
+}
+
+/**
+ * Build app object
+ */
+function buildApplication(
+  obj: object,
+  binders: Collection<Binder | BinderRoutine>,
+  components: Collection<Component>,
+  formatters: Collection<Formatter | FormatterFunction>
+): Application {
+  const context = buildContext(obj);
+
+  return {
+    binders,
+    components,
+    context,
+    formatters,
+    buildView: (el: HTMLElement, newObj?: object) =>
+      buildView(el, newObj || context, binders, components, formatters)
   };
 }
 
@@ -113,62 +170,17 @@ function buildSubscription(app: App, directive: Directive) {
  */
 export function buildView(
   el: HTMLElement,
-  obj: any,
-  prefix: string | RegExp,
+  obj: object,
   binders: Collection<Binder | BinderRoutine>,
   components: Collection<Component>,
   formatters: Collection<Formatter | FormatterFunction>
 ): View {
-  // Build view context
-  const context = buildContext(obj);
+  const app = buildApplication(obj, binders, components, formatters);
 
-  // Cache prefix regular expression
-  const prefixRegExp = getPrefixRegExp(prefix);
-
-  // Create the app instance
-  const app: App = {
-    binders,
-    components,
-    context,
-    formatters,
-    prefix: prefixRegExp,
-    buildView: (a: HTMLElement, b?: any) =>
-      buildView(a, b || context, prefix, binders, components, formatters)
-  };
-
-  // Build view directives
-  const directives: Directive[] = [];
-  traverseDOM(
-    el,
-    text => {
-      directives.push(...buildTextDirectives.call(app, text));
-    },
-    child => {
-      const eachAttr = getAttributeByDirective(prefixRegExp, child, "each");
-      const ifAttr = getAttributeByDirective(prefixRegExp, child, "if");
-      const cName = child.nodeName.toLowerCase();
-
-      if (eachAttr) {
-        directives.push(buildListDirective.call(app, child, eachAttr));
-      } else if (ifAttr) {
-        directives.push(buildConditionalDirective.call(app, child, ifAttr));
-      } else if (cName === "component" || components.hasOwnProperty(cName)) {
-        directives.push(buildComponentDirective.call(app, child));
-      } else {
-        directives.push(...buildBinderDirectives.call(app, child));
-
-        // Keep DOM scanning
-        return true;
-      }
-    }
-  );
-
-  // Make directives reactive and get subscriptions
-  const subscriptions = directives.map(directive =>
+  const subscriptions = buildDirectives(app, el).map(directive =>
     buildSubscription(app, directive)
   );
 
-  // Multiple void functions to single function reducer
   const reducer = (accumulator: VoidFunction, fn: VoidFunction) => {
     return () => {
       accumulator();
@@ -176,19 +188,17 @@ export function buildView(
     };
   };
 
-  // Build view#update method
+  // View APIs
   const update = subscriptions.map(sub => sub.update).reduce(reducer);
-
-  // Build view#unbind method
   const unbind = subscriptions.map(sub => sub.unbind).reduce(reducer);
 
   // First render
   update();
 
-  // Return view instance
+  // View instance
   return {
     el,
-    context,
+    context: app.context,
     update,
     unbind
   };

@@ -1,30 +1,20 @@
-import { AttributeValueInfo, Value } from "../interfaces/AttributeInfo";
 import { Context } from "../interfaces/Context";
+import { Expression } from "../interfaces/Expression";
 import { Formatter, FormatterFunction } from "../interfaces/Formatter";
+import { Target } from "../interfaces/Target";
 
-import {
-  Collection,
-  isArray,
-  isFunction,
-  isObject,
-  parsePath,
-  uniq
-} from "../utils";
+import { uniq } from "../utils/array";
+import { isArray, isFunction, isObject, parsePath } from "../utils/language";
+import { Collection, Getter, Setter } from "../utils/type";
 
-/**
- * Simple map function
- */
 type Mapper = (value: any) => any;
 
-/**
- * Simplest type of map function
- */
 function passthrough<T>(value: T): T {
   return value;
 }
 
 /**
- * Compose two map functions into a single one
+ * Compose two mappers into a single one, preserve the context
  */
 function composeMappers(first: Mapper, second: Mapper): Mapper {
   return function composedMapper(value: any): any {
@@ -40,25 +30,25 @@ function reduceMappers(mappers: Mapper[]): Mapper {
 }
 
 /**
- * Return a function that throw an error if called
+ * Wrap a error inside a function
  */
-function toThrow(message: string): (...args: any[]) => any {
+function wrapError(message: string): (...args: any[]) => any {
   return function ko(): void {
     throw new Error(message);
   };
 }
 
 /**
- * Wrap const value into a function
+ * Wrap a const value inside a function
  */
-function toConst<T>(value: T) {
+function wrapConst<T>(value: T) {
   return function get() {
     return value;
   };
 }
 
 /**
- * Get and normalize a formatter
+ * Get and ensure a full formatter
  */
 function getFormatter(
   formatters: Collection<Formatter | FormatterFunction>,
@@ -66,23 +56,32 @@ function getFormatter(
 ): Formatter {
   const definition = formatters[name];
 
+  const noPull = wrapError(`Formatter ${name} does not have pull function`);
+  const noPush = wrapError(`Formatter ${name} does not have push function`);
+
   if (isFunction(definition)) {
-    return { pull: definition };
+    return {
+      pull: definition,
+      push: noPush
+    };
   } else if (isObject(definition)) {
-    return definition;
+    return {
+      pull: definition.pull || noPull,
+      push: definition.push || noPush
+    };
   } else {
     throw new Error(`Unable to resolve formatter "${name}"`);
   }
 }
 
 /**
- * Build a getter function by object and path
+ * Build getter function by path
  */
-function buildGetter(path: string) {
+function buildGetter(path: string): Getter {
   const tokens = parsePath(path);
 
-  return function get(): any {
-    let o: any = this;
+  return function get(this: any): any {
+    let o = this;
 
     for (const token of tokens) {
       if (isObject(o)) {
@@ -97,13 +96,13 @@ function buildGetter(path: string) {
 }
 
 /**
- * Build a setter function by object and path
+ * Build setter function by path
  */
-function buildSetter(path: string) {
+function buildSetter(path: string): Setter {
   const tokens = parsePath(path);
 
-  return function set(value: any): void {
-    let o: any = this;
+  return function set(this: any, value: any): void {
+    let o = this;
     let i: number;
 
     for (i = 0; i < tokens.length - 1; i++) {
@@ -131,63 +130,75 @@ function buildSetter(path: string) {
 }
 
 /**
- * Map a value into a getter function
+ * Map target to getter
  */
-function buildValueGetter(value: Value) {
-  return value.type === "path"
-    ? buildGetter(value.value)
-    : toConst(value.value);
+function buildTargetGetter(target: Target): Getter {
+  return target.type === "path"
+    ? buildGetter(target.value)
+    : wrapConst(target.value);
 }
 
 /**
- * Map a value into a setter function
+ * Map target to setter
  */
-function buildValueSetter(value: Value) {
-  return value.type === "path"
-    ? buildSetter(value.value)
-    : toThrow("You cannot update a primitive value");
+function buildTargetSetter(target: Target): Setter {
+  return target.type === "path"
+    ? buildSetter(target.value)
+    : wrapError("You cannot update a primitive value");
 }
 
 /**
- * Bind formatter arguments to its functions
+ * Bind formatter arguments (targets)
  */
 function bindFormatterArguments(
   format: FormatterFunction,
-  values: Value[]
+  targets: Target[]
 ): Mapper {
-  const getters = values.map(buildValueGetter);
+  if (targets.length <= 0) {
+    return format;
+  }
 
-  return function formatValue(value: any): any {
-    return format.apply(this, [
-      value,
-      ...getters.map(getter => getter.call(this))
-    ]);
-  };
+  const getters = targets.map(buildTargetGetter);
+  if (getters.length === 1) {
+    return function boundFormatter(value: any): any {
+      return format.call(this, value, getters[0].call(this));
+    };
+  } else if (getters.length === 2) {
+    return function boundFormatter(value: any): any {
+      return format.call(
+        this,
+        value,
+        getters[0].call(this),
+        getters[1].call(this)
+      );
+    };
+  } else {
+    return function boundFormatter(value: any): any {
+      return format.apply(this, [
+        value,
+        ...getters.map(getter => getter.call(this))
+      ]);
+    };
+  }
 }
 
 /**
- * Build a value getter by expression
+ * Build getter by expression
  */
-export function getExpressionGetter(
-  formatters: Collection<Formatter | FormatterFunction>,
-  expression: AttributeValueInfo
-) {
-  const formatter: (name: string) => Formatter = getFormatter.bind(
-    null,
-    formatters
-  );
-
+export function buildExpressionGetter<T = any>(
+  expression: Expression,
+  formatters: Collection<Formatter | FormatterFunction> = {}
+): Getter<T> {
   const pull = reduceMappers(
     expression.formatters.map(entry =>
       bindFormatterArguments(
-        formatter(entry.name).pull ||
-          toThrow(`Formatter "${entry.name}" does not have pull function`),
-        entry.arguments
+        getFormatter(formatters, entry.name).pull,
+        entry.targets
       )
     )
   );
 
-  const getSourceValue = buildValueGetter(expression.value);
+  const getSourceValue = buildTargetGetter(expression.target);
 
   return function get(): any {
     return pull.call(this, getSourceValue.call(this));
@@ -195,28 +206,22 @@ export function getExpressionGetter(
 }
 
 /**
- * Build a value setter by expression
+ * Build setter by expression
  */
-export function getExpressionSetter(
-  formatters: Collection<Formatter | FormatterFunction>,
-  expression: AttributeValueInfo
-) {
-  const formatter: (name: string) => Formatter = getFormatter.bind(
-    null,
-    formatters
-  );
-
+export function buildExpressionSetter<T = any>(
+  expression: Expression,
+  formatters: Collection<Formatter | FormatterFunction> = {}
+): Setter<T> {
   const push = reduceMappers(
     expression.formatters.map(entry =>
       bindFormatterArguments(
-        formatter(entry.name).push ||
-          toThrow(`Formatter "${entry.name}" does not have push function`),
-        entry.arguments
+        getFormatter(formatters, entry.name).push,
+        entry.targets
       )
     )
   );
 
-  const setTargetValue = buildValueSetter(expression.value);
+  const setTargetValue = buildTargetSetter(expression.target);
 
   return function set(value: any): void {
     setTargetValue.call(this, push.call(this, value));
@@ -226,18 +231,18 @@ export function getExpressionSetter(
 /**
  * Get all used paths by the expression
  */
-function getPaths({ formatters, value, watch }: AttributeValueInfo): string[] {
+function getPaths({ formatters, target, watch }: Expression): string[] {
   const paths: string[] = [];
-  if (value.type === "path") {
-    paths.push(value.value);
+  if (target.type === "path") {
+    paths.push(target.value);
   }
   for (const path of watch) {
     paths.push(path);
   }
-  for (const fi of formatters) {
-    for (const fa of fi.arguments) {
-      if (fa.type === "path") {
-        paths.push(fa.value);
+  for (const formatter of formatters) {
+    for (const target of formatter.targets) {
+      if (target.type === "path") {
+        paths.push(target.value);
       }
     }
   }
@@ -249,8 +254,8 @@ function getPaths({ formatters, value, watch }: AttributeValueInfo): string[] {
  */
 export function observeExpression(
   context: Context,
-  expression: AttributeValueInfo,
-  callback: () => void
+  expression: Expression,
+  callback: VoidFunction
 ) {
   const paths = getPaths(expression);
 

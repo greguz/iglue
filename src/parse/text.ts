@@ -1,23 +1,13 @@
 import { Chunk } from "../interfaces/Chunk";
 
-export function parseText(text: string, regex: RegExp): Chunk[] {
-  // Ensure global flag
-  if (!regex.global) {
-    throw new Error("The interpolation regular expression must be global");
-  }
-
-  // Results
+export function parseText(text: string): Chunk[] {
+  const regex = /{([^}]+)}/g;
   const chunks: Chunk[] = [];
 
-  // Current match
-  let match: RegExpExecArray | null;
+  let index = 0;
+  let match = regex.exec(text);
 
-  // Current text index
-  let index: number = 0;
-
-  // tslint:disable-next-line
-  while ((match = regex.exec(text))) {
-    // Extract previous text
+  while (match) {
     if (index !== match.index) {
       chunks.push({
         type: "static",
@@ -27,7 +17,6 @@ export function parseText(text: string, regex: RegExp): Chunk[] {
       });
     }
 
-    // Extract matched path
     chunks.push({
       type: "expression",
       from: match.index,
@@ -35,11 +24,10 @@ export function parseText(text: string, regex: RegExp): Chunk[] {
       content: match[1]
     });
 
-    // Update current index
     index = match.index + match[0].length;
+    match = regex.exec(text);
   }
 
-  // Extract text after last match
   if (index !== text.length) {
     chunks.push({
       type: "static",

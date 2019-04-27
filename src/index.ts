@@ -4,12 +4,10 @@ import { View, ViewOptions } from "./interfaces/View";
 
 import binders from "./binders";
 import { buildView } from "./view";
-import { Collection } from "./utils";
 
-/**
- * Public interfaces
- */
-export * from "./interfaces/AttributeInfo";
+import { isFunction, isObject } from "./utils/language";
+import { Collection } from "./utils/type";
+
 export * from "./interfaces/Binder";
 export * from "./interfaces/Binding";
 export * from "./interfaces/Component";
@@ -18,27 +16,17 @@ export * from "./interfaces/Formatter";
 export * from "./interfaces/Specification";
 export * from "./interfaces/View";
 
-/**
- * Public APIs
- */
 export * from "./context";
 
-/**
- * Global binders
- */
+export * from "./utils/type";
+
 export { binders };
 
-/**
- * Global components
- */
 export const components: Collection<Component> = {};
 
-/**
- * Global formatters
- */
 export const formatters: Collection<Formatter | FormatterFunction> = {
   args(method: any, ...boundArgs: any[]): (...args: any[]) => any {
-    if (typeof method !== "function") {
+    if (!isFunction(method)) {
       throw new Error("The target bound value is not a function");
     }
     return function(...args: any[]): any {
@@ -47,39 +35,34 @@ export const formatters: Collection<Formatter | FormatterFunction> = {
   },
 
   prop(obj: any, prop: string): any {
-    if (typeof obj === "object" && obj !== null) {
-      return obj[prop];
-    }
+    return isObject(obj) ? obj[prop] : undefined;
   },
 
-  eq(value: any, target: any): boolean {
+  eq(value: any, target: any) {
     return value === target;
   },
 
-  neq(value: any, target: any): boolean {
+  neq(value: any, target: any) {
     return value !== target;
   },
 
-  gt(value: any, target: any): boolean {
+  gt(value: any, target: any) {
     return value > target;
   },
 
-  gte(value: any, target: any): boolean {
+  gte(value: any, target: any) {
     return value >= target;
   },
 
-  lt(value: any, target: any): boolean {
+  lt(value: any, target: any) {
     return value < target;
   },
 
-  lte(value: any, target: any): boolean {
+  lte(value: any, target: any) {
     return value <= target;
   }
 };
 
-/**
- * Bind a new view API
- */
 export function bind(
   el: HTMLElement,
   obj: object = {},
@@ -88,7 +71,6 @@ export function bind(
   return buildView(
     el,
     obj,
-    options.prefix || "i-",
     { ...binders, ...options.binders },
     { ...components, ...options.components },
     { ...formatters, ...options.formatters }
