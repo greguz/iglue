@@ -240,9 +240,9 @@ function getPaths({ formatters, target, watch }: Expression): string[] {
     paths.push(path);
   }
   for (const formatter of formatters) {
-    for (const target of formatter.targets) {
-      if (target.type === "path") {
-        paths.push(target.value);
+    for (const fTarget of formatter.targets) {
+      if (fTarget.type === "path") {
+        paths.push(fTarget.value);
       }
     }
   }

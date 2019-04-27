@@ -28,9 +28,7 @@ export function parseTargets(text: string): Target[] {
   let string = false;
   let token = false;
 
-  for (let index = 0; index < text.length; index++) {
-    const char = text[index];
-
+  for (const char of text) {
     if (number) {
       if (!isWhiteSpace(char)) {
         chunk += char;

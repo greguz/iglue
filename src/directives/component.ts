@@ -4,7 +4,7 @@ import { Directive } from "../interfaces/Directive";
 import { Expression } from "../interfaces/Expression";
 import { View } from "../interfaces/View";
 
-import { parseDirective, parseArgument } from "../libs/attribute";
+import { parseArgument, parseDirective } from "../libs/attribute";
 import { buildExpressionGetter, observeExpression } from "../libs/engine";
 import { parseExpression } from "../libs/expression";
 import { buildHTML } from "../libs/html";
