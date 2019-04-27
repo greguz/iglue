@@ -255,7 +255,7 @@ function getPaths({ formatters, target, watch }: Expression): string[] {
 export function observeExpression(
   context: Context,
   expression: Expression,
-  callback: VoidFunction
+  callback: () => void
 ) {
   const paths = getPaths(expression);
 

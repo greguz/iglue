@@ -75,6 +75,7 @@ export function buildListDirective(
 ): Directive {
   // Extract useful data from app
   const { buildView } = app;
+  const { expression } = attribute;
 
   // Ensure argument value
   const argument = attribute.argument || "$value";
@@ -83,7 +84,7 @@ export function buildListDirective(
   const views: View[] = [];
 
   // Static element into DOM to use as position marker
-  const marker = document.createComment(` EACH ${attribute.target.value} `);
+  const marker = document.createComment(` EACH ${expression.target.value} `);
 
   // Swap original element with maker
   replaceNode(marker, el);
@@ -126,7 +127,7 @@ export function buildListDirective(
 
   // Return build directive
   return {
-    ...attribute,
+    expression,
     update,
     unbind
   };

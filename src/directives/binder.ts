@@ -5,10 +5,7 @@ import { Binding } from "../interfaces/Binding";
 import { Directive } from "../interfaces/Directive";
 import { Specification } from "../interfaces/Specification";
 
-import {
-  buildExpressionGetter,
-  buildExpressionSetter
-} from "../parse/expression";
+import { buildExpressionGetter, buildExpressionSetter } from "../libs/engine";
 
 import { isArray, isFunction, isNil, isObject } from "../utils/language";
 
@@ -75,14 +72,15 @@ function getBinderByName(app: Application, name: string): Binder {
 /**
  * Build binding object
  */
-function buildBinding(app: Application, attr: Attribute): Binding {
+function buildBinding(app: Application, attribute: Attribute): Binding {
   const { context, formatters } = app;
+  const { expression } = attribute;
 
   return {
-    ...attr,
+    ...attribute,
     context,
-    get: buildExpressionGetter(attr, formatters).bind(context),
-    set: buildExpressionSetter(attr, formatters).bind(context)
+    get: buildExpressionGetter(expression, formatters).bind(context),
+    set: buildExpressionSetter(expression, formatters).bind(context)
   };
 }
 
@@ -101,6 +99,7 @@ export function buildBinderDirective(
 
   const binding = buildBinding(app, attribute);
   const context: any = {};
+  const { expression } = attribute;
 
   if (binder.bind) {
     binder.bind.call(context, el, binding);
@@ -124,7 +123,7 @@ export function buildBinderDirective(
   }
 
   return {
-    ...attribute,
+    expression,
     update,
     unbind
   };

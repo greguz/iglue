@@ -14,12 +14,13 @@ import { buildConditionalDirective } from "./directives/conditional";
 import { buildListDirective } from "./directives/list";
 import { buildTextDirective } from "./directives/text";
 
-import { parseAttributes } from "./parse/attribute";
-import { buildExpressionGetter, observeExpression } from "./parse/expression";
-import { parseText } from "./parse/text";
+import { parseAttributes } from "./libs/attribute";
+import { buildExpressionGetter, observeExpression } from "./libs/engine";
+import { parseText } from "./libs/text";
 
 import { find } from "./utils/array";
 import { parentElement } from "./utils/dom";
+import { voidReducer, noop } from "./utils/language";
 import { Collection } from "./utils/type";
 
 /**
@@ -124,14 +125,15 @@ function buildDirectives(app: Application, el: HTMLElement) {
  */
 function buildSubscription(app: Application, directive: Directive) {
   const { context, formatters } = app;
+  const { expression } = directive;
 
-  const get = buildExpressionGetter(directive, formatters);
+  const get = buildExpressionGetter(expression, formatters);
 
   function update() {
     directive.update(get.call(context));
   }
 
-  const unobserve = observeExpression(context, directive, update);
+  const unobserve = observeExpression(context, expression, update);
 
   function unbind() {
     unobserve();
@@ -181,21 +183,11 @@ export function buildView(
     buildSubscription(app, directive)
   );
 
-  const reducer = (accumulator: VoidFunction, fn: VoidFunction) => {
-    return () => {
-      accumulator();
-      fn();
-    };
-  };
+  const update = subscriptions.map(sub => sub.update).reduce(voidReducer, noop);
+  const unbind = subscriptions.map(sub => sub.unbind).reduce(voidReducer, noop);
 
-  // View APIs
-  const update = subscriptions.map(sub => sub.update).reduce(reducer);
-  const unbind = subscriptions.map(sub => sub.unbind).reduce(reducer);
-
-  // First render
   update();
 
-  // View instance
   return {
     el,
     context: app.context,

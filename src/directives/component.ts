@@ -4,112 +4,91 @@ import { Directive } from "../interfaces/Directive";
 import { Expression } from "../interfaces/Expression";
 import { View } from "../interfaces/View";
 
-import {
-  parseAttributes,
-  parseAttributeValue,
-  parseDirective
-} from "../parse/attribute";
-import { buildExpressionGetter, observeExpression } from "../parse/expression";
-import { buildHTML } from "../parse/html";
+import { parseDirective, parseArgument } from "../libs/attribute";
+import { buildExpressionGetter, observeExpression } from "../libs/engine";
+import { parseExpression } from "../libs/expression";
+import { buildHTML } from "../libs/html";
 
 import { getAttributes, parentElement } from "../utils/dom";
-import { assign, isFunction, isObject, noop } from "../utils/language";
-import { Collection, Getter } from "../utils/type";
+import {
+  assign,
+  isFunction,
+  isObject,
+  noop,
+  voidReducer
+} from "../utils/language";
+import { Collection } from "../utils/type";
 
 /**
- * Component event handler
- */
-type Handler = (this: any, ...args: any[]) => any;
-
-/**
- *
- */
-type Handlers = Collection<Getter<Handler>>;
-
-/**
- * Property binding definition
- */
-interface Property extends Expression {
-  name: string;
-}
-
-/**
- *
+ * Extended application with component utils
  */
 interface CA extends Application {
-  handlers: Handlers;
-  properties: Property[];
+  handlers: Collection<Expression>;
+  properties: Collection<Expression>;
 }
 
 /**
- *
+ * Component state
  */
 interface State {
+  // Current component DOM element
   el: HTMLElement;
+  // Current component name
   name: string;
+  // Current rendered view
   view: View;
+  // Source component definition
   component: Component;
+  // Stop data observation callback
   unobserve: VoidFunction;
 }
 
 /**
- *
- */
-function getProperties(app: Application, el: HTMLElement): Property[] {
-  return getAttributes(el)
-    .filter(attr => !parseDirective(attr.name))
-    .map(attr => ({ ...parseAttributeValue(attr.value), name: attr.name }));
-}
-
-/**
- *
- */
-function getHandlers(app: Application, el: HTMLElement): Handlers {
-  const { formatters } = app;
-
-  return parseAttributes(el)
-    .filter(attr => attr.directive === "on")
-    .reduce<Handlers>((handlers, attr) => {
-      if (attr.argument) {
-        handlers[attr.argument] = buildExpressionGetter<Handler>(
-          attr,
-          formatters
-        );
-      }
-      return handlers;
-    }, {});
-}
-
-/**
- *
+ * Build the custom component application
  */
 function buildApp(app: Application, el: HTMLElement): CA {
+  const properties: Collection<Expression> = {};
+  const handlers: Collection<Expression> = {};
+
+  for (const attribute of getAttributes(el)) {
+    const directive = parseDirective(attribute.value);
+    const argument = parseArgument(attribute.value);
+
+    if (!directive) {
+      properties[attribute.name] = parseExpression(attribute.value);
+    } else if (directive === "on" && argument) {
+      handlers[argument] = parseExpression(attribute.value);
+    }
+  }
+
   return {
     ...app,
-    properties: getProperties(app, el),
-    handlers: getHandlers(app, el)
+    properties,
+    handlers
   };
 }
 
 /**
- * $emit API of component context
+ * $emit component API
  */
 function $emit(app: CA, event: string, ...args: any[]): void {
-  const { handlers, context } = app;
+  const { handlers, context, formatters } = app;
 
-  const handler = handlers[event];
-
-  if (handler) {
-    const listener = handler.call(context);
-
-    if (isFunction(listener)) {
-      listener.apply(context, args);
-    }
+  const expression = handlers[event];
+  if (!expression) {
+    return;
   }
+
+  const handler = buildExpressionGetter(expression, formatters).call(context);
+  if (!isFunction(handler)) {
+    throw new Error(`Found an invalid handler for event "${event}"`);
+  }
+
+  handler.apply(context, args);
 }
 
 /**
- *
+ * Get component by name
  */
 function getComponent(app: CA, name: string): Component {
   const definition = app.components[name];
@@ -139,35 +118,42 @@ function buildComponentElement(
 }
 
 /**
- * Make a property reactive between two objects
+ * Make a property reactive (parent to child only)
  */
-function linkProperty(app: CA, target: any, property: Property): VoidFunction {
+function linkProperty(
+  app: CA,
+  target: any,
+  property: string,
+  expression: Expression
+): VoidFunction {
   const { context, formatters } = app;
 
-  const get = buildExpressionGetter(property, formatters).bind(context);
+  const get = buildExpressionGetter(expression, formatters).bind(context);
 
   function update() {
-    target[property.name] = get();
+    target[property] = get();
   }
 
   update();
 
-  return observeExpression(context, property, update);
+  return observeExpression(context, expression, update);
 }
 
 /**
- * Make reactive component context (parent>to>child)
+ * Make component context reactive
  */
 function linkProperties(app: CA, target: any): VoidFunction {
-  return app.properties
-    .map(property => linkProperty(app, target, property))
-    .reduce(
-      (acc, fn) => () => {
-        acc();
-        fn();
-      },
-      noop
+  const { properties } = app;
+
+  let unobserve: VoidFunction = noop;
+  for (const property in properties) {
+    unobserve = voidReducer(
+      unobserve,
+      linkProperty(app, target, property, properties[property] as Expression)
     );
+  }
+
+  return unobserve;
 }
 
 /**
@@ -175,7 +161,7 @@ function linkProperties(app: CA, target: any): VoidFunction {
  */
 function mount(app: CA, name: string): State {
   // Fetch component object
-  const component: Component = getComponent(app, name);
+  const component = getComponent(app, name);
 
   // Create base component context
   const context = component.data ? component.data.call(null) : {};
@@ -300,7 +286,7 @@ function destroy(app: CA, state: State, el: HTMLElement) {
  */
 function buildDirectiveExpression(el: HTMLElement): Expression {
   return el.hasAttribute("is")
-    ? parseAttributeValue(el.getAttribute("is") as string)
+    ? parseExpression(el.getAttribute("is") as string)
     : {
         target: {
           type: "primitive",
@@ -319,15 +305,15 @@ export function buildComponentDirective(
   el: HTMLElement
 ): Directive {
   const expression = buildDirectiveExpression(el);
-  const cap = buildApp(app, el);
+  const ca = buildApp(app, el);
 
   let state: State | undefined;
 
   function update(componentName: any) {
     if (!state) {
-      state = create(cap, el, componentName);
+      state = create(ca, el, componentName);
     } else if (state.name !== componentName) {
-      state = swap(cap, state, componentName);
+      state = swap(ca, state, componentName);
     } else {
       state.view.update();
     }
@@ -335,13 +321,13 @@ export function buildComponentDirective(
 
   function unbind() {
     if (state) {
-      destroy(cap, state, el);
+      destroy(ca, state, el);
       state = undefined;
     }
   }
 
   return {
-    ...expression,
+    expression,
     update,
     unbind
   };

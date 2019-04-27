@@ -97,3 +97,10 @@ export function assign(target: any, ...sources: any[]): any {
 
   return to;
 }
+
+export function voidReducer(a: VoidFunction, b: VoidFunction): VoidFunction {
+  return function c() {
+    a();
+    b();
+  };
+}

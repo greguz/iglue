@@ -11,6 +11,7 @@ export function buildConditionalDirective(
   attribute: Attribute
 ): Directive {
   const { buildView } = app;
+  const { expression } = attribute;
   const comment = document.createComment(` IF : ${attribute.value} `);
 
   let node: Node = el;
@@ -43,7 +44,7 @@ export function buildConditionalDirective(
   }
 
   return {
-    ...attribute,
+    expression,
     update,
     unbind
   };

@@ -1,11 +1,12 @@
-import { Attribute, Name } from "../interfaces/Attribute";
-import { Expression, FormatterInfo } from "../interfaces/Expression";
+import { Attribute } from "../interfaces/Attribute";
+import { FormatterInfo } from "../interfaces/Expression";
 import { Target } from "../interfaces/Target";
-
-import { parseTargets } from "../parse/targets";
 
 import { getAttributes } from "../utils/dom";
 import { captureRegExpGroup, captureRegExpGroups } from "../utils/language";
+
+import { parseExpression } from "./expression";
+import { parseTargets } from "./targets";
 
 export function parseDirective(attrName: string) {
   return captureRegExpGroup(/^i-([^:.]+)/, attrName);
@@ -54,35 +55,21 @@ export function parseWatchedPaths(attrValue: string): string[] {
   return captureRegExpGroups(/\S+/g, text, 0);
 }
 
-export function parseAttributeName(attrName: string): Name {
+export function parseAttribute(el: HTMLElement, attrName: string): Attribute {
+  const attrValue = el.getAttribute(attrName) || "";
+
   const directive = parseDirective(attrName);
   if (!directive) {
     throw new Error("Unexpected attribute name");
   }
 
   return {
-    directive,
-    argument: parseArgument(attrName),
-    modifiers: parseModifiers(attrName)
-  };
-}
-
-export function parseAttributeValue(attrValue: string): Expression {
-  return {
-    target: parseRootTarget(attrValue),
-    formatters: parseFormatters(attrValue),
-    watch: parseWatchedPaths(attrValue)
-  };
-}
-
-export function parseAttribute(el: HTMLElement, attrName: string): Attribute {
-  const attrValue = el.getAttribute(attrName) || "";
-
-  return {
     name: attrName,
     value: attrValue,
-    ...parseAttributeName(attrName),
-    ...parseAttributeValue(attrValue)
+    directive,
+    argument: parseArgument(attrName),
+    modifiers: parseModifiers(attrName),
+    expression: parseExpression(attrValue)
   };
 }
 

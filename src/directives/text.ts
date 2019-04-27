@@ -1,7 +1,7 @@
 import { Application } from "../interfaces/Application";
 import { Directive } from "../interfaces/Directive";
 
-import { parseAttributeValue } from "../parse/attribute";
+import { parseExpression } from "../libs/expression";
 
 import { isNil } from "../utils/language";
 
@@ -17,7 +17,7 @@ export function buildTextDirective(app: Application, node: Text): Directive {
   }
 
   return {
-    ...parseAttributeValue(originalContent),
+    expression: parseExpression(originalContent),
     update,
     unbind
   };

@@ -1,18 +1,28 @@
 import { Expression } from "./Expression";
 
-/**
- * Parsed DOM attribute name and value
- */
-export interface Attribute extends Name, Expression {
+export interface Attribute {
+  /**
+   * DOM attribute name
+   */
   name: string;
+  /**
+   * DOM attribute value
+   */
   value: string;
-}
-
-/**
- * Attribute name info (directive declaration)
- */
-export interface Name {
+  /**
+   * Directive name
+   */
   directive: string;
+  /**
+   * Directive's argument
+   */
   argument?: string;
+  /**
+   * Modifiers list
+   */
   modifiers: string[];
+  /**
+   * Parsed attribute value
+   */
+  expression: Expression;
 }
