@@ -76,6 +76,9 @@ export function parsePath(path: string): string[] {
   return tokens;
 }
 
+export function assign<T>(target: T): T;
+export function assign<T, S0>(target: T, s0: S0): T & S0;
+export function assign<T, S0, S1>(target: T, s0: S0, s1: S1): T & S0 & S1;
 export function assign(target: any, ...sources: any[]): any {
   if (isNil(target)) {
     throw new TypeError(
