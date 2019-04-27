@@ -6,7 +6,7 @@ import $class from "./class";
 import $on from "./on";
 import $value from "./value";
 
-const binders: Collection<Binder | BinderRoutine> = {
+export const binders: Collection<Binder | BinderRoutine> = {
   class: $class,
   on: $on,
   value: $value,
@@ -39,5 +39,3 @@ const binders: Collection<Binder | BinderRoutine> = {
     }
   }
 };
-
-export default binders;
