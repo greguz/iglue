@@ -88,10 +88,9 @@ export function buildContext(obj: any, ownProperties: string[] = []): Context {
   // Expose all currently enumerable properties and skip owned properties
   for (const property in obj) {
     if (obj.hasOwnProperty(property)) {
-      if (ownProperties && includes(ownProperties, property)) {
-        continue;
+      if (!includes(ownProperties, property)) {
+        exposeProperty(context, property);
       }
-      exposeProperty(context, property);
     }
   }
 
