@@ -8,10 +8,12 @@ import { buildView } from "./view";
 import { isFunction, isObject } from "./utils/language";
 import { Collection } from "./utils/type";
 
+export * from "./interfaces/Attribute";
 export * from "./interfaces/Binder";
 export * from "./interfaces/Binding";
 export * from "./interfaces/Component";
 export * from "./interfaces/Context";
+export * from "./interfaces/Expression";
 export * from "./interfaces/Formatter";
 export * from "./interfaces/Specification";
 export * from "./interfaces/View";
