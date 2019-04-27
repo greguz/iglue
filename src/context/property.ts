@@ -1,5 +1,5 @@
 import { remove } from "../utils/array";
-import { isObject } from "../utils/language";
+import { assign, isObject } from "../utils/language";
 import { Collection } from "../utils/type";
 
 /**
@@ -46,10 +46,7 @@ function getPropertyDescriptor(obj: any, property: string): PropertyDescriptor {
   }
 
   return descriptor
-    ? {
-        ...descriptor,
-        configurable: true
-      }
+    ? assign({}, descriptor, { configurable: true })
     : {
         configurable: true,
         enumerable: true,

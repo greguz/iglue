@@ -6,6 +6,7 @@ import { formatters } from "./formatters";
 
 import { buildView } from "./view";
 
+import { assign } from "./utils/language";
 import { Collection } from "./utils/type";
 
 export * from "./interfaces/Attribute";
@@ -34,8 +35,8 @@ export function bind(
   return buildView(
     el,
     obj,
-    { ...binders, ...options.binders },
-    { ...components, ...options.components },
-    { ...formatters, ...options.formatters }
+    assign({}, binders, options.binders),
+    assign({}, components, options.components),
+    assign({}, formatters, options.formatters)
   );
 }

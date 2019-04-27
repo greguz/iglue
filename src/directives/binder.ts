@@ -7,7 +7,13 @@ import { Specification } from "../interfaces/Specification";
 
 import { buildExpressionGetter, buildExpressionSetter } from "../libs/engine";
 
-import { isArray, isFunction, isNil, isObject } from "../utils/language";
+import {
+  assign,
+  isArray,
+  isFunction,
+  isNil,
+  isObject
+} from "../utils/language";
 
 function isInstanceOf(value: any, Type: Function) {
   return typeof value === "object"
@@ -76,12 +82,11 @@ function buildBinding(app: Application, attribute: Attribute): Binding {
   const { context, formatters } = app;
   const { expression } = attribute;
 
-  return {
-    ...attribute,
+  return assign({}, attribute, {
     context,
     get: buildExpressionGetter(expression, formatters).bind(context),
     set: buildExpressionSetter(expression, formatters).bind(context)
-  };
+  });
 }
 
 /**

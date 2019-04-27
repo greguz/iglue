@@ -61,11 +61,10 @@ function buildApp(app: Application, el: HTMLElement): CA {
     }
   }
 
-  return {
-    ...app,
+  return assign({}, app, {
     properties,
     handlers
-  };
+  });
 }
 
 /**

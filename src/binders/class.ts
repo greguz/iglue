@@ -26,7 +26,7 @@ const binder: Binder<BinderContext> = {
       if (isString(value)) {
         newClasses = value.match(/\S+/g) || [];
       } else if (isArray(value)) {
-        newClasses = value;
+        newClasses = value.slice(0);
       } else {
         newClasses = [];
       }
@@ -46,7 +46,7 @@ const binder: Binder<BinderContext> = {
       }
 
       // save current status
-      this.classes = [...newClasses];
+      this.classes = newClasses;
     }
   },
 
