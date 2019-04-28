@@ -16,7 +16,7 @@ import { buildHTML } from "../libs/html";
 import { voidReducer } from "../utils/array";
 import { getAttributes, parentElement } from "../utils/dom";
 import { isFunction, isObject, noop } from "../utils/language";
-import { assign } from "../utils/object";
+import { assign, eachObject, mapObject } from "../utils/object";
 import { Collection } from "../utils/type";
 
 /**
@@ -139,23 +139,6 @@ function linkProperty(
 }
 
 /**
- * Make component context reactive
- */
-function linkProperties(app: CA, target: any): VoidFunction {
-  const { properties } = app;
-
-  let unobserve: VoidFunction = noop;
-  for (const property in properties) {
-    unobserve = voidReducer(
-      unobserve,
-      linkProperty(app, target, property, properties[property] as Expression)
-    );
-  }
-
-  return unobserve;
-}
-
-/**
  * Build descriptor by computer property definition
  */
 function buildComputedProperty(definition: any): PropertyDescriptor {
@@ -208,29 +191,31 @@ function mount(app: CA, componentName: string): State {
 
   // Apply computed properties
   if (component.computed) {
-    for (const property in component.computed) {
+    eachObject(component.computed, (definition, property) =>
       Object.defineProperty(
         context,
         property,
-        buildComputedProperty(component.computed[property])
-      );
-    }
+        buildComputedProperty(definition)
+      )
+    );
   }
 
   // Inject $emit API
   Object.defineProperty(context, "$emit", { value: $emit.bind(null, app) });
 
-  // Make component context reactive
-  let unobserve = linkProperties(app, context);
+  // Stop observation function
+  let unobserve: VoidFunction = noop;
+
+  // Link parent properties
+  unobserve = mapObject(app.properties, (expression, name) =>
+    linkProperty(app, context, name, expression)
+  ).reduce(voidReducer, unobserve);
 
   // Register watch handlers
   if (component.watch) {
-    for (const path in component.watch) {
-      unobserve = voidReducer(
-        unobserve,
-        registerWatchHandler(context, path, component.watch[path] as any)
-      );
-    }
+    unobserve = mapObject(component.watch, (handler, path) =>
+      registerWatchHandler(context, path, handler)
+    ).reduce(voidReducer, unobserve);
   }
 
   // Trigger creation hook

@@ -8,6 +8,7 @@ import { buildContext } from "../context/context";
 
 import { insertAfter, parentElement, replaceNode } from "../utils/dom";
 import { isArray, isObject } from "../utils/language";
+import { mapObject } from "../utils/object";
 
 /**
  * List entry
@@ -25,13 +26,7 @@ function buildEntries(data: any): Entry[] {
   if (isArray(data)) {
     return data.map((value, index) => ({ index, value }));
   } else if (isObject(data)) {
-    const result: Entry[] = [];
-    for (const key in data) {
-      if (data.hasOwnProperty(key)) {
-        result.push({ key, value: data[key] });
-      }
-    }
-    return result;
+    return mapObject<Entry, any>(data, (value, key) => ({ key, value }));
   } else {
     return [];
   }

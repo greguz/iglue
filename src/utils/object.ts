@@ -1,4 +1,5 @@
-import { isNil } from "./language";
+import { isUndefined, isNil } from "./language";
+import { Collection } from "./type";
 
 export function assign<T>(target: T): T;
 export function assign<T, S0>(target: T, s0: S0): T & S0;
@@ -47,4 +48,27 @@ export function parsePath(path: string): string[] {
     }
   }
   return tokens;
+}
+
+export function eachObject<T>(
+  object: Collection<T>,
+  fn: (value: T, key: string) => any
+) {
+  for (const key in object) {
+    if (object.hasOwnProperty(key)) {
+      const value = object[key];
+      if (!isUndefined(value)) {
+        fn(value, key);
+      }
+    }
+  }
+}
+
+export function mapObject<A, B = any>(
+  object: Collection<B>,
+  fn: (value: B, key: string) => A
+): A[] {
+  const result: A[] = [];
+  eachObject(object, (value, key) => result.push(fn(value, key)));
+  return result;
 }

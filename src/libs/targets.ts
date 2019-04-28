@@ -24,12 +24,12 @@ export function parseTargets(text: string): Target[] {
 
   let chunk = "";
 
-  let number = false;
-  let string = false;
-  let token = false;
+  let pNumber = false;
+  let pString = false;
+  let pToken = false;
 
   for (const char of text) {
-    if (number) {
+    if (pNumber) {
       if (!isWhiteSpace(char)) {
         chunk += char;
       } else {
@@ -38,17 +38,17 @@ export function parseTargets(text: string): Target[] {
         }
         targets.push(primitiveTarget(parseFloat(chunk)));
         chunk = "";
-        number = false;
+        pNumber = false;
       }
-    } else if (string) {
+    } else if (pString) {
       if (char === chunk[0]) {
         targets.push(primitiveTarget(chunk.slice(1)));
         chunk = "";
-        string = false;
+        pString = false;
       } else {
         chunk += char;
       }
-    } else if (token) {
+    } else if (pToken) {
       if (!isWhiteSpace(char)) {
         chunk += char;
       } else {
@@ -64,13 +64,13 @@ export function parseTargets(text: string): Target[] {
           targets.push(pathTarget(chunk));
         }
         chunk = "";
-        token = false;
+        pToken = false;
       }
     } else if (!isWhiteSpace(char)) {
       chunk += char;
-      number = /[-\.\d]/.test(char);
-      string = char === '"' || char === "'";
-      token = !number && !string;
+      pNumber = /[-\.\d]/.test(char);
+      pString = char === '"' || char === "'";
+      pToken = !pNumber && !pString;
     }
   }
 
