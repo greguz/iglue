@@ -6,7 +6,7 @@ import { formatters } from "./formatters";
 
 import { buildView } from "./view";
 
-import { assign } from "./utils/language";
+import { assign } from "./utils/object";
 import { Collection } from "./utils/type";
 
 export * from "./interfaces/Attribute";

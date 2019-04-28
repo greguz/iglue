@@ -1,6 +1,8 @@
 import { Binder } from "../interfaces/Binder";
 import { Binding } from "../interfaces/Binding";
 
+import { isNil } from "../utils/language";
+
 type BoundElement = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
 interface BinderContext {
@@ -48,7 +50,7 @@ const binder: Binder<BinderContext> = {
     ) {
       (el as HTMLInputElement).checked = !!value;
     } else {
-      el.value = value === undefined || value === null ? "" : value.toString();
+      el.value = isNil(value) ? "" : value.toString();
     }
   },
 

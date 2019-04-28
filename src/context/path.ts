@@ -1,5 +1,6 @@
 import { remove } from "../utils/array";
-import { isArray, isObject, parsePath } from "../utils/language";
+import { isArray, isObject, isUndefined } from "../utils/language";
+import { parsePath } from "../utils/object";
 import { Collection } from "../utils/type";
 
 import { observeArray, unobserveArray } from "./array";
@@ -68,7 +69,7 @@ function register(
   token: string | undefined,
   callback: VoidFunction
 ): void {
-  if (token === undefined) {
+  if (isUndefined(token)) {
     if (isArray(value)) {
       onArray(value, callback);
     }

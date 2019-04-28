@@ -4,7 +4,8 @@ import { Formatter, FormatterFunction } from "../interfaces/Formatter";
 import { Target } from "../interfaces/Target";
 
 import { uniq } from "../utils/array";
-import { isArray, isFunction, isObject, parsePath } from "../utils/language";
+import { isArray, isFunction, isObject, isUndefined } from "../utils/language";
+import { parsePath } from "../utils/object";
 import { Collection, Getter, Setter } from "../utils/type";
 
 type Mapper = (value: any) => any;
@@ -108,7 +109,7 @@ function buildSetter(path: string): Setter {
     for (i = 0; i < tokens.length - 1; i++) {
       const token: string = tokens[i];
 
-      if (o[token] === undefined) {
+      if (isUndefined(o[token])) {
         if (/^\d+$/.test(token)) {
           o[token] = [];
         } else {

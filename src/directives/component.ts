@@ -9,14 +9,10 @@ import { buildExpressionGetter, observeExpression } from "../libs/engine";
 import { parseExpression } from "../libs/expression";
 import { buildHTML } from "../libs/html";
 
+import { voidReducer } from "../utils/array";
 import { getAttributes, parentElement } from "../utils/dom";
-import {
-  assign,
-  isFunction,
-  isObject,
-  noop,
-  voidReducer
-} from "../utils/language";
+import { isFunction, isObject, noop } from "../utils/language";
+import { assign } from "../utils/object";
 import { Collection } from "../utils/type";
 
 /**

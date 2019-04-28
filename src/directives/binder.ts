@@ -7,13 +7,8 @@ import { Specification } from "../interfaces/Specification";
 
 import { buildExpressionGetter, buildExpressionSetter } from "../libs/engine";
 
-import {
-  assign,
-  isArray,
-  isFunction,
-  isNil,
-  isObject
-} from "../utils/language";
+import { isArray, isFunction, isNil, isObject } from "../utils/language";
+import { assign } from "../utils/object";
 
 function isInstanceOf(value: any, Type: Function) {
   return typeof value === "object"

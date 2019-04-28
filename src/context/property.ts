@@ -1,5 +1,6 @@
 import { remove } from "../utils/array";
-import { assign, isObject } from "../utils/language";
+import { isObject } from "../utils/language";
+import { assign } from "../utils/object";
 import { Collection } from "../utils/type";
 
 /**
