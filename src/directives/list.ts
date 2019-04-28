@@ -100,7 +100,7 @@ export function buildListDirective(
     // Insert all views
     for (const entry of entries) {
       const ee = el.cloneNode(true) as HTMLElement;
-      const ec = buildEntryContext.call(this, argument, entry);
+      const ec = buildEntryContext(app, argument, entry);
 
       insertAfter(ee, previous);
       views.push(buildView(ee, ec));
