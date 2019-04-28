@@ -14,27 +14,27 @@ export interface Component<T = any> {
    */
   render?(this: T): HTMLElement;
   /**
-   * 1. Data is available
+   * 1. Data is ready and reactive
    */
   create?(this: T): void;
   /**
-   * 2. Reactivity and DOM is ready
+   * 2. Component DOM element is ready, but not inside the document
    */
   bind?(this: T): void;
   /**
-   * 3. Attached into DOM
+   * 3. Component is attached to the document
    */
   attach?(this: T): void;
   /**
-   * 4. Detached from DOM
+   * 4. Triggered while the component is still inside the document
    */
   detach?(this: T): void;
   /**
-   * 5. DOM uninitialized
+   * 5. Triggere while the component DOM is still present
    */
   unbind?(this: T): void;
   /**
-   * 6. Data is still here
+   * 6. Triggered while the component data is still usable
    */
   destroy?(this: T): void;
   /**

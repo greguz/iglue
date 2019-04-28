@@ -1,5 +1,5 @@
 import { Application } from "../interfaces/Application";
-import { Component } from "../interfaces/Component";
+import { Component, WatchHandler } from "../interfaces/Component";
 import { Directive } from "../interfaces/Directive";
 import { Expression } from "../interfaces/Expression";
 import { View } from "../interfaces/View";
@@ -170,6 +170,28 @@ function buildComputedProperty(definition: any): PropertyDescriptor {
 }
 
 /**
+ * Register watch handler
+ */
+function registerWatchHandler(
+  context: any,
+  path: string,
+  handler: WatchHandler
+): VoidFunction {
+  return observeExpression(
+    context,
+    {
+      formatters: [],
+      target: {
+        type: "path",
+        value: path
+      },
+      watch: []
+    },
+    handler.bind(context)
+  );
+}
+
+/**
  * Mount a component and start data binding
  */
 function mount(app: CA, componentName: string): State {
@@ -199,7 +221,17 @@ function mount(app: CA, componentName: string): State {
   Object.defineProperty(context, "$emit", { value: $emit.bind(null, app) });
 
   // Make component context reactive
-  const unobserve = linkProperties(app, context);
+  let unobserve = linkProperties(app, context);
+
+  // Register watch handlers
+  if (component.watch) {
+    for (const path in component.watch) {
+      unobserve = voidReducer(
+        unobserve,
+        registerWatchHandler(context, path, component.watch[path] as any)
+      );
+    }
+  }
 
   // Trigger creation hook
   if (component.create) {

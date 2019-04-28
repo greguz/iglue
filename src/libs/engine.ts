@@ -1,4 +1,4 @@
-import { Context } from "../interfaces/Context";
+import { Context, ContextCallback } from "../interfaces/Context";
 import { Expression } from "../interfaces/Expression";
 import { Formatter, FormatterFunction } from "../interfaces/Formatter";
 import { Target } from "../interfaces/Target";
@@ -256,7 +256,7 @@ function getPaths({ formatters, target, watch }: Expression): string[] {
 export function observeExpression(
   context: Context,
   expression: Expression,
-  callback: () => void
+  callback: ContextCallback
 ) {
   const paths = getPaths(expression);
 
