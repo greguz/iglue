@@ -33,7 +33,7 @@ function reduceMappers(mappers: Mapper[]): Mapper {
 /**
  * Wrap a error inside a function
  */
-function wrapError(message: string): (...args: any[]) => any {
+export function wrapError(message: string): (...args: any[]) => any {
   return function ko(): void {
     throw new Error(message);
   };

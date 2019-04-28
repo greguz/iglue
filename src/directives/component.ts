@@ -5,7 +5,11 @@ import { Expression } from "../interfaces/Expression";
 import { View } from "../interfaces/View";
 
 import { parseArgument, parseDirective } from "../libs/attribute";
-import { buildExpressionGetter, observeExpression } from "../libs/engine";
+import {
+  buildExpressionGetter,
+  observeExpression,
+  wrapError
+} from "../libs/engine";
 import { parseExpression } from "../libs/expression";
 import { buildHTML } from "../libs/html";
 
@@ -19,7 +23,7 @@ import { Collection } from "../utils/type";
  * Extended application with component utils
  */
 interface CA extends Application {
-  handlers: Collection<Expression>;
+  events: Collection<Expression>;
   properties: Collection<Expression>;
 }
 
@@ -43,8 +47,8 @@ interface State {
  * Build the custom component application
  */
 function buildApp(app: Application, el: HTMLElement): CA {
+  const events: Collection<Expression> = {};
   const properties: Collection<Expression> = {};
-  const handlers: Collection<Expression> = {};
 
   for (const attribute of getAttributes(el)) {
     const directive = parseDirective(attribute.value);
@@ -53,13 +57,13 @@ function buildApp(app: Application, el: HTMLElement): CA {
     if (!directive) {
       properties[attribute.name] = parseExpression(attribute.value);
     } else if (directive === "on" && argument) {
-      handlers[argument] = parseExpression(attribute.value);
+      events[argument] = parseExpression(attribute.value);
     }
   }
 
   return assign({}, app, {
-    properties,
-    handlers
+    events,
+    properties
   });
 }
 
@@ -67,9 +71,9 @@ function buildApp(app: Application, el: HTMLElement): CA {
  * $emit component API
  */
 function $emit(app: CA, event: string, ...args: any[]): void {
-  const { handlers, context, formatters } = app;
+  const { context, events, formatters } = app;
 
-  const expression = handlers[event];
+  const expression = events[event];
   if (!expression) {
     return;
   }
@@ -152,11 +156,25 @@ function linkProperties(app: CA, target: any): VoidFunction {
 }
 
 /**
+ * Build descriptor by computer property definition
+ */
+function buildComputedProperty(definition: any): PropertyDescriptor {
+  return {
+    configurable: true,
+    enumerable: true,
+    get: isFunction(definition) ? definition : definition.get,
+    set: isFunction(definition)
+      ? wrapError("You cannot set this property")
+      : definition.set
+  };
+}
+
+/**
  * Mount a component and start data binding
  */
-function mount(app: CA, name: string): State {
+function mount(app: CA, componentName: string): State {
   // Fetch component object
-  const component = getComponent(app, name);
+  const component = getComponent(app, componentName);
 
   // Create base component context
   const context = component.data ? component.data.call(null) : {};
@@ -164,6 +182,17 @@ function mount(app: CA, name: string): State {
   // Assign methods to context
   if (component.methods) {
     assign(context, component.methods);
+  }
+
+  // Apply computed properties
+  if (component.computed) {
+    for (const property in component.computed) {
+      Object.defineProperty(
+        context,
+        property,
+        buildComputedProperty(component.computed[property])
+      );
+    }
   }
 
   // Inject $emit API
@@ -194,7 +223,7 @@ function mount(app: CA, name: string): State {
 
   // Return current state
   return {
-    name,
+    name: componentName,
     component,
     view,
     el,
