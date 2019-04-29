@@ -13,7 +13,7 @@ export function buildTextDirective(app: Application, node: Text): Directive {
   }
 
   function unbind() {
-    node.data = originalContent;
+    node.data = "{" + originalContent + "}";
   }
 
   return {
