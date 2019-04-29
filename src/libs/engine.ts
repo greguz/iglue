@@ -4,7 +4,7 @@ import { Formatter, FormatterFunction } from "../interfaces/Formatter";
 import { Target } from "../interfaces/Target";
 
 import { uniq } from "../utils/array";
-import { passthrough, wrapConst, wrapError } from "../utils/engine";
+import { wrapConst, wrapError } from "../utils/engine";
 import { isArray, isFunction, isObject, isUndefined } from "../utils/language";
 import { parsePath } from "../utils/object";
 import { Collection, Getter, Setter } from "../utils/type";
@@ -21,13 +21,6 @@ function composeMappers(first: Mapper, second: Mapper): Mapper {
 }
 
 /**
- * Reduce multiple mappers into a single one
- */
-function reduceMappers(mappers: Mapper[]): Mapper {
-  return mappers.length <= 0 ? passthrough : mappers.reduce(composeMappers);
-}
-
-/**
  * Get and ensure a full formatter
  */
 function getFormatter(
@@ -36,19 +29,13 @@ function getFormatter(
 ): Formatter {
   const definition = formatters[name];
 
-  const noPull = wrapError(`Formatter ${name} does not have pull function`);
-  const noPush = wrapError(`Formatter ${name} does not have push function`);
-
   if (isFunction(definition)) {
     return {
       pull: definition,
-      push: noPush
+      push: wrapError(`Formatter "${name}" does not have push function`)
     };
   } else if (isObject(definition)) {
-    return {
-      pull: definition.pull || noPull,
-      push: definition.push || noPush
-    };
+    return definition;
   } else {
     throw new Error(`Unable to resolve formatter "${name}"`);
   }
@@ -165,46 +152,62 @@ function bindFormatterArguments(
 /**
  * Build getter by expression
  */
-export function buildExpressionGetter<T = any>(
+export function buildExpressionGetter(
   expression: Expression,
   formatters: Collection<Formatter | FormatterFunction> = {}
-): Getter<T> {
-  const pull = reduceMappers(
-    expression.formatters.map(entry =>
+): Getter {
+  // Build base target getter
+  const getValue = buildTargetGetter(expression.target);
+
+  // Clean getter without formatters, return the base getter
+  if (expression.formatters.length <= 0) {
+    return getValue;
+  }
+
+  // Build single format function
+  const pull = expression.formatters
+    .map(entry =>
       bindFormatterArguments(
         getFormatter(formatters, entry.name).pull,
         entry.targets
       )
     )
-  );
+    .reduce(composeMappers);
 
-  const getSourceValue = buildTargetGetter(expression.target);
-
+  // Compose getter and formatters
   return function get(): any {
-    return pull.call(this, getSourceValue.call(this));
+    return pull.call(this, getValue.call(this));
   };
 }
 
 /**
  * Build setter by expression
  */
-export function buildExpressionSetter<T = any>(
+export function buildExpressionSetter(
   expression: Expression,
   formatters: Collection<Formatter | FormatterFunction> = {}
-): Setter<T> {
-  const push = reduceMappers(
-    expression.formatters.map(entry =>
+): Setter {
+  // Build base target setter
+  const setValue = buildTargetSetter(expression.target);
+
+  // Clean setter without formatters
+  if (expression.formatters.length <= 0) {
+    return setValue;
+  }
+
+  // Build single format function
+  const push = expression.formatters
+    .map(entry =>
       bindFormatterArguments(
         getFormatter(formatters, entry.name).push,
         entry.targets
       )
     )
-  );
+    .reduce(composeMappers);
 
-  const setTargetValue = buildTargetSetter(expression.target);
-
+  // Compose setter and formatters
   return function set(value: any): void {
-    setTargetValue.call(this, push.call(this, value));
+    setValue.call(this, push.call(this, value));
   };
 }
 
@@ -236,14 +239,14 @@ export function observeExpression(
   context: Context,
   expression: Expression,
   callback: ContextCallback
-) {
+): VoidFunction {
   const paths = getPaths(expression);
 
   for (const path of paths) {
     context.$observe(path, callback);
   }
 
-  return function unobserve(): void {
+  return function unobserve() {
     for (const path of paths) {
       context.$unobserve(path, callback);
     }
