@@ -207,13 +207,6 @@ function mount(app: CA, componentName: string): State {
     linkProperty(app, context, name, expression)
   ).reduce(voidReducer, unobserve);
 
-  // Register watch handlers
-  if (component.watch) {
-    unobserve = mapObject(component.watch, (handler, path) =>
-      registerWatchHandler(context, path, handler)
-    ).reduce(voidReducer, unobserve);
-  }
-
   // Trigger creation hook
   if (component.create) {
     component.create.call(context);
@@ -229,9 +222,16 @@ function mount(app: CA, componentName: string): State {
     value: el
   });
 
+  // Register watch handlers
+  if (component.watch) {
+    unobserve = mapObject(component.watch, (handler, path) =>
+      registerWatchHandler(view.context, path, handler)
+    ).reduce(voidReducer, unobserve);
+  }
+
   // Triggere "DOM ready" hook
   if (component.bind) {
-    component.bind.call(context);
+    component.bind.call(view.context);
   }
 
   // Return current state
