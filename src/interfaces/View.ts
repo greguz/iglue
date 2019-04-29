@@ -1,69 +1,31 @@
-import { Collection } from "../utils";
 import { Binder, BinderRoutine } from "./Binder";
 import { Component } from "./Component";
 import { Context } from "./Context";
 import { Formatter, FormatterFunction } from "./Formatter";
 
-/**
- * Represents a bound view
- */
+import { Collection } from "../utils/type";
 
 export interface View {
-
   /**
    * Bound DOM element
    */
-
-  readonly el: HTMLElement;
-
+  el: HTMLElement;
   /**
-   * Bound data model
+   * Bound context
    */
-
-  readonly context: Context;
-
+  context: Context;
   /**
-   * Re-render the entire UI
+   * Re-render the entire UI (edge cases)
    */
-
-  refresh(): void;
-
+  update: () => void;
   /**
-   * Stop data binding and destroy the view
+   * Destroy the view and restore the original DOM content
    */
-
-  unbind(): void;
-
+  unbind: () => void;
 }
 
-/**
- * Build a new view options
- */
-
 export interface ViewOptions {
-
-  /**
-   * Global binders prefix
-   */
-
-  prefix?: string;
-
-  /**
-   * Binders collection
-   */
-
   binders?: Collection<Binder | BinderRoutine>;
-
-  /**
-   * Components collection
-   */
-
   components?: Collection<Component>;
-
-  /**
-   * Formatters collection
-   */
-
   formatters?: Collection<Formatter | FormatterFunction>;
-
 }

@@ -1,31 +1,45 @@
+import { Application } from "../interfaces/Application";
+import { Attribute } from "../interfaces/Attribute";
 import { Binder } from "../interfaces/Binder";
 import { Binding } from "../interfaces/Binding";
 import { Directive } from "../interfaces/Directive";
 import { Specification } from "../interfaces/Specification";
 
+import { buildExpressionGetter, buildExpressionSetter } from "../libs/engine";
+
+import { isArray, isFunction, isNil, isObject } from "../utils/language";
+import { assign } from "../utils/object";
+
+function isInstanceOf(value: any, Type: Function) {
+  return typeof value === "object"
+    ? value instanceof Type
+    : Object.getPrototypeOf(value) === Type.prototype;
+}
+
 /**
  * Apply value specification utility
  */
-
-function applySpecification(value: any, source: string, spec: Specification): any {
-  if (value === null || value === undefined) {
+function applySpec(value: any, spec: Specification): any {
+  if (isNil(value)) {
     if (spec.required === true) {
-      throw new Error(`The required bound value "${source}" is not defined`);
+      throw new Error(`Value "${value}" does not meet the requirements`);
     }
     if (spec.hasOwnProperty("default")) {
       value = spec.default;
     }
   } else {
-    if (typeof spec.type === "string" && typeof value !== spec.type) {
-      throw new Error(`The bound value "${source}" is not a "${spec.type}"`);
-    }
-    if (typeof spec.type === "function" && !(value instanceof spec.type)) {
-      throw new Error(`The bound value "${source}" is not an instance of ${spec.type}`);
+    if (spec.type) {
+      const types = isArray(spec.type) ? spec.type : [spec.type];
+      for (const Type of types) {
+        if (!isInstanceOf(value, Type)) {
+          throw new Error(`Value "${value}" does not meet the requirements`);
+        }
+      }
     }
     if (spec.validator) {
-      const valid: boolean = spec.validator.call(context, value);
+      const valid = spec.validator.call(null, value);
       if (!valid) {
-        throw new Error(`The bound value "${value}" from "${source}" is not valid`);
+        throw new Error(`Value "${value}" does not meet the requirements`);
       }
     }
   }
@@ -34,62 +48,83 @@ function applySpecification(value: any, source: string, spec: Specification): an
 }
 
 /**
+ * Get and normalize a binder
+ */
+function getBinderByName(app: Application, name: string): Binder {
+  const definition = app.binders[name];
+
+  if (isFunction(definition)) {
+    return { routine: definition };
+  } else if (isObject(definition)) {
+    return definition;
+  } else {
+    return {
+      routine(el: HTMLElement, value: any): void {
+        if (isNil(value)) {
+          el.removeAttribute(name);
+        } else {
+          el.setAttribute(name, value.toString());
+        }
+      }
+    };
+  }
+}
+
+/**
+ * Build binding object
+ */
+function buildBinding(app: Application, attribute: Attribute): Binding {
+  const { context, formatters } = app;
+  const { expression } = attribute;
+
+  return assign({}, attribute, {
+    context,
+    get: buildExpressionGetter(expression, formatters).bind(context),
+    set: buildExpressionSetter(expression, formatters).bind(context)
+  });
+}
+
+/**
  * Build a binder directive
  */
-
-export function buildBinderDirective(binder: Binder, binding: Binding): Directive {
-  // argument required check
-  if (binder.argumentRequired === true && !binding.argument) {
-    throw new Error(`The binder ${binding.directive} requires an argument`);
+export function buildBinderDirective(
+  app: Application,
+  el: HTMLElement,
+  attribute: Attribute
+): Directive {
+  const binder = getBinderByName(app, attribute.directive);
+  if (binder.argumentRequired === true && !attribute.argument) {
+    throw new Error(`Binder ${attribute.directive} requires an argument`);
   }
 
-  // shortcut
-  const el: HTMLElement = binding.el;
-
-  // context object
+  const binding = buildBinding(app, attribute);
   const context: any = {};
+  const { expression } = attribute;
 
-  // remove the binding argument
-  el.removeAttribute(binding.attrName);
-
-  // trigger bind hook
   if (binder.bind) {
     binder.bind.call(context, el, binding);
   }
+  el.removeAttribute(attribute.name);
 
-  /**
-   * Directive#refresh
-   */
-
-  function refresh(value: any): void {
-    // apply value validation
+  function update(value: any) {
     if (binder.value) {
-      value = applySpecification(value, binding.attrValue, binder.value);
+      value = applySpec(value, binder.value);
     }
-
-    // execute binder routine
     if (binder.routine) {
       binder.routine.call(context, el, value, binding);
     }
   }
 
-  /**
-   * Directive#unbind
-   */
-
-  function unbind(): void {
-    // trigger unbind hook
+  function unbind() {
     if (binder.unbind) {
       binder.unbind.call(context, el, binding);
     }
-
-    // restore original DOM attribute
-    el.setAttribute(binding.attrName, binding.attrValue);
+    el.setAttribute(attribute.name, attribute.value);
   }
 
-  // return the configured directive
   return {
-    refresh,
+    expression,
+    update,
     unbind
   };
 }

@@ -1,23 +1,13 @@
 import { Chunk } from "../interfaces/Chunk";
 
-export function parseText(text: string, regex: RegExp): Chunk[] {
-  // ensure global flag
-  if (!regex.global) {
-    throw new Error("The interpolation regular expression must be global");
-  }
-
-  // resulting array
+export function parseText(text: string): Chunk[] {
+  const regex = /{([^}]+)}/g;
   const chunks: Chunk[] = [];
 
-  // current match
-  let match: RegExpExecArray;
+  let index = 0;
+  let match = regex.exec(text);
 
-  // current text index
-  let index: number = 0;
-
-  // each all regexp matches
-  while (match = regex.exec(text)) {
-    // extract previous text
+  while (match) {
     if (index !== match.index) {
       chunks.push({
         type: "static",
@@ -27,7 +17,6 @@ export function parseText(text: string, regex: RegExp): Chunk[] {
       });
     }
 
-    // extract matched path
     chunks.push({
       type: "expression",
       from: match.index,
@@ -35,11 +24,10 @@ export function parseText(text: string, regex: RegExp): Chunk[] {
       content: match[1]
     });
 
-    // update current index
     index = match.index + match[0].length;
+    match = regex.exec(text);
   }
 
-  // extract text after last match
   if (index !== text.length) {
     chunks.push({
       type: "static",

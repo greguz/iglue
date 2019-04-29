@@ -1,15 +1,17 @@
 import { Context } from "../interfaces/Context";
-import { includes, isObject } from "../utils";
+
+import { includes } from "../utils/array";
+import { isObject } from "../utils/language";
+
 import { observePath, PathNotifier, unobservePath } from "./path";
 
 /**
  * Get the root property name of a object value path
  */
-
 function getRootProperty(path: string): string {
-  const regex = /^[^\.\[]+/;
-  if (regex.test(path)) {
-    return path.match(regex)[0];
+  const match = path.match(/^[^\.\[]+/);
+  if (match) {
+    return match[0];
   } else {
     throw new Error("This path does not have a root property");
   }
@@ -18,7 +20,6 @@ function getRootProperty(path: string): string {
 /**
  * Expose an object property from another object
  */
-
 function exposeProperty(context: Context, property: string): void {
   Object.defineProperty(context, property, {
     configurable: true,
@@ -35,24 +36,24 @@ function exposeProperty(context: Context, property: string): void {
 /**
  * $observe API
  */
-
 function $observe(this: Context, path: string, callback: PathNotifier): void {
-  // get the root property of this value path
+  // Get the root property of this path
   const property: string = getRootProperty(path);
 
   if (includes(this.$own, property)) {
-    // handle own property
+    // Direct observe if own property
     observePath(this, path, callback);
   } else {
-    // lazy props exposing
+    // Lazy props exposing
     if (!this.hasOwnProperty(property)) {
       exposeProperty(this, property);
     }
 
-    // observe property
     if (this.$source.hasOwnProperty("$observe")) {
+      // Use source context.$observe API
       this.$source.$observe(path, callback);
     } else {
+      // // Observe source value
       observePath(this.$source, path, callback);
     }
   }
@@ -61,7 +62,6 @@ function $observe(this: Context, path: string, callback: PathNotifier): void {
 /**
  * $unobserve API
  */
-
 function $unobserve(this: Context, path: string, callback: PathNotifier): void {
   const property: string = getRootProperty(path);
 
@@ -77,35 +77,30 @@ function $unobserve(this: Context, path: string, callback: PathNotifier): void {
 /**
  * Build a context object
  */
-
-export function buildContext(obj: object, ownProperties?: string[]): Context {
-  // validate input
+export function buildContext(obj: any, ownProperties: string[] = []): Context {
   if (!isObject(obj)) {
     throw new Error("Unable to observe this value");
   }
 
-  // resulting context object
+  // Resulting context object
   const context: any = {};
 
-  // clone all currently enumerable properties
+  // Expose all currently enumerable properties and skip owned properties
   for (const property in obj) {
     if (obj.hasOwnProperty(property)) {
-      if (ownProperties) {
-        if (includes(ownProperties, property)) {
-          continue;
-        }
+      if (!includes(ownProperties, property)) {
+        exposeProperty(context, property);
       }
-      exposeProperty(context, property);
     }
   }
 
-  // build and return the context
+  // Build and return the context
   return Object.defineProperties(context, {
     $source: {
       value: obj
     },
     $own: {
-      value: ownProperties || []
+      value: ownProperties
     },
     $observe: {
       value: $observe

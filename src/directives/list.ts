@@ -1,94 +1,129 @@
-import { AttributeInfo } from "../interfaces/AttributeInfo";
+import { Application } from "../interfaces/Application";
+import { Attribute } from "../interfaces/Attribute";
 import { Context } from "../interfaces/Context";
 import { Directive } from "../interfaces/Directive";
 import { View } from "../interfaces/View";
 
 import { buildContext } from "../context/context";
 
-export interface ListDirectiveOptions {
-  el: HTMLElement;
-  info: AttributeInfo;
-  context: Context;
-  buildView: (el: HTMLElement, obj: object) => View;
+import { insertAfter, parentElement, replaceNode } from "../utils/dom";
+import { isArray, isObject } from "../utils/language";
+import { mapObject } from "../utils/object";
+
+/**
+ * List entry
+ */
+interface Entry {
+  index?: number;
+  key?: string;
+  value: any;
 }
 
-export function buildListDirective(options: ListDirectiveOptions): Directive {
-  const info: AttributeInfo = options.info;
-  const container: HTMLElement = options.el.parentElement;
-  const marker: Comment = document.createComment(` EACH ${info.value.value} `);
-
-  let views: View[] = [];
-
-  options.el.removeAttribute(info.attrName);
-
-  container.insertBefore(marker, options.el);
-  container.removeChild(options.el);
-
-  function clone(): HTMLElement {
-    return options.el.cloneNode(true) as HTMLElement;
+/**
+ * Map directive data into entries array
+ */
+function buildEntries(data: any): Entry[] {
+  if (isArray(data)) {
+    return data.map((value, index) => ({ index, value }));
+  } else if (isObject(data)) {
+    return mapObject<Entry, any>(data, (value, key) => ({ key, value }));
+  } else {
+    return [];
   }
+}
 
-  function buildListContext(entry: any, keyOrIndex: string | number): Context {
-    const context: Context = buildContext(options.context, [
-      info.argument,
-      "$key",
-      "$index"
-    ]);
+/**
+ * Build entry context
+ */
+function buildEntryContext(
+  app: Application,
+  argument: string,
+  { index, key, value }: Entry
+): Context {
+  const context = buildContext(app.context, ["$index", "$key", argument]);
 
-    context.$key = typeof keyOrIndex === "string" ? keyOrIndex : null;
-    context.$index = typeof keyOrIndex === "number" ? keyOrIndex : null;
-    context[info.argument] = entry;
+  context.$index = index;
+  context.$key = key;
+  context[argument] = value;
 
-    return context;
+  return context;
+}
+
+/**
+ * Unload views array
+ */
+function unload(views: View[]) {
+  while (views.length > 0) {
+    const view = views.pop() as View;
+    view.unbind();
+    parentElement(view.el).removeChild(view.el);
   }
+}
 
-  function refresh(data: any): void {
-    while (views.length > 0) {
-      const view: View = views.pop();
-      view.unbind();
-      container.removeChild(view.el);
-    }
+/**
+ * Build list directive
+ */
+export function buildListDirective(
+  app: Application,
+  el: HTMLElement,
+  attribute: Attribute
+): Directive {
+  // Extract useful data from app
+  const { buildView } = app;
+  const { expression } = attribute;
 
+  // Ensure argument value
+  const argument = attribute.argument || "$value";
+
+  // Currently rendered views
+  const views: View[] = [];
+
+  // Static element into DOM to use as position marker
+  const marker = document.createComment(` EACH ${expression.target.value} `);
+
+  // Swap original element with maker
+  replaceNode(marker, el);
+
+  // Remove original DOM attribute
+  el.removeAttribute(attribute.name);
+
+  function update(data: any) {
+    // Remove rendered views
+    unload(views);
+
+    // Get current entries
+    const entries = buildEntries(data);
+
+    // Last inserted node
     let previous: Node = marker;
-    function next(entry: any, keyOrIndex: string | number): void {
-      const el: HTMLElement = clone();
-      const data: Context = buildListContext(entry, keyOrIndex);
 
-      container.insertBefore(el, previous.nextSibling);
+    // Insert all views
+    for (const entry of entries) {
+      const ee = el.cloneNode(true) as HTMLElement;
+      const ec = buildEntryContext(app, argument, entry);
 
-      views.push(options.buildView(el, data));
+      insertAfter(ee, previous);
+      views.push(buildView(ee, ec));
 
-      previous = previous.nextSibling;
-    }
-
-    if (data instanceof Array) {
-      for (let i = 0; i < data.length; i++) {
-        next(data[i], i);
-      }
-    } else if (typeof data === "object" && data !== null) {
-      for (const key in data) {
-        if (data.hasOwnProperty(key)) {
-          next(data[key], key);
-        }
-      }
+      previous = previous.nextSibling as Node;
     }
   }
 
-  function unbind(): void {
-    while (views.length > 0) {
-      const view: View = views.pop();
-      view.unbind();
-      container.removeChild(view.el);
-    }
+  function unbind() {
+    // Remove rendered views
+    unload(views);
 
-    container.insertBefore(options.el, marker);
-    container.removeChild(marker);
+    // Restore original attribute value
+    el.setAttribute(attribute.name, attribute.value);
 
-    options.el.setAttribute(info.attrName, info.attrValue);
+    // Restore original element
+    replaceNode(el, marker);
   }
 
+  // Return build directive
   return {
-    refresh,
+    expression,
+    update,
     unbind
   };
 }

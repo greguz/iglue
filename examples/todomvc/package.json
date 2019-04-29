@@ -4,7 +4,7 @@
   "description": "TodoMVC iglue example",
   "license": "MIT",
   "dependencies": {
-    "iglue": "^0.5.2",
+    "iglue": "~0.6.0",
     "todomvc-app-css": "^2.1.2",
     "todomvc-common": "^1.0.5"
   },

@@ -1,55 +1,65 @@
-/**
- * Component definition interface
- */
+import { Collection, Getter, Setter } from "../utils/type";
 
 export interface Component<T = any> {
-
   /**
-   * HTML template
+   * Build default component data
    */
-
+  data?(this: null): object;
+  /**
+   * HTML template string
+   */
   template?: string;
-
   /**
    * Custom rendering function
    */
-
-  render?: (this: T) => HTMLElement;
-
+  render?(this: T): HTMLElement;
   /**
-   * Component loaded, data-binding and DOM not initialized
+   * 1. Data is ready and reactive
    */
-
-  create?: (this: T) => void;
-
+  create?(this: T): void;
   /**
-   * DOM initialized, data-binding is not running
+   * 2. Component DOM element is ready, but not inside the document
    */
-
-  attach?: (this: T) => void;
-
+  bind?(this: T): void;
   /**
-   * Both DOM and data-binding are initialized
+   * 3. Component is attached to the document
    */
-
-  bind?: (this: T) => void;
-
+  attach?(this: T): void;
   /**
-   * The data-binding and the DOM are still running
+   * 4. Triggered while the component is still inside the document
    */
-
-  unbind?: (this: T) => void;
-
+  detach?(this: T): void;
   /**
-   * The data-binding is stopped, the DOM is still untached
+   * 5. Triggere while the component DOM is still present
    */
-
-  detach?: (this: T) => void;
-
+  unbind?(this: T): void;
   /**
-   * Both data-biding and DOM are dead
+   * 6. Triggered while the component data is still usable
    */
-
-  destroy?: (this: T) => void;
-
+  destroy?(this: T): void;
+  /**
+   * Component methods
+   */
+  methods?: Collection<Method<T>>;
+  /**
+   * Computed properties
+   */
+  computed?: Collection<Getter<any, T> | ComputedProperty<any, T>>;
+  /**
+   * Watch handlers
+   */
+  watch?: Collection<WatchHandler<T>>;
 }
+
+export type Method<T = any> = (this: T, ...args: any[]) => any;
+
+export interface ComputedProperty<T = any, C = any> {
+  get: Getter<T, C>;
+  set: Setter<T, C>;
+}
+
+export type WatchHandler<T = any> = (
+  this: T,
+  newValue: any,
+  oldValue: any
+) => any;

@@ -1,86 +1,51 @@
-import { AttributeInfo } from "../interfaces/AttributeInfo";
+import { Application } from "../interfaces/Application";
+import { Attribute } from "../interfaces/Attribute";
 import { Directive } from "../interfaces/Directive";
 import { View } from "../interfaces/View";
 
-export interface ConditionalDirectiveOptions {
-  el: HTMLElement;
-  info: AttributeInfo;
-  buildView: (el: HTMLElement) => View;
-}
+import { replaceNode } from "../utils/dom";
 
-export function buildConditionalDirective(options: ConditionalDirectiveOptions): Directive {
-  // shortcut
-  const info: AttributeInfo = options.info;
+export function buildConditionalDirective(
+  app: Application,
+  el: HTMLElement,
+  attribute: Attribute
+): Directive {
+  const { buildView } = app;
+  const { expression } = attribute;
+  const comment = document.createComment(` IF : ${attribute.value} `);
 
-  // get the parent element
-  const parent: HTMLElement = options.el.parentElement;
+  let node: Node = el;
+  let status: boolean | undefined;
+  let view: View | undefined;
 
-  // create a placeholder node
-  const comment: Comment = document.createComment(` IF : ${info.attrValue} `);
+  el.removeAttribute(attribute.name);
 
-  // current rendered node into DOM
-  let node: Comment | HTMLElement = options.el;
+  function update(value: any) {
+    const newStatus = !!value;
 
-  // current condition status
-  let status: boolean;
-
-  // current rendered view instance
-  let view: View;
-
-  // remove original binding attribute from DOM
-  options.el.removeAttribute(info.attrName);
-
-  /**
-   * Swap the current rendered DOM node with another
-   */
-
-  function swap(update: Comment | HTMLElement): void {
-    if (update !== node) {
-      parent.replaceChild(update, node);
-      node = update;
-    }
-  }
-
-  /**
-   * Directive#refresh
-   */
-
-  function refresh(value: any): void {
-    const condition: boolean = !!value;
-
-    if (condition !== status) {
+    if (newStatus !== status) {
       if (view) {
         view.unbind();
-        view = undefined;
       }
 
-      if (condition) {
-        swap(options.el);
-        view = options.buildView(options.el);
-      } else {
-        swap(comment);
-      }
-
-      status = condition;
+      status = newStatus;
+      node = replaceNode(status ? el : comment, node);
+      view = status ? buildView(el) : undefined;
     }
   }
 
-  /**
-   * Directive#unbind
-   */
-
-  function unbind(): void {
+  function unbind() {
     if (view) {
       view.unbind();
-      view = undefined;
     }
-    options.el.setAttribute(info.attrName, info.attrValue);
-    swap(options.el);
+
+    el.setAttribute(attribute.name, attribute.value);
+    replaceNode(node, el);
   }
 
-  // return the directive instance
   return {
-    refresh,
+    expression,
+    update,
     unbind
   };
 }

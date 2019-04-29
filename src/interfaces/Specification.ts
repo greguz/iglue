@@ -1,31 +1,18 @@
-/**
- * Represents a single value requirements
- */
-
 export interface Specification<T = any> {
-
   /**
-   * Defaul value
+   * Default value
    */
-
   default?: T;
-
   /**
-   * True to reject null and undefined
+   * Reject null and undefined
    */
-
   required?: boolean;
-
   /**
-   * Required "typeof" return value
+   * Type constructor
    */
-
-  type?: string | Function;
-
+  type?: Function | Function[];
   /**
-   * Custom validation
+   * Custom validation function
    */
-
-  validator?: (value: any) => boolean;
-
+  validator?: (value: any) => value is T;
 }

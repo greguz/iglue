@@ -1,19 +1,7 @@
-/**
- * Represents an active view
- */
+import { Expression } from "./Expression";
 
 export interface Directive {
-
-  /**
-   * Re-render the UI
-   */
-
-  refresh(value: any): void;
-
-  /**
-   * Destroy and unload the resources
-   */
-
-  unbind(): void;
-
+  expression: Expression;
+  update: (value: any) => void;
+  unbind: () => void;
 }

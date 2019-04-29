@@ -1,25 +1,12 @@
-/**
- * Represents a template formatting mode
- */
-
 export interface Formatter {
-
   /**
-   * Map the value when it is extracted from the store
+   * Transform the value when is retrieved from the context (JS > DOM)
    */
-
-  pull?: FormatterFunction;
-
+  pull: FormatterFunction;
   /**
-   * Map the value before store update
+   * Transform the value when is retrieved from the DOM (DOM > JS)
    */
-
-  push?: FormatterFunction;
-
+  push: FormatterFunction;
 }
-
-/**
- * Formatter mapping function
- */
 
 export type FormatterFunction = (value: any, ...args: any[]) => any;

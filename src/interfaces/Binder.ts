@@ -1,46 +1,35 @@
 import { Binding } from "./Binding";
 import { Specification } from "./Specification";
 
-/**
- * Binder configuration
- */
-
-export interface Binder<T = any, V = any> {
-
+export interface Binder<T = any> {
   /**
    * Enforce binding argument
    */
-
   argumentRequired?: boolean;
-
   /**
-   * Bound value specifications
+   * Value validation
    */
-
-  value?: Specification<V>;
-
+  value?: Specification<T>;
   /**
    * Triggered when the binding is created
    */
-
-  bind?: (this: T, el: HTMLElement, binding: Binding) => void;
-
+  bind?: (this: any, el: HTMLElement, binding: Binding) => void;
   /**
-   * Triggered when the watched value changes
+   * Triggered when the target value changes
    */
-
-  routine?: BinderRoutine<T, V>;
-
+  routine?: BinderRoutine<T>;
   /**
    * Triggered when the binding is destroyed
    */
-
-  unbind?: (this: T, el: HTMLElement, binding: Binding) => void;
-
+  unbind?: (this: any, el: HTMLElement, binding: Binding) => void;
 }
 
 /**
- * Binder routine function
+ * Triggered when the target value changes
  */
-
-export type BinderRoutine<T = any, V = any> = (this: T, el: HTMLElement, value: V, binding: Binding) => void;
+export type BinderRoutine<T = any> = (
+  this: any,
+  el: HTMLElement,
+  value: T,
+  binding: Binding
+) => void;

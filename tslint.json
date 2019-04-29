@@ -1,15 +1,13 @@
 {
   "defaultSeverity": "error",
-  "extends": [
-      "tslint:recommended"
-  ],
-  "jsRules": {},
+  "extends": ["tslint:recommended"],
   "rules": {
-    "trailing-comma": [ true, { "multiline": "never", "singleline": "never" } ],
+    "trailing-comma": [true, { "multiline": "never", "singleline": "never" }],
     "object-literal-sort-keys": false,
-    "space-before-function-paren": ["error", "always"],
-    "forin": false,
-    "interface-name": [true, "never-prefix"]
-  },
-  "rulesDirectory": []
+    "interface-name": [true, "never-prefix"],
+    "arrow-parens": [true, "ban-single-arg-parens"],
+    "ordered-imports": false,
+    "member-ordering": false,
+    "ban-types": false
+  }
 }

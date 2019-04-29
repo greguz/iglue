@@ -5,23 +5,17 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "noImplicitAny": true,
-    "noImplicitReturns": true,
     "noUnusedLocals": true,
     "noUnusedParameters": false,
-    "outDir": "dist",
+    "outDir": "out/src",
     "removeComments": true,
     "rootDir": "src",
+    "strictNullChecks": true,
+    "strictBindCallApply": true,
     "target": "es5",
     "types": [],
-    "typeRoots": [
-      "node_modules/@types"
-    ]
+    "typeRoots": ["node_modules/@types"]
   },
-  "include": [
-    "src/index.ts",
-    "src/**/*.spec.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["src/index.ts"],
+  "exclude": ["node_modules"]
 }

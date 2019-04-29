@@ -1,154 +1,371 @@
-import { Component } from "../interfaces/Component";
+import { Application } from "../interfaces/Application";
+import { Component, WatchHandler } from "../interfaces/Component";
 import { Directive } from "../interfaces/Directive";
+import { Expression } from "../interfaces/Expression";
 import { View } from "../interfaces/View";
 
-import { buildHTML } from "../parse/html";
-import { Mapper } from "../utils";
+import { parseArgument, parseDirective } from "../libs/attribute";
+import { buildExpressionGetter, observeExpression } from "../libs/engine";
+import { parseExpression } from "../libs/expression";
+import { buildHTML } from "../libs/html";
 
-function parseTemplate(component: Component, context: object): HTMLElement {
-  if (component.render) {
+import { getAttributes, parentElement } from "../utils/dom";
+import { noop, voidReducer, wrapError } from "../utils/engine";
+import { isFunction, isObject } from "../utils/language";
+import { assign, eachObject, mapObject } from "../utils/object";
+import { Collection } from "../utils/type";
+
+/**
+ * Extended application with component utils
+ */
+interface CA extends Application {
+  events: Collection<Expression>;
+  properties: Collection<Expression>;
+}
+
+/**
+ * Component state
+ */
+interface State {
+  // Current component DOM element
+  el: HTMLElement;
+  // Current component name
+  name: string;
+  // Current rendered view
+  view: View;
+  // Source component definition
+  component: Component;
+  // Stop data observation callback
+  unobserve: VoidFunction;
+}
+
+/**
+ * Build the custom component application
+ */
+function buildApp(app: Application, el: HTMLElement): CA {
+  const events: Collection<Expression> = {};
+  const properties: Collection<Expression> = {};
+
+  for (const attribute of getAttributes(el)) {
+    const directive = parseDirective(attribute.name);
+    const argument = parseArgument(attribute.name);
+
+    if (!directive) {
+      properties[attribute.name] = parseExpression(attribute.value);
+    } else if (directive === "on" && argument) {
+      events[argument] = parseExpression(attribute.value);
+    }
+  }
+
+  return assign({}, app, {
+    events,
+    properties
+  });
+}
+
+/**
+ * $emit component API
+ */
+function $emit(app: CA, event: string, ...args: any[]): void {
+  const { context, events, formatters } = app;
+
+  const expression = events[event];
+  if (!expression) {
+    return;
+  }
+
+  const handler = buildExpressionGetter(expression, formatters).call(context);
+  if (!isFunction(handler)) {
+    throw new Error(`Found an invalid handler for event "${event}"`);
+  }
+
+  handler.apply(context, args);
+}
+
+/**
+ * Get component by name
+ */
+function getComponent(app: CA, name: string): Component {
+  const definition = app.components[name];
+  if (isObject(definition)) {
+    return definition;
+  } else {
+    throw new Error(`Unable to find component "${name}"`);
+  }
+}
+
+/**
+ * Create the component HTML element
+ */
+function buildComponentElement(
+  component: Component,
+  context: any
+): HTMLElement {
+  if (component.render && component.template) {
+    throw new Error("Over specialized component");
+  } else if (component.render) {
     return component.render.call(context);
   } else if (component.template) {
     return buildHTML(component.template);
   } else {
-    throw new Error("Invalid component template detected");
+    throw new Error("Empty component");
   }
 }
 
-export interface ComponentDirectiveOptions {
-  el: HTMLElement;
-  context: object;
-  getComponent: Mapper<string, Component>;
-  buildView: (el: HTMLElement, obj: object) => View;
+/**
+ * Make a property reactive (parent to child only)
+ */
+function linkProperty(
+  app: CA,
+  target: any,
+  property: string,
+  expression: Expression
+): VoidFunction {
+  const { context, formatters } = app;
+
+  const get = buildExpressionGetter(expression, formatters).bind(context);
+
+  function update() {
+    target[property] = get();
+  }
+
+  update();
+
+  return observeExpression(context, expression, update);
 }
 
-export function buildComponentDirective(options: ComponentDirectiveOptions): Directive {
-  // get the parent element
-  const parent: HTMLElement = options.el.parentElement;
-
-  // node present inside the DOM
-  let currentElement: HTMLElement = options.el;
-
-  // current component name
-  let currentName: string;
-
-  // bound component view
-  let currentView: View;
-
-  // current component definition object
-  let currentComponent: Component;
-
-  // component context
-  const context: any = options.context;
-
-  /**
-   * Unmount and stop current component data binding
-   */
-
-  function unmount(): void {
-    // DOM and data-binding still ok
-    if (currentComponent.unbind) {
-      currentComponent.unbind.call(context);
-    }
-
-    // unbind the view
-    currentView.unbind();
-
-    // data-binding is dead
-    if (currentComponent.detach) {
-      currentComponent.detach.call(context);
-    }
-
-    // DOM restored and data-binding not running
-    if (currentComponent.destroy) {
-      currentComponent.destroy.call(context);
-    }
-
-    // delete current component
-    currentName = undefined;
-    currentComponent = undefined;
-    currentView = undefined;
-  }
-
-  /**
-   * Mount a component and start data binding
-   */
-
-  function mount(name: string): void {
-    // resolve component name
-    const component: Component = options.getComponent(name);
-
-    // call creation hook
-    if (component.create) {
-      component.create.call(context);
-    }
-
-    // create the component HTML node
-    const componentNode: HTMLElement = parseTemplate(component, context);
-
-    // remove current node from DOM
-    parent.replaceChild(componentNode, currentElement);
-
-    // save the target DOM element into the context
-    Object.defineProperty(context, "$el", {
-      configurable: true,
-      value: currentElement
-    });
-
-    // call DOM attach hook
-    if (component.attach) {
-      component.attach.call(context);
-    }
-
-    // create a new view for this component
-    const view: View = options.buildView(componentNode, context);
-
-    // save the target DOM element into the context
-    Object.defineProperty(context, "$el", {
-      configurable: true,
-      value: view.el
-    });
-
-    // call last life hook
-    if (component.bind) {
-      component.bind.call(context);
-    }
-
-    // update status
-    currentName = name;
-    currentComponent = component;
-    currentElement = componentNode;
-    currentView = view;
-  }
-
-  /**
-   * Directive#refresh
-   */
-
-  function refresh(name: string): void {
-    if (name !== currentName) {
-      if (currentComponent) {
-        unmount();
-      }
-      mount(name);
-    } else {
-      currentView.refresh();
-    }
-  }
-
-  /**
-   * Directive#unbind
-   */
-
-  function unbind(): void {
-    unmount();
-    parent.replaceChild(options.el, currentElement);
-    currentElement = options.el;
-  }
-
-  // return the directive
+/**
+ * Build descriptor by computer property definition
+ */
+function buildComputedProperty(definition: any): PropertyDescriptor {
   return {
-    refresh,
+    configurable: true,
+    enumerable: true,
+    get: isFunction(definition) ? definition : definition.get,
+    set: isFunction(definition)
+      ? wrapError("You cannot set this property")
+      : definition.set
+  };
+}
+
+/**
+ * Register watch handler
+ */
+function registerWatchHandler(
+  context: any,
+  path: string,
+  handler: WatchHandler
+): VoidFunction {
+  return observeExpression(
+    context,
+    {
+      formatters: [],
+      target: {
+        type: "path",
+        value: path
+      },
+      watch: []
+    },
+    handler.bind(context)
+  );
+}
+
+/**
+ * Mount a component and start data binding
+ */
+function mount(app: CA, componentName: string): State {
+  // Fetch component object
+  const component = getComponent(app, componentName);
+
+  // Create base component context
+  const context = component.data ? component.data.call(null) : {};
+
+  // Assign methods to context
+  if (component.methods) {
+    assign(context, component.methods);
+  }
+
+  // Apply computed properties
+  if (component.computed) {
+    eachObject(component.computed, (definition, property) =>
+      Object.defineProperty(
+        context,
+        property,
+        buildComputedProperty(definition)
+      )
+    );
+  }
+
+  // Inject $emit API
+  Object.defineProperty(context, "$emit", { value: $emit.bind(null, app) });
+
+  // Stop observation function
+  let unobserve: VoidFunction = noop;
+
+  // Link parent properties
+  unobserve = mapObject(app.properties, (expression, name) =>
+    linkProperty(app, context, name, expression)
+  ).reduce(voidReducer, unobserve);
+
+  // Trigger creation hook
+  if (component.create) {
+    component.create.call(context);
+  }
+
+  // Render the component inside the DOM
+  const el = buildComponentElement(component, context);
+  const view = app.buildView(el, context);
+
+  // Save component element inside the context
+  Object.defineProperty(context, "$el", {
+    configurable: true,
+    value: el
+  });
+
+  // Register watch handlers
+  if (component.watch) {
+    unobserve = mapObject(component.watch, (handler, path) =>
+      registerWatchHandler(view.context, path, handler)
+    ).reduce(voidReducer, unobserve);
+  }
+
+  // Triggere "DOM ready" hook
+  if (component.bind) {
+    component.bind.call(view.context);
+  }
+
+  // Return current state
+  return {
+    name: componentName,
+    component,
+    view,
+    el,
+    unobserve
+  };
+}
+
+/**
+ * Unmount and stop current component data binding
+ */
+function unmount(app: CA, state: State): State {
+  const { component, view } = state;
+  const { context } = view;
+
+  // Trigger destruction hook
+  if (component.unbind) {
+    component.unbind.call(context);
+  }
+
+  // Destroy DOM elements
+  view.unbind();
+
+  // Trigger hook
+  if (component.destroy) {
+    component.destroy.call(context);
+  }
+
+  // Stop context reactivity
+  state.unobserve();
+
+  return state;
+}
+
+/**
+ * First component render, create a new state
+ */
+function create(app: CA, el: HTMLElement, componentName: string): State {
+  const parent = parentElement(el);
+
+  const state = mount(app, componentName);
+  parent.replaceChild(state.el, el);
+  if (state.component.attach) {
+    state.component.attach.call(state.view.context);
+  }
+
+  return state;
+}
+
+/**
+ * Swap current component with another
+ */
+function swap(app: CA, currentState: State, componentName: string) {
+  const parent = parentElement(currentState.el);
+
+  const newState = mount(app, componentName);
+  if (currentState.component.detach) {
+    currentState.component.detach.call(currentState.view.context);
+  }
+  parent.replaceChild(newState.el, currentState.el);
+  if (newState.component.attach) {
+    newState.component.attach.call(newState.view.context);
+  }
+  unmount(app, currentState);
+
+  return newState;
+}
+
+/**
+ * Destroy current component
+ */
+function destroy(app: CA, state: State, el: HTMLElement) {
+  const parent = parentElement(state.el);
+
+  if (state.component.detach) {
+    state.component.detach.call(state.view.context);
+  }
+  unmount(app, state);
+
+  parent.replaceChild(el, state.el);
+}
+
+/**
+ * Build component directive info
+ */
+function buildDirectiveExpression(el: HTMLElement): Expression {
+  return el.hasAttribute("is")
+    ? parseExpression(el.getAttribute("is") as string)
+    : {
+        target: {
+          type: "primitive",
+          value: el.tagName.toLowerCase()
+        },
+        formatters: [],
+        watch: []
+      };
+}
+
+/**
+ * Build component directive
+ */
+export function buildComponentDirective(
+  app: Application,
+  el: HTMLElement
+): Directive {
+  const expression = buildDirectiveExpression(el);
+  const ca = buildApp(app, el);
+
+  let state: State | undefined;
+
+  function update(componentName: any) {
+    if (!state) {
+      state = create(ca, el, componentName);
+    } else if (state.name !== componentName) {
+      state = swap(ca, state, componentName);
+    } else {
+      state.view.update();
+    }
+  }
+
+  function unbind() {
+    if (state) {
+      destroy(ca, state, el);
+      state = undefined;
+    }
+  }
+
+  return {
+    expression,
+    update,
     unbind
   };
 }

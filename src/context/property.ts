@@ -1,205 +1,193 @@
-import { isObject, remove } from "../utils";
+import { remove } from "../utils/array";
+import { isObject } from "../utils/language";
+import { assign } from "../utils/object";
+import { Collection } from "../utils/type";
 
 /**
- * This is the variable the all data about observing is placed
+ * Property value change callback
  */
-
-const STORE = "_op_";
-
-/**
- * Represents an observed object
- */
-
-interface ObservedObject {
-  [STORE]: {
-    [property: string]: PropertyInfo;
-  };
-}
-
-/**
- * Single observed property information
- */
-
-interface PropertyInfo {
-  // original property descriptor
-  d: PropertyDescriptor;
-  // registered property notifiers
-  n: PropertyNotifier[];
-}
-
-/**
- * Notifier function to call on value change
- */
-
 export type PropertyNotifier = (value: any) => void;
 
 /**
- * Get the property descriptor (walk through prototype)
+ * Represents a single observed property
  */
+interface Ticket {
+  /**
+   * Original property descriptor
+   */
+  descriptor: PropertyDescriptor;
+  /**
+   * Registered notifiers
+   */
+  notifiers: PropertyNotifier[];
+}
 
-function getPropertyDescriptor(obj: object, property: string): PropertyDescriptor {
-  let descriptor: PropertyDescriptor;
+/**
+ * Read tickets storage
+ */
+function read(obj: any, property = "_op_"): Collection<Ticket> {
+  if (!isObject(obj)) {
+    throw new Error("Argument is not an object");
+  }
+  if (!obj.hasOwnProperty(property)) {
+    Object.defineProperty(obj, property, { value: {} });
+  }
+  return obj[property];
+}
 
-  // each all prototype chain
+/**
+ * Get the property descriptor (deep/proto version)
+ */
+function getPropertyDescriptor(obj: any, property: string): PropertyDescriptor {
+  let descriptor: PropertyDescriptor | undefined;
+
   while (obj && !descriptor) {
     descriptor = Object.getOwnPropertyDescriptor(obj, property);
     obj = Object.getPrototypeOf(obj);
   }
 
-  // fallback to undefined value descriptor
-  if (!descriptor) {
-    descriptor = {
-      configurable: true,
-      enumerable: true,
-      writable: true,
-      value: undefined
-    };
-  }
-
-  // ensure always configurable descriptor
-  if (descriptor.configurable !== true) {
-    descriptor.configurable = true;
-  }
-
-  return descriptor;
+  return descriptor
+    ? assign({}, descriptor, { configurable: true })
+    : {
+        configurable: true,
+        enumerable: true,
+        writable: true
+      };
 }
 
 /**
- * Apply observe middleware to the object
+ * Wrap the descriptor value into a function
  */
-
-function applyMiddleware(obj: ObservedObject, property: string, notifier: PropertyNotifier): void {
-  // ensure object data store
-  if (!obj.hasOwnProperty(STORE)) {
-    Object.defineProperty(obj, STORE, {
-      // not configurable, prevent double definition
-      // not enumerable, prevent Object.assign cloning
-      // not writable, prevent value assignation/override
-      value: {}
-    });
-  }
-
-  // get the original property descriptor
-  const descriptor = getPropertyDescriptor(obj, property);
-
-  // registered notifiers
-  const notifiers: PropertyNotifier[] = [notifier];
-
-  // custom wrapped getter and setter
-  let get: () => any;
-  let set: (value: any) => void;
-
-  if (descriptor.get || descriptor.set) {
-    // save the getter as is
-    get = descriptor.get;
-
-    // wrap the setter
-    if (descriptor.set) {
-      set = function setter(this: ObservedObject, update: any): void {
-        // call the original setter to update the value
-        descriptor.set.call(this, update);
-
-        // get the current value
-        const value: any = descriptor.get.call(this);
-
-        // trigger all property notifiers
-        for (const n of notifiers) {
-          n(value);
-        }
-      };
-    }
-  } else {
-    // create getter
-    get = function getter(this: ObservedObject): any {
-      return descriptor.value;
-    };
-
-    // create setter with middleware
-    set = function setter(this: ObservedObject, value: any): void {
-      if (descriptor.value !== value) {
-        // update the current value
-        descriptor.value = value;
-
-        // trigger all property notifiers
-        for (const n of notifiers) {
-          n(value);
-        }
-      }
-    };
-  }
-
-  // override property
-  Object.defineProperty(obj, property, {
-    enumerable: true,
-    configurable: true,
-    get,
-    set
-  });
-
-  // save the property descriptor and setup notifiers array
-  obj[STORE][property] = {
-    d: descriptor,
-    n: notifiers
+function getStaticGetter(descriptor: PropertyDescriptor) {
+  return function staticGetter() {
+    return descriptor.value;
   };
 }
 
 /**
- * Remove observe middleware and restore the origianl property status
+ * Update the descriptor value and fire the notifiers
  */
+function getStaticSetter(
+  descriptor: PropertyDescriptor,
+  notifiers: PropertyNotifier[]
+) {
+  return function staticSetter(value: any): void {
+    if (descriptor.value !== value) {
+      descriptor.value = value;
 
-function removeMiddleware(obj: ObservedObject, property: string): void {
-  // restore the original property descriptor
-  Object.defineProperty(obj, property, obj[STORE][property].d);
-
-  // remove property info from the store
-  obj[STORE][property] = undefined;
-}
-
-/**
- * Returns true the object is observed, optionally the property may be specified
- */
-
-export function isObservedObject(obj: any, property?: string): boolean {
-  if (isObject(obj) && obj.hasOwnProperty(STORE)) {
-    if (property === undefined || property === null) {
-      return true;
-    } else {
-      return !!obj[STORE][property];
+      for (const notifier of notifiers) {
+        notifier(value);
+      }
     }
-  }
-  return false;
+  };
 }
 
 /**
- * Start property observing
+ * Fire the custom setter, read from getter the updated value and trigger notifiers
  */
+function getDynamicSetter(
+  get: () => any,
+  set: (value: any) => void,
+  notifiers: PropertyNotifier[]
+) {
+  return function dynamicSetter(value: any): void {
+    set.call(this, value);
 
-export function observeProperty(obj: any, property: string, notifier: PropertyNotifier): void {
-  // input validation
-  if (!isObject(obj)) {
-    throw new Error("Unexpected object to observe");
-  }
+    value = get.call(this);
 
-  // register the new notifier
-  if (isObservedObject(obj, property)) {
-    obj[STORE][property].n.push(notifier);
+    for (const notifier of notifiers) {
+      notifier(value);
+    }
+  };
+}
+
+/**
+ * Observe object property
+ */
+export function observeProperty(
+  obj: any,
+  property: string,
+  notifier: PropertyNotifier
+): void {
+  // Read storage property
+  const tickets = read(obj);
+
+  // Read current property ticket
+  const ticket = tickets[property];
+
+  if (ticket) {
+    // Ticket in place, push new notifier
+    ticket.notifiers.push(notifier);
   } else {
-    applyMiddleware(obj, property, notifier);
+    // Get the property descriptor
+    const descriptor = getPropertyDescriptor(obj, property);
+
+    // Build notifiers array
+    const notifiers = [notifier];
+
+    // Build custom getter
+    const get = descriptor.get || getStaticGetter(descriptor);
+
+    // Build custom setter
+    const set = descriptor.set
+      ? getDynamicSetter(get, descriptor.set, notifiers)
+      : getStaticSetter(descriptor, notifiers);
+
+    // Inject middleware
+    Object.defineProperty(obj, property, {
+      enumerable: true,
+      configurable: true,
+      get,
+      set
+    });
+
+    // Save ticket
+    tickets[property] = {
+      descriptor,
+      notifiers
+    };
   }
 }
 
 /**
- * Stop property observing, returns true is the notifier is removed
+ * Unobserve object property, returns true if the notifier is removed
  */
+export function unobserveProperty(
+  obj: any,
+  property: string,
+  notifier: PropertyNotifier
+): boolean {
+  // Read tickets storage
+  const tickets = read(obj);
 
-export function unobserveProperty(obj: any, property: string, notifier: PropertyNotifier): boolean {
-  if (isObservedObject(obj, property)) {
-    const notifiers: PropertyNotifier[] = obj[STORE][property].n;
-    const removed: boolean = remove(notifiers, notifier);
+  // Read property ticket
+  const info = tickets[property];
+  if (info) {
+    const { descriptor, notifiers } = info;
+
+    // Try to remove the notifier
+    const removed = remove(notifiers, notifier);
+
+    // When there's no notifiers remove the custom middleware
     if (notifiers.length === 0) {
-      removeMiddleware(obj, property);
+      // Restore the original property descriptor
+      Object.defineProperty(obj, property, descriptor);
+
+      // Remove property ticket
+      tickets[property] = undefined;
     }
+
+    // Return the removed status
     return removed;
   }
+
+  // Fallback
   return false;
+}
+
+/**
+ * Returns true if the property is observed
+ */
+export function isPropertyObserved(obj: any, property: string): boolean {
+  return !!read(obj)[property];
 }

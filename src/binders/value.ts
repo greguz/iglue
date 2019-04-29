@@ -1,6 +1,8 @@
 import { Binder } from "../interfaces/Binder";
 import { Binding } from "../interfaces/Binding";
 
+import { isNil } from "../utils/language";
+
 type BoundElement = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
 interface BinderContext {
@@ -9,7 +11,10 @@ interface BinderContext {
 }
 
 function getEvent(el: BoundElement): string {
-  if ((el.tagName === "INPUT" && el.type !== "checkbox" && el.type !== "radio") || el.tagName === "TEXTAREA") {
+  if (
+    (el.tagName === "INPUT" && el.type !== "checkbox" && el.type !== "radio") ||
+    el.tagName === "TEXTAREA"
+  ) {
     return "input";
   } else {
     return "change";
@@ -17,7 +22,10 @@ function getEvent(el: BoundElement): string {
 }
 
 function getListener(el: BoundElement, binding: Binding): EventListener {
-  if (el.tagName === "INPUT" && (el.type === "checkbox" || el.type === "radio")) {
+  if (
+    el.tagName === "INPUT" &&
+    (el.type === "checkbox" || el.type === "radio")
+  ) {
     return function listener(): void {
       binding.set((el as HTMLInputElement).checked);
     };
@@ -29,7 +37,6 @@ function getListener(el: BoundElement, binding: Binding): EventListener {
 }
 
 const binder: Binder<BinderContext> = {
-
   bind(el: BoundElement, binding: Binding): void {
     this.event = getEvent(el);
     this.listener = getListener(el, binding);
@@ -37,17 +44,19 @@ const binder: Binder<BinderContext> = {
   },
 
   routine(el: BoundElement, value: any): void {
-    if (el.tagName === "INPUT" && (el.type === "checkbox" || el.type === "radio")) {
+    if (
+      el.tagName === "INPUT" &&
+      (el.type === "checkbox" || el.type === "radio")
+    ) {
       (el as HTMLInputElement).checked = !!value;
     } else {
-      el.value = value === undefined || value === null ? "" : value.toString();
+      el.value = isNil(value) ? "" : value.toString();
     }
   },
 
   unbind(el: BoundElement): void {
     el.removeEventListener(this.event, this.listener, false);
   }
-
 };
 
 export default binder;

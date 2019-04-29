@@ -1,19 +1,14 @@
-import { includes, isArray } from "../utils";
-
 import { Binder } from "../interfaces/Binder";
 import { Binding } from "../interfaces/Binding";
 
+import { includes } from "../utils/array";
+import { isArray, isString } from "../utils/language";
+
 interface BinderContext {
-  classes: string[];
+  classes: string[] | undefined;
 }
 
 const binder: Binder<BinderContext> = {
-
-  bind(): void {
-    // initialize the class array
-    this.classes = [];
-  },
-
   routine(el: HTMLElement, value: any, binding: Binding): void {
     if (binding.argument) {
       // toggle class by value
@@ -24,14 +19,14 @@ const binder: Binder<BinderContext> = {
       }
     } else {
       // get the previously saved classes
-      const oldClasses: string[] = this.classes;
+      const oldClasses: string[] = this.classes || [];
 
       // get the new class list
       let newClasses: string[];
-      if (typeof value === "string" && value !== "") {
-        newClasses = value.match(/\S+/g);
+      if (isString(value)) {
+        newClasses = value.match(/\S+/g) || [];
       } else if (isArray(value)) {
-        newClasses = value;
+        newClasses = value.slice(0);
       } else {
         newClasses = [];
       }
@@ -51,25 +46,20 @@ const binder: Binder<BinderContext> = {
       }
 
       // save current status
-      this.classes = [...newClasses];
+      this.classes = newClasses;
     }
   },
 
   unbind(el: HTMLElement, binding: Binding): void {
-    // remove explicit class
     if (binding.argument) {
       el.classList.remove(binding.argument);
+    } else {
+      const classes = this.classes || [];
+      for (const cName of classes) {
+        el.classList.remove(cName);
+      }
     }
-
-    // remove dynamic classes
-    for (const cName of this.classes) {
-      el.classList.remove(cName);
-    }
-
-    // free resources
-    this.classes = undefined;
   }
-
 };
 
 export default binder;

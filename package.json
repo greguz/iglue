@@ -1,19 +1,20 @@
 {
   "name": "iglue",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "description": "Intuitive Data Binding engine",
   "main": "dist/iglue.cjs.js",
   "module": "dist/iglue.es.js",
   "types": "types/index.d.ts",
   "scripts": {
-    "check": "tsc --noEmit",
-    "lint": "tslint -c tslint.json -e **/*.spec.ts src/**/*.ts",
-    "test": "mocha -r ts-node/register src/**/*.spec.ts",
-    "types": "rimraf types && tsc --emitDeclarationOnly --declaration --declarationDir types",
-    "build": "rimraf dist && npm run build:umd && npm run build:cjs && npm run build:es",
+    "test:ts": "tsc --noEmit",
+    "test:lint": "tslint -c tslint.json src/**/*.ts",
+    "test:unit": "tsc -p tsconfig.test.json && mocha out/**/*.spec.js",
+    "test": "npm run test:ts && npm run test:lint && npm run test:unit",
     "build:umd": "rollup --config --format umd --name iglue --file dist/iglue.js",
     "build:cjs": "rollup --config --format cjs --file dist/iglue.cjs.js",
     "build:es": "rollup --config --format es --file dist/iglue.es.js",
+    "build": "rimraf dist && npm run build:umd && npm run build:cjs && npm run build:es",
+    "types": "rimraf types && tsc --emitDeclarationOnly --declaration --declarationDir types",
     "prepublishOnly": "npm run test && npm run types && npm run build"
   },
   "author": {
@@ -22,16 +23,15 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@types/chai": "^4.1.4",
-    "@types/mocha": "^5.2.5",
-    "chai": "^4.1.2",
-    "mocha": "^5.2.0",
-    "rimraf": "^2.6.2",
-    "rollup": "^0.58.2",
-    "rollup-plugin-typescript": "^0.8.1",
-    "ts-node": "^6.2.0",
-    "tslint": "^5.11.0",
-    "typescript": "^2.9.2"
+    "@types/chai": "^4.1.7",
+    "@types/mocha": "^5.2.6",
+    "chai": "^4.2.0",
+    "mocha": "^6.1.4",
+    "rimraf": "^2.6.3",
+    "rollup": "^1.10.1",
+    "rollup-plugin-typescript": "^1.0.1",
+    "tslint": "^5.16.0",
+    "typescript": "^3.4.4"
   },
   "repository": {
     "type": "git",

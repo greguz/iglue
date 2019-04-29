@@ -1,12 +1,13 @@
 import { Binder, BinderRoutine } from "../interfaces/Binder";
-import { Collection } from "../utils";
+
+import { isNil } from "../utils/language";
+import { Collection } from "../utils/type";
 
 import $class from "./class";
 import $on from "./on";
 import $value from "./value";
 
-const binders: Collection<Binder | BinderRoutine> = {
-
+export const binders: Collection<Binder | BinderRoutine> = {
   class: $class,
   on: $on,
   value: $value,
@@ -28,17 +29,16 @@ const binders: Collection<Binder | BinderRoutine> = {
   },
 
   html(el: HTMLElement, value: any): void {
-    el.innerHTML = value == null ? "" : value;
+    el.innerHTML = isNil(value) ? "" : value;
   },
 
   text(el: HTMLElement, value: any): void {
+    value = isNil(value) ? "" : value;
+
     if (el.textContent) {
-      el.textContent = value == null ? "" : value;
+      el.textContent = value;
     } else {
-      el.innerText = value == null ? "" : value;
+      el.innerText = value;
     }
   }
-
 };
-
-export default binders;

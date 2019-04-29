@@ -1,14 +1,24 @@
+import { Application } from "../interfaces/Application";
 import { Directive } from "../interfaces/Directive";
 
-export function buildTextDirective(node: Text): Directive {
+import { parseExpression } from "../libs/expression";
+
+import { isNil } from "../utils/language";
+
+export function buildTextDirective(app: Application, node: Text): Directive {
+  const originalContent = node.data;
+
+  function update(value: any) {
+    node.data = isNil(value) ? "" : value.toString();
+  }
+
+  function unbind() {
+    node.data = "{" + originalContent + "}";
+  }
+
   return {
-    refresh(value: any): void {
-      node.data = value === undefined || value === null
-        ? ""
-        : value.toString();
-    },
-    unbind(): void {
-      // keep the last value
-    }
+    expression: parseExpression(originalContent),
+    update,
+    unbind
   };
 }
