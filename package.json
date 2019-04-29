@@ -1,6 +1,6 @@
 {
   "name": "iglue",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "description": "Intuitive Data Binding engine",
   "main": "dist/iglue.cjs.js",
   "module": "dist/iglue.es.js",
