@@ -5,17 +5,13 @@ import { Expression } from "../interfaces/Expression";
 import { View } from "../interfaces/View";
 
 import { parseArgument, parseDirective } from "../libs/attribute";
-import {
-  buildExpressionGetter,
-  observeExpression,
-  wrapError
-} from "../libs/engine";
+import { buildExpressionGetter, observeExpression } from "../libs/engine";
 import { parseExpression } from "../libs/expression";
 import { buildHTML } from "../libs/html";
 
-import { voidReducer } from "../utils/array";
 import { getAttributes, parentElement } from "../utils/dom";
-import { isFunction, isObject, noop } from "../utils/language";
+import { noop, voidReducer, wrapError } from "../utils/engine";
+import { isFunction, isObject } from "../utils/language";
 import { assign, eachObject, mapObject } from "../utils/object";
 import { Collection } from "../utils/type";
 

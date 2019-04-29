@@ -4,21 +4,18 @@ import { Formatter, FormatterFunction } from "../interfaces/Formatter";
 import { Target } from "../interfaces/Target";
 
 import { uniq } from "../utils/array";
+import { passthrough, wrapConst, wrapError } from "../utils/engine";
 import { isArray, isFunction, isObject, isUndefined } from "../utils/language";
 import { parsePath } from "../utils/object";
 import { Collection, Getter, Setter } from "../utils/type";
 
 type Mapper = (value: any) => any;
 
-function passthrough<T>(value: T): T {
-  return value;
-}
-
 /**
  * Compose two mappers into a single one, preserve the context
  */
 function composeMappers(first: Mapper, second: Mapper): Mapper {
-  return function composedMapper(value: any): any {
+  return function composedMapper(this: any, value: any): any {
     return second.call(this, first.call(this, value));
   };
 }
@@ -28,24 +25,6 @@ function composeMappers(first: Mapper, second: Mapper): Mapper {
  */
 function reduceMappers(mappers: Mapper[]): Mapper {
   return mappers.length <= 0 ? passthrough : mappers.reduce(composeMappers);
-}
-
-/**
- * Wrap a error inside a function
- */
-export function wrapError(message: string): (...args: any[]) => any {
-  return function ko(): void {
-    throw new Error(message);
-  };
-}
-
-/**
- * Wrap a const value inside a function
- */
-function wrapConst<T>(value: T) {
-  return function get() {
-    return value;
-  };
 }
 
 /**

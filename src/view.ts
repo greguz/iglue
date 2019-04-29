@@ -18,9 +18,9 @@ import { parseAttributes } from "./libs/attribute";
 import { buildExpressionGetter, observeExpression } from "./libs/engine";
 import { parseText } from "./libs/text";
 
-import { find, voidReducer } from "./utils/array";
+import { find } from "./utils/array";
 import { parentElement } from "./utils/dom";
-import { noop } from "./utils/language";
+import { noop, voidReducer } from "./utils/engine";
 import { Collection } from "./utils/type";
 
 /**

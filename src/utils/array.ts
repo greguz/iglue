@@ -47,10 +47,3 @@ export function remove<T>(arr: T[], target: T): boolean {
   }
   return index >= 0;
 }
-
-export function voidReducer(a: VoidFunction, b: VoidFunction): VoidFunction {
-  return function c() {
-    a();
-    b();
-  };
-}
