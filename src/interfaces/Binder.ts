@@ -13,7 +13,7 @@ export interface Binder<T = any> {
   /**
    * Triggered when the binding is created
    */
-  bind?: (el: HTMLElement, binding: Binding) => void;
+  bind?: (this: any, el: HTMLElement, binding: Binding) => void;
   /**
    * Triggered when the target value changes
    */
@@ -21,13 +21,14 @@ export interface Binder<T = any> {
   /**
    * Triggered when the binding is destroyed
    */
-  unbind?: (el: HTMLElement, binding: Binding) => void;
+  unbind?: (this: any, el: HTMLElement, binding: Binding) => void;
 }
 
 /**
  * Triggered when the target value changes
  */
 export type BinderRoutine<T = any> = (
+  this: any,
   el: HTMLElement,
   value: T,
   binding: Binding
