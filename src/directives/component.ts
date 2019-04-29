@@ -47,8 +47,8 @@ function buildApp(app: Application, el: HTMLElement): CA {
   const properties: Collection<Expression> = {};
 
   for (const attribute of getAttributes(el)) {
-    const directive = parseDirective(attribute.value);
-    const argument = parseArgument(attribute.value);
+    const directive = parseDirective(attribute.name);
+    const argument = parseArgument(attribute.name);
 
     if (!directive) {
       properties[attribute.name] = parseExpression(attribute.value);
