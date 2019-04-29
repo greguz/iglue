@@ -10,6 +10,10 @@ export function getAttributes(el: HTMLElement): Attr[] {
   return Array.prototype.slice.call(el.attributes);
 }
 
+export function getChildNodes(el: HTMLElement): ChildNode[] {
+  return Array.prototype.slice.call(el.childNodes);
+}
+
 export function replaceNode<T extends Node>(newNode: T, oldNode: Node): T {
   parentElement(oldNode).replaceChild(newNode, oldNode);
   return newNode;

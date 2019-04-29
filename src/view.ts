@@ -19,7 +19,7 @@ import { buildExpressionGetter, observeExpression } from "./libs/engine";
 import { parseText } from "./libs/text";
 
 import { find } from "./utils/array";
-import { parentElement } from "./utils/dom";
+import { parentElement, getChildNodes } from "./utils/dom";
 import { noop, voidReducer } from "./utils/engine";
 import { Collection } from "./utils/type";
 
@@ -36,8 +36,8 @@ function traverseDOM(
   } else if (node.nodeType === 1) {
     const el = node as HTMLElement;
     if (onElement(el) === true) {
-      for (let i = 0; i < el.childNodes.length; i++) {
-        traverseDOM(el.childNodes[i], onText, onElement);
+      for (const child of getChildNodes(el)) {
+        traverseDOM(child, onText, onElement);
       }
     }
   }
