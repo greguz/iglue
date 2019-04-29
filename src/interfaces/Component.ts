@@ -30,7 +30,7 @@ export interface Component<T = any> {
    */
   detach?(this: T): void;
   /**
-   * 5. Triggere while the component DOM is still present
+   * 5. Triggered while the component DOM elements are still present
    */
   unbind?(this: T): void;
   /**
