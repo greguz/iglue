@@ -4,7 +4,7 @@ import { Formatter, FormatterFunction } from "../interfaces/Formatter";
 import { Target } from "../interfaces/Target";
 
 import { uniq } from "../utils/array";
-import { wrapConst, wrapError } from "../utils/engine";
+import { wrapConst, wrapError, voidReducer } from "../utils/engine";
 import { isArray, isFunction, isObject, isUndefined } from "../utils/language";
 import { parsePath } from "../utils/object";
 import { Collection, Getter, Setter } from "../utils/type";
@@ -233,22 +233,26 @@ function getPaths({ formatters, target, watch }: Expression): string[] {
 }
 
 /**
+ * Observe single path value
+ */
+export function observePath(
+  context: Context,
+  path: string,
+  callback: ContextCallback
+): VoidFunction {
+  context.$observe(path, callback);
+  return context.$unobserve.bind(context, path, callback);
+}
+
+/**
  * Observe expression targets
  */
 export function observeExpression(
   context: Context,
   expression: Expression,
-  callback: ContextCallback
+  callback: VoidFunction
 ): VoidFunction {
-  const paths = getPaths(expression);
-
-  for (const path of paths) {
-    context.$observe(path, callback);
-  }
-
-  return function unobserve() {
-    for (const path of paths) {
-      context.$unobserve(path, callback);
-    }
-  };
+  return getPaths(expression)
+    .map(path => observePath(context, path, callback))
+    .reduce(voidReducer);
 }

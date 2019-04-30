@@ -5,7 +5,11 @@ import { Expression } from "../interfaces/Expression";
 import { View } from "../interfaces/View";
 
 import { parseArgument, parseDirective } from "../libs/attribute";
-import { buildExpressionGetter, observeExpression } from "../libs/engine";
+import {
+  buildExpressionGetter,
+  observeExpression,
+  observePath
+} from "../libs/engine";
 import { parseExpression } from "../libs/expression";
 import { buildHTML } from "../libs/html";
 
@@ -156,18 +160,7 @@ function registerWatchHandler(
   path: string,
   handler: WatchHandler
 ): VoidFunction {
-  return observeExpression(
-    context,
-    {
-      formatters: [],
-      target: {
-        type: "path",
-        value: path
-      },
-      watch: []
-    },
-    handler.bind(context)
-  );
+  return observePath(context, path, handler.bind(context));
 }
 
 /**
