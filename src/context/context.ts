@@ -2,6 +2,7 @@ import { Context } from "../interfaces/Context";
 
 import { includes } from "../utils/array";
 import { isObject } from "../utils/language";
+import { parsePath } from "../utils/object";
 
 import { observePath, PathNotifier, unobservePath } from "./path";
 
@@ -9,12 +10,7 @@ import { observePath, PathNotifier, unobservePath } from "./path";
  * Get the root property name of a object value path
  */
 function getRootProperty(path: string): string {
-  const match = path.match(/^[^\.\[]+/);
-  if (match) {
-    return match[0];
-  } else {
-    throw new Error("This path does not have a root property");
-  }
+  return parsePath(path)[0];
 }
 
 /**

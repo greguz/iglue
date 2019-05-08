@@ -15,7 +15,7 @@ type Mapper = (value: any) => any;
  * Compose two mappers into a single one, preserve the context
  */
 function composeMappers(first: Mapper, second: Mapper): Mapper {
-  return function composedMapper(this: any, value: any): any {
+  return function composedMapper(value: any): any {
     return second.call(this, first.call(this, value));
   };
 }
@@ -159,7 +159,7 @@ export function buildExpressionGetter(
   // Build base target getter
   const getValue = buildTargetGetter(expression.target);
 
-  // Clean getter without formatters, return the base getter
+  // Clean getter without formatters
   if (expression.formatters.length <= 0) {
     return getValue;
   }

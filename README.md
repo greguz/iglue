@@ -10,9 +10,9 @@ I've worked with [Rivets.js](https://github.com/mikeric/rivets) for some time,
 then I fell in love with [Vue.js](https://github.com/vuejs/vue),
 but sometimes I just wanted something in between,
 something cool and well written like _Vue_,
-but simple and unobtrusive like _Rivets_...
+but simple and unobtrusive like _Rivets_ ... so I came out to write **iglue**.
 
-So I came out to write **iglue**.
+Long story short, it's the fixed version of Rivets with the Vue's component interface.
 
 ## Browser support
 

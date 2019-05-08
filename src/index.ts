@@ -29,12 +29,13 @@ export const components: Collection<Component> = {};
 
 export function bind(
   el: HTMLElement,
-  obj: object = {},
-  options: ViewOptions = {}
+  obj?: object,
+  options?: ViewOptions
 ): View {
+  options = options || {};
   return buildView(
     el,
-    obj,
+    obj || {},
     assign({}, binders, options.binders),
     assign({}, components, options.components),
     assign({}, formatters, options.formatters)
